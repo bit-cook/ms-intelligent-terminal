@@ -712,11 +712,21 @@ namespace winrt::TerminalApp::implementation
     // - The full path to wta.exe, or empty string if not found.
     winrt::hstring TerminalPage::_DetectWtaPath() const
     {
+        // 1. Check system PATH first (production scenario).
         wchar_t buffer[MAX_PATH];
         if (SearchPathW(nullptr, L"wta", L".exe", MAX_PATH, buffer, nullptr) > 0)
         {
             return winrt::hstring{ buffer };
         }
+
+        // 2. Check the known dev build location (matches WindowEmperor's hardcoded path).
+        static constexpr std::wstring_view devPath =
+            L"C:\\Users\\xianghong\\Documents\\wta-unified\\wta\\target\\debug\\wta.exe";
+        if (std::filesystem::exists(devPath))
+        {
+            return winrt::hstring{ devPath };
+        }
+
         return winrt::hstring{};
     }
 
