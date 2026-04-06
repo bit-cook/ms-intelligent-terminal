@@ -2355,8 +2355,9 @@ namespace winrt::TerminalApp::implementation
                     if (!strongThis)
                         return;
 
-                    // Dispatch to UI thread for safe _tabs access.
-                    // Fire-and-forget: we don't need to block the reader thread.
+                    // Dispatch to UI thread: _FindPaneIdForControl accesses _tabs
+                    // which has UI thread affinity.  Fire-and-forget — don't block
+                    // the connection reader thread.
                     strongThis->Dispatcher().RunAsync(
                         winrt::Windows::UI::Core::CoreDispatcherPriority::Normal,
                         [weakThis, weakTerm, seq]() {
@@ -2409,7 +2410,7 @@ namespace winrt::TerminalApp::implementation
                         }
                     }
 
-                    // Dispatch to UI thread for safe _tabs access.
+                    // Dispatch to UI thread: _FindPaneIdForControl accesses _tabs.
                     strongThis->Dispatcher().RunAsync(
                         winrt::Windows::UI::Core::CoreDispatcherPriority::Normal,
                         [weakThis, weakTerm, stateStr]() {

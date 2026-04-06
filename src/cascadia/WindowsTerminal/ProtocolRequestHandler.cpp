@@ -275,72 +275,35 @@ void ProtocolRequestHandler::_ensurePageEventsRegistered()
 {
     if (_pageEventsRegistered || !_server)
         return;
-
-    // We need any window to get a Dispatcher for UI-thread dispatch.
-    // The actual page lookup and event subscription must happen on the UI
-    // thread because TerminalPage is a DependencyObject — obtaining it from
-    // a background thread returns a COM proxy whose event subscriptions
-    // are silently lost.
-    AppHost* anyHost = nullptr;
-    for (const auto& host : _emperor._windows)
-    {
-        anyHost = host.get();
-        if (anyHost)
-            break;
-    }
-    if (!anyHost)
-        return;
-
-    auto logic = anyHost->Logic();
-    if (!logic)
-        return;
-
-    auto root = logic.GetRoot();
-    if (!root)
-        return;
-
-    auto dispatcher = root.Dispatcher();
-    if (!dispatcher)
-        return;
-
     _pageEventsRegistered = true;
 
-    auto& windows = _emperor._windows;
-    auto subscribe = [&windows]() {
-        for (const auto& host : windows)
-        {
-            const auto page = _getPage(host.get());
-            if (!page)
-                continue;
-
-            page.ProtocolVtSequenceReceived(
-                [](auto&&, const winrt::hstring& eventJson) {
-                    const auto jsonStr = winrt::to_string(eventJson);
-                    if (auto* svr = ProtocolRequestHandler::GetPipeServer())
-                    {
-                        svr->BroadcastEvent(jsonStr);
-                    }
-                    TerminalProtocolComServer::s_NotifyEventToComClients(jsonStr);
-                });
-            break; // Single-window for now
-        }
-    };
-
-    if (dispatcher.HasThreadAccess())
+    // Subscribe directly — til::typed_event is thread-safe for subscription
+    // from any thread.  The handler may be invoked on the UI thread (since
+    // TerminalPage raises the event there for safe _tabs access), so we
+    // dispatch pipe broadcast + COM callback delivery to the thread pool.
+    // COM callbacks must be called from MTA-compatible threads, not the STA.
+    for (const auto& host : _emperor._windows)
     {
-        subscribe();
-    }
-    else
-    {
-        HANDLE completedEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-        dispatcher.RunAsync(
-            winrt::Windows::UI::Core::CoreDispatcherPriority::Normal,
-            [&]() {
-                subscribe();
-                SetEvent(completedEvent);
+        const auto page = _getPage(host.get());
+        if (!page)
+            continue;
+
+        page.ProtocolVtSequenceReceived(
+            [](auto&&, const winrt::hstring& eventJson) {
+                auto* ctx = new std::string(winrt::to_string(eventJson));
+                TrySubmitThreadpoolCallback(
+                    [](PTP_CALLBACK_INSTANCE, PVOID p) {
+                        auto* str = static_cast<std::string*>(p);
+                        if (auto* svr = ProtocolRequestHandler::GetPipeServer())
+                        {
+                            svr->BroadcastEvent(*str);
+                        }
+                        TerminalProtocolComServer::s_NotifyEventToComClients(*str);
+                        delete str;
+                    },
+                    ctx, nullptr);
             });
-        WaitForSingleObject(completedEvent, INFINITE);
-        CloseHandle(completedEvent);
+        break; // Single-window for now
     }
 }
 

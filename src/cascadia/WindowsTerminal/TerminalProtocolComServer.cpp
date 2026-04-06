@@ -139,64 +139,30 @@ void TerminalProtocolComServer::_ensurePageEventsRegistered()
     if (!emperor)
         return;
 
-    // We need any window's AppHost to get a Dispatcher for UI-thread dispatch.
-    // The actual page lookup and event subscription must happen on the UI thread
-    // because TerminalPage is a DependencyObject with thread affinity — obtaining
-    // it from a background thread may return a COM proxy whose event subscription
-    // is silently lost.
-    AppHost* anyHost = nullptr;
+    // Subscribe directly — til::typed_event is thread-safe for subscription
+    // from any thread.  The handler may be invoked on the UI thread (since
+    // TerminalPage raises the event there for safe _tabs access), so we
+    // dispatch COM callback delivery to the thread pool.  COM callbacks were
+    // obtained on the MTA and must be called from MTA-compatible threads —
+    // calling them from the STA/UI thread causes RPC_E_WRONG_THREAD.
     for (const auto& host : emperor->GetWindows())
     {
-        anyHost = host.get();
-        if (anyHost)
-            break;
-    }
-    if (!anyHost)
-        return;
+        const auto page = _getPage(host.get());
+        if (!page)
+            continue;
 
-    // Use Logic().Dispatcher() which is safe to call cross-thread.
-    auto logic = anyHost->Logic();
-    if (!logic)
-        return;
-
-    auto root = logic.GetRoot();
-    if (!root)
-        return;
-
-    auto dispatcher = root.Dispatcher();
-    if (!dispatcher)
-        return;
-
-    auto subscribe = [emperor]() {
-        for (const auto& host : emperor->GetWindows())
-        {
-            const auto page = _getPage(host.get());
-            if (!page)
-                continue;
-
-            page.ProtocolVtSequenceReceived(
-                [](auto&&, const winrt::hstring& eventJson) {
-                    s_NotifyEventToComClients(winrt::to_string(eventJson));
-                });
-            break; // Single-window for now
-        }
-    };
-
-    if (dispatcher.HasThreadAccess())
-    {
-        subscribe();
-    }
-    else
-    {
-        HANDLE completedEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-        dispatcher.RunAsync(
-            winrt::Windows::UI::Core::CoreDispatcherPriority::Normal,
-            [&]() {
-                subscribe();
-                SetEvent(completedEvent);
+        page.ProtocolVtSequenceReceived(
+            [](auto&&, const winrt::hstring& eventJson) {
+                auto* ctx = new std::string(winrt::to_string(eventJson));
+                TrySubmitThreadpoolCallback(
+                    [](PTP_CALLBACK_INSTANCE, PVOID p) {
+                        auto* str = static_cast<std::string*>(p);
+                        s_NotifyEventToComClients(*str);
+                        delete str;
+                    },
+                    ctx, nullptr);
             });
-        WaitForSingleObject(completedEvent, INFINITE);
-        CloseHandle(completedEvent);
+        break; // Single-window for now
     }
 }
 
