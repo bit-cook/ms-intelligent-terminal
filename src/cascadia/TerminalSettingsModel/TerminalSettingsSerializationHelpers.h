@@ -449,6 +449,14 @@ JSON_ENUM_MAPPER(::winrt::Microsoft::Terminal::Settings::Model::SettingsTarget)
     };
 };
 
+JSON_ENUM_MAPPER(::winrt::Microsoft::Terminal::Settings::Model::ShellIntegrationTarget)
+{
+    JSON_MAPPINGS(2) = {
+        pair_type{ "pwsh", ValueType::Pwsh },
+        pair_type{ "windowsPowerShell", ValueType::WindowsPowerShell },
+    };
+};
+
 JSON_ENUM_MAPPER(::winrt::Windows::System::VirtualKey)
 {
     JSON_MAPPINGS(3) = {

@@ -60,6 +60,7 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
     DEFINE_ENUM_MAP(Microsoft::Terminal::Settings::Model::SplitDirection, SplitDirection);
     DEFINE_ENUM_MAP(Microsoft::Terminal::Settings::Model::SplitType, SplitType);
     DEFINE_ENUM_MAP(Microsoft::Terminal::Settings::Model::SettingsTarget, SettingsTarget);
+    DEFINE_ENUM_MAP(Microsoft::Terminal::Settings::Model::ShellIntegrationTarget, ShellIntegrationTarget);
     DEFINE_ENUM_MAP(Microsoft::Terminal::Settings::Model::MoveTabDirection, MoveTabDirection);
     DEFINE_ENUM_MAP(Microsoft::Terminal::Control::ScrollToMarkDirection, ScrollToMarkDirection);
     DEFINE_ENUM_MAP(Microsoft::Terminal::Settings::Model::CommandPaletteLaunchMode, CommandPaletteLaunchMode);
