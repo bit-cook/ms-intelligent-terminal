@@ -91,8 +91,6 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <!-- Button 1: AI toggle (dock/collapse bottom pane) -->
@@ -121,9 +119,17 @@
                         </StackPanel>
                     </ToolTip>
                 </ToolTipService.ToolTip>
-                <PathIcon Width="16"
-                          Height="16"
-                          Data="M1 4.625C1 3.17526 2.17526 2 3.625 2H12.375C13.8248 2 15 3.17526 15 4.625V10.75C15 12.1998 13.8248 13.375 12.375 13.375H3.625C2.17526 13.375 1 12.1998 1 10.75V4.625ZM3.625 2.875C2.6585 2.875 1.875 3.6585 1.875 4.625V9H14.125V4.625C14.125 3.6585 13.3415 2.875 12.375 2.875H3.625Z" />
+                <Grid>
+                    <PathIcon x:Name="AgentToggleIconBottom"
+                              Width="16"
+                              Height="16"
+                              Data="M1 4.625C1 3.17526 2.17526 2 3.625 2H12.375C13.8248 2 15 3.17526 15 4.625V10.75C15 12.1998 13.8248 13.375 12.375 13.375H3.625C2.17526 13.375 1 12.1998 1 10.75V4.625ZM3.625 2.875C2.6585 2.875 1.875 3.6585 1.875 4.625V9H14.125V4.625C14.125 3.6585 13.3415 2.875 12.375 2.875H3.625Z" />
+                    <PathIcon x:Name="AgentToggleIconRight"
+                              Width="14"
+                              Height="11"
+                              Visibility="Collapsed"
+                              Data="M11.1667 0C12.3633 0 13.3333 0.970047 13.3333 2.16667V8.5C13.3333 9.6966 12.3633 10.6667 11.1667 10.6667H2.16667C0.970047 10.6667 0 9.6966 0 8.5V2.16667C0 0.970047 0.970047 0 2.16667 0H11.1667ZM2.16667 1C1.52233 1 1 1.52233 1 2.16667V8.5C1 9.14433 1.52233 9.66667 2.16667 9.66667H8.33333V1H2.16667Z" />
+                </Grid>
             </Button>
 
             <!-- Button 2: Diagnostics / Warning — clickable once a fix is armed -->
@@ -142,6 +148,14 @@
                         IsEnabled="False"
                         ToolTipService.ToolTip="Diagnostics"
                         Click="_DiagnosticsButtonOnClick">
+                    <Button.Resources>
+                        <SolidColorBrush x:Key="ButtonBackground" Color="Transparent" />
+                        <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="Transparent" />
+                        <SolidColorBrush x:Key="ButtonBorderBrush" Color="Transparent" />
+                        <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="Transparent" />
+                        <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="Transparent" />
+                        <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="Transparent" />
+                    </Button.Resources>
                     <FontIcon x:Name="DiagnosticsIcon"
                               FontFamily="{ThemeResource SymbolThemeFontFamily}"
                               FontSize="16"
@@ -153,85 +167,6 @@
                            Visibility="Collapsed" />
             </StackPanel>
 
-            <!-- Center: Agent selector (visible when agent pane is open) -->
-            <StackPanel x:Name="AgentSelectorPanel"
-                        Grid.Column="2"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Center"
-                        Margin="8,0,0,0"
-                        Visibility="Collapsed">
-                <Button x:Name="AgentSelectorButton"
-                        Height="24"
-                        Padding="8,2,4,2"
-                        Background="Transparent"
-                        BorderBrush="Transparent"
-                        VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="6">
-                        <TextBlock x:Name="AgentSelectorText"
-                                   Text="Copilot"
-                                   FontSize="12"
-                                   VerticalAlignment="Center" />
-                        <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                                  FontSize="8"
-                                  Glyph="&#xE70D;"
-                                  VerticalAlignment="Center" />
-                    </StackPanel>
-                    <Button.Flyout>
-                        <MenuFlyout Placement="Top" />
-                    </Button.Flyout>
-                </Button>
-            </StackPanel>
-
-            <!-- Right: Action buttons (visible when agent pane is open) -->
-            <StackPanel x:Name="ActionButtonsPanel"
-                        Grid.Column="3"
-                        Orientation="Horizontal"
-                        Spacing="2"
-                        Visibility="Collapsed">
-                <!-- Prompt button: opens command palette in ? mode -->
-                <Button x:Name="PromptButton"
-                        Width="30"
-                        Height="30"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderBrush="Transparent"
-                        ToolTipService.ToolTip="Send prompt to agent"
-                        Click="_PromptButtonOnClick">
-                    <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                              FontSize="14"
-                              Glyph="&#xE8BD;" />
-                </Button>
-
-                <!-- History button -->
-                <Button x:Name="HistoryButton"
-                        Width="30"
-                        Height="30"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderBrush="Transparent"
-                        ToolTipService.ToolTip="History"
-                        Click="_HistoryButtonOnClick">
-                    <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                              FontSize="14"
-                              Glyph="&#xE81C;" />
-                </Button>
-
-                <!-- Settings button -->
-                <Button x:Name="SettingsButton"
-                        Width="30"
-                        Height="30"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderBrush="Transparent"
-                        ToolTipService.ToolTip="AI Agent settings"
-                        Click="_AgentSettingsButtonOnClick">
-                    <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                              FontSize="14"
-                              Glyph="&#xE713;" />
-                </Button>
-            </StackPanel>
         </Grid>
 
         <!--

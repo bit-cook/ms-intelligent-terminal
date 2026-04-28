@@ -296,6 +296,7 @@ winrt::hstring TerminalProtocolComServer::GetCapabilities()
         "list_tabs",
         "list_panes",
         "read_pane_output",
+        "read_pane_last_command",
         "get_process_status",
         "get_session_variable",
         "get_settings",
@@ -409,6 +410,25 @@ Protocol::PaneOutput TerminalProtocolComServer::ReadPaneOutput(
             continue;
 
         auto info = page.ReadProtocolPaneOutput(paneId, effectiveSource, maxLines).get();
+        if (info.PaneId != 0)
+            return info;
+    }
+
+    winrt::throw_hresult(E_FAIL); // Pane not found
+}
+
+Protocol::PaneOutput TerminalProtocolComServer::ReadPaneLastCommand(
+    uint32_t paneId)
+{
+    THROW_HR_IF(E_NOT_VALID_STATE, !s_emperor);
+
+    for (const auto& host : s_emperor->GetWindows())
+    {
+        const auto page = _getPage(host.get());
+        if (!page)
+            continue;
+
+        auto info = page.ReadProtocolPaneLastCommand(paneId).get();
         if (info.PaneId != 0)
             return info;
     }

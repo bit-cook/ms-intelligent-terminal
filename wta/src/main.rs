@@ -17,6 +17,7 @@ use clap::{Parser, Subcommand};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
+    style::Print,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::prelude::*;
@@ -526,34 +527,11 @@ async fn main() -> Result<()> {
             run_set_env(&pipe_override, &shell)
         }
 
-        // ── Ensure host (called by WT on startup) ──
-        Some(Command::EnsureHost {
-            agent,
-            delegate_agent,
-            delegate_model,
-        }) => {
-            run_ensure_host(
-                &pipe_override,
-                agent.unwrap_or_else(|| agent_registry::DEFAULT_ACP_COMMAND.to_string()),
-                delegate_agent,
-                delegate_model,
-            )
-            .await
-        }
+        // ── Ensure host — no-op (centralized architecture: no separate host process) ──
+        Some(Command::EnsureHost { .. }) => Ok(()),
 
-        // ── Attach to shared host (lightweight pane TUI) ──
-        Some(Command::Attach { host_pipe, prompt }) => {
-            run_attach_tui(
-                pipe_override,
-                cli.agent,
-                cli.delegate_agent,
-                cli.delegate_model,
-                cli.no_autofix,
-                host_pipe,
-                prompt,
-            )
-            .await
-        }
+        // ── Attach — no-op (centralized architecture: use default TUI mode instead) ──
+        Some(Command::Attach { .. }) => Ok(()),
 
         // ── Delegate prompt to new tab agent ──
         Some(Command::Delegate {
@@ -1093,7 +1071,7 @@ async fn delegate_with_context(
     Ok(())
 }
 
-// ─── Ensure host (background mode) ──────────────────────────────────────────
+// ─── Ensure host (background mode — no-op in centralized architecture) ──────
 
 async fn run_ensure_host(
     po: &PipeOverride,
@@ -1387,6 +1365,8 @@ async fn run_attach_tui(
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    // Set pane background via OSC 11 so the terminal chrome pixels match the chat area.
+    execute!(stdout, Print("\x1b]11;#0c0c0c\x07"))?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -1479,10 +1459,9 @@ async fn run_attach_tui(
                 permission_tx,
                 debug_capture_enabled.clone(),
                 wt_connected,
-                true, // shared_mode
                 autofix_enabled,
             );
-            app_state.dismiss_autofix_tx = Some(dismiss_autofix_tx);
+            let _ = dismiss_autofix_tx; // was used for shared_mode dismiss; no longer needed
 
             // If preflight failed, enter Setup mode with static guidance
             // (no retry — user must close and reopen the agent pane).
@@ -1505,7 +1484,7 @@ async fn run_attach_tui(
         .await;
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), DisableMouseCapture, LeaveAlternateScreen)?;
+    execute!(terminal.backend_mut(), Print("\x1b]111\x07"), DisableMouseCapture, LeaveAlternateScreen)?;
     terminal.show_cursor()?;
 
     if let Err(e) = result {
@@ -1607,6 +1586,7 @@ async fn run_acp_tui_mode(
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(stdout, Print("\x1b]11;#0c0c0c\x07"))?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -1614,7 +1594,7 @@ async fn run_acp_tui_mode(
         run_acp_app(&mut terminal, cli, shell_mgr, wt_connected, debug_rx, pane_identity, wt_event_rx, wt_pipe_channel).await;
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), DisableMouseCapture, LeaveAlternateScreen)?;
+    execute!(terminal.backend_mut(), Print("\x1b]111\x07"), DisableMouseCapture, LeaveAlternateScreen)?;
     terminal.show_cursor()?;
 
     if let Err(e) = result {
@@ -1913,7 +1893,7 @@ async fn run_acp_app(
             ));
 
             let autofix_enabled = !cli.no_autofix;
-            let mut app_state = app::App::new(prompt_tx, recommendation_tx, permission_tx, debug_capture_enabled, wt_connected, false, autofix_enabled);
+            let mut app_state = app::App::new(prompt_tx, recommendation_tx, permission_tx, debug_capture_enabled, wt_connected, autofix_enabled);
 
             // If preflight failed, start in Setup mode
             if start_in_setup {

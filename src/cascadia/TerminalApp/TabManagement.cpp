@@ -206,25 +206,24 @@ namespace winrt::TerminalApp::implementation
             _tabContent.Children().Append(content);
         }
 
-        // Auto-create a hidden agent pane so WTA is always running in the
-        // background, receiving events and processing autofix silently.
-        // Ctrl+Shift+. toggles visibility of this pane.
-        //
-        // Deferred via Dispatcher so it runs after the current tab creation
-        // completes — calling it synchronously inside _InitializeTab would
-        // interfere with COM callers (CreateProtocolTab) that are blocking
-        // on the result, causing spurious 0x8007023E errors.
-        auto weakSelf = get_weak();
-        auto weakAgentTab = make_weak(newTabImpl);
-        Dispatcher().RunAsync(winrt::Windows::UI::Core::CoreDispatcherPriority::Low,
-            [weakSelf, weakAgentTab]() {
-                auto self = weakSelf.get();
-                auto tab = weakAgentTab.get();
-                if (self && tab)
-                {
-                    self->_AutoCreateHiddenAgentPane(tab);
-                }
-            });
+        // Auto-start the single shared wta pane (hidden) the first time a
+        // terminal tab is created in this window. Deferred so it runs after
+        // the tab creation completes — avoids interfering with COM callers.
+        if (!_agentPane.lock())
+        {
+            auto weakSelf = get_weak();
+            auto weakTab = make_weak(newTabImpl);
+            Dispatcher().RunAsync(winrt::Windows::UI::Core::CoreDispatcherPriority::Low,
+                [weakSelf, weakTab]() {
+                    if (auto self = weakSelf.get())
+                    {
+                        if (auto tab = weakTab.get())
+                        {
+                            self->_AutoCreateHiddenAgentPane(tab);
+                        }
+                    }
+                });
+        }
     }
 
     // Method Description:
@@ -454,6 +453,48 @@ namespace winrt::TerminalApp::implementation
         auto t = winrt::get_self<implementation::Tab>(tab);
         auto actions = t->BuildStartupActions(BuildStartupKind::None);
         _AddPreviouslyClosedPaneOrTab(std::move(actions));
+
+        // If this tab contains the agent pane, rescue it to another tab before
+        // closing so the wta process keeps running.
+        const auto agentTab = _FindTabContainingAgentPane();
+        if (agentTab && agentTab.get() == t)
+        {
+            const auto existingPane = _FindAgentPane();
+            const auto agentTabRoot = agentTab->GetRootPane();
+            // Only rescue if the agent pane is not the sole content of the tab
+            // (if it is, DetachPane would leave nothing behind — let it close).
+            if (existingPane && agentTabRoot && agentTabRoot != existingPane)
+            {
+                winrt::com_ptr<Tab> rescueTab;
+                for (const auto& candidate : _tabs)
+                {
+                    if (auto impl = _GetTabImpl(candidate))
+                    {
+                        if (impl.get() != t)
+                        {
+                            rescueTab = impl;
+                            break;
+                        }
+                    }
+                }
+                if (rescueTab)
+                {
+                    agentTabRoot->DetachPane(existingPane);
+                    const auto splitDir = _AgentPanePositionToSplitDirection(
+                        _settings.GlobalSettings().AgentPanePosition());
+                    rescueTab->SplitPaneAtRoot(splitDir, existingPane);
+                    // Keep it hidden in the rescue tab.
+                    if (const auto rescueRoot = rescueTab->GetRootPane())
+                    {
+                        if (!existingPane->IsHidden())
+                        {
+                            rescueRoot->HidePane(existingPane);
+                        }
+                    }
+                    // agent pane rescued from closing tab
+                }
+            }
+        }
 
         tab.Close();
     }

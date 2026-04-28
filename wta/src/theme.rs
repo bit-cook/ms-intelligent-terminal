@@ -1,5 +1,9 @@
 use ratatui::style::{Color, Modifier, Style};
 
+/// Title bar background — noticeably lighter than the #0c0c0c pane background.
+pub const PANEL_BG: Color = Color::Rgb(30, 30, 30);
+pub const PANEL_STYLE: Style = Style::new().bg(PANEL_BG);
+
 // Colors matching AcpConnection.cpp ANSI codes
 pub const USER_PROMPT: Style = Style::new().fg(Color::DarkGray);
 pub const INPUT_TEXT: Style = Style::new().fg(Color::White);
@@ -27,10 +31,13 @@ pub const DEBUG_RECEIVED: Style = Style::new().fg(Color::Cyan);
 pub const RECOMMENDATION_TITLE: Style = Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD);
 pub const RECOMMENDATION_DETAIL: Style = Style::new().fg(Color::Gray);
 // Card-style recommendation UI
-pub const CARD_BORDER: Style = Style::new().fg(Color::DarkGray);
-pub const CARD_BORDER_SELECTED: Style = Style::new().fg(Color::White);
-pub const CARD_CODE: Style = Style::new().fg(Color::White);
-pub const BUTTON: Style = Style::new().fg(Color::DarkGray);
+pub const CARD_BG: Color = Color::Rgb(45, 45, 45);
+pub const BUTTON_BG: Color = Color::Rgb(70, 70, 70);
+pub const CARD_FILL: Style = Style::new().bg(CARD_BG);
+pub const CARD_BORDER: Style = Style::new().fg(Color::DarkGray).bg(CARD_BG);
+pub const CARD_BORDER_SELECTED: Style = Style::new().fg(Color::White).bg(CARD_BG);
+pub const CARD_CODE: Style = Style::new().fg(Color::White).bg(CARD_BG);
+pub const BUTTON: Style = Style::new().fg(Color::Gray).bg(BUTTON_BG);
 pub const BUTTON_FOCUSED: Style = Style::new()
     .fg(Color::Black)
     .bg(Color::White)
@@ -43,3 +50,6 @@ pub const BADGE_CRITICAL: Style = Style::new().fg(Color::Red).add_modifier(Modif
 pub const BADGE_ACTIONABLE: Style = Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD);
 pub const BADGE_INFO: Style = Style::new().fg(Color::DarkGray);
 pub const BANNER_HINT: Style = Style::new().fg(Color::DarkGray);
+// Input box
+pub const INPUT_BG: Color = Color::Black;
+pub const INPUT_BORDER: Style = Style::new().fg(Color::Rgb(50, 50, 50));

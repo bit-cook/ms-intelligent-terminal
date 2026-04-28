@@ -276,6 +276,7 @@ pub enum AppEvent {
     AgentConnected {
         name: String,
         model: Option<String>,
+        version: Option<String>,
         session_id: String,
     },
     PromptTemplateLoaded {
@@ -320,6 +321,17 @@ pub enum AppEvent {
     PreflightComplete(PreflightResult),
 }
 
+// --- Per-tab session storage ---
+
+#[derive(Default)]
+struct TabSession {
+    messages: Vec<ChatMessage>,
+    completed_turns: Vec<CompletedTurn>,
+    selected_history: Option<usize>,
+    expanded_history: Option<usize>,
+    scroll_offset: usize,
+}
+
 // --- App ---
 
 pub struct App {
@@ -328,6 +340,7 @@ pub struct App {
     pub state: ConnectionState,
     pub agent_name: String,
     pub agent_model: Option<String>,
+    pub agent_version: Option<String>,
     pub prompt_name: Option<String>,
     pub progress_status: Option<String>,
     pub activity_frame: usize,
@@ -351,7 +364,6 @@ pub struct App {
     pub terminal_cols: u16,
     pub should_quit: bool,
     pub prompt_in_flight: bool,
-    pub shared_mode: bool,
     current_prompt_id: Option<u64>,
     current_prompt_submitted_at_unix_s: Option<f64>,
     selection_visible_pending: bool,
@@ -381,14 +393,14 @@ pub struct App {
     // Auto-fix: the pane ID where the error occurred (used to auto-fill Send parent)
     pub autofix_pane_id: Option<String>,
     pub autofix_enabled: bool,
-    // In shared mode the host owns autofix_pane_id; this sender asks it to dismiss.
-    pub dismiss_autofix_tx: Option<mpsc::UnboundedSender<()>>,
     // Generation counter: incremented on every new trigger or cancel.
     // AgentMessageEnd responses whose generation doesn't match are discarded.
     autofix_generation: u64,
     // Generation captured when the current in-flight autofix prompt was sent.
     // None means the in-flight prompt is not an autofix prompt.
     inflight_autofix_generation: Option<u64>,
+    // Per-tab conversation sessions. Keyed by tab_id string (0-based index).
+    tab_sessions: HashMap<String, TabSession>,
 }
 
 impl App {
@@ -398,7 +410,6 @@ impl App {
         permission_tx: mpsc::UnboundedSender<String>,
         debug_capture_enabled: Arc<AtomicBool>,
         wt_connected: bool,
-        shared_mode: bool,
         autofix_enabled: bool,
     ) -> Self {
         Self {
@@ -407,6 +418,7 @@ impl App {
             state: ConnectionState::Connecting("Starting agent...".to_string()),
             agent_name: String::new(),
             agent_model: None,
+            agent_version: None,
             prompt_name: None,
             progress_status: None,
             activity_frame: 0,
@@ -430,7 +442,6 @@ impl App {
             terminal_cols: 80,
             should_quit: false,
             prompt_in_flight: false,
-            shared_mode,
             current_prompt_id: None,
             current_prompt_submitted_at_unix_s: None,
             selection_visible_pending: false,
@@ -457,7 +468,7 @@ impl App {
             autofix_enabled,
             autofix_generation: 0,
             inflight_autofix_generation: None,
-            dismiss_autofix_tx: None,
+            tab_sessions: HashMap::new(),
         }
     }
 
@@ -747,10 +758,12 @@ impl App {
             AppEvent::AgentConnected {
                 name,
                 model,
+                version,
                 session_id,
             } => {
                 self.agent_name = name;
                 self.agent_model = model;
+                self.agent_version = version;
                 self.session_id = session_id;
                 self.state = ConnectionState::Connected;
             }
@@ -830,30 +843,18 @@ impl App {
                 self.scroll_to_bottom();
             }
             AppEvent::AgentThoughtChunk(text) => {
-                if self.shared_mode {
-                    // In shared mode the host accumulates thoughts and sends
-                    // snapshots — don't duplicate on the client.
-                } else {
-                    self.prompt_in_flight = true;
-                    if self.progress_status.is_none() {
-                        self.progress_status = Some("Thinking...".to_string());
-                    }
-                    append_thought_preview(&mut self.pending_thought_response, &text);
-                    // Don't auto-scroll during streaming — user can read at their own pace.
+                self.prompt_in_flight = true;
+                if self.progress_status.is_none() {
+                    self.progress_status = Some("Thinking...".to_string());
                 }
+                append_thought_preview(&mut self.pending_thought_response, &text);
             }
             AppEvent::AgentMessageChunk(text) => {
-                if self.shared_mode {
-                    // In shared mode the host accumulates the response and sends
-                    // snapshots — don't build the streaming response on the client.
-                } else {
-                    self.agent_streaming = true;
-                    self.prompt_in_flight = true;
-                    self.progress_status = None;
-                    self.pending_thought_response.clear();
-                    self.pending_agent_response.push_str(&text);
-                    // Don't auto-scroll during streaming — user can read at their own pace.
-                }
+                self.agent_streaming = true;
+                self.prompt_in_flight = true;
+                self.progress_status = None;
+                self.pending_thought_response.clear();
+                self.pending_agent_response.push_str(&text);
             }
             AppEvent::AgentMessageEnd => {
                 // Check if this response is stale (generation bumped since we sent).
@@ -883,9 +884,7 @@ impl App {
                 self.activity_frame = 0;
                 self.inflight_autofix_generation = None;
 
-                if !self.shared_mode {
-                    // Only the non-shared client finalizes the response locally.
-                    // In shared mode the host does this and sends the result via snapshot.
+                {
                     if let Some(summary) = self.completion_latency_summary() {
                         self.push_execution_info(summary);
                     }
@@ -984,13 +983,29 @@ impl App {
                 // same-pane skip below. Ignore the event if we don't
                 // actually have a cached autofix for that pane.
                 if method == "autofix_execute" {
-                    // In shared mode the host owns the armed recommendations
-                    // and autofix_pane_id, so it handles Execute. The attach
-                    // TUI never calls maybe_trigger_autofix and therefore has
-                    // no autofix_pane_id — calling handle_autofix_execute_request
-                    // here would just immediately clear the armed bottom-bar state.
-                    if !self.shared_mode {
-                        self.handle_autofix_execute_request(&pane_id);
+                    self.handle_autofix_execute_request(&pane_id);
+                    return;
+                }
+
+                if method == "tab_changed" {
+                    tracing::info!(
+                        target: "tab_session",
+                        raw_params = %params,
+                        current_tab = ?self.tab_id,
+                        "tab_changed event received"
+                    );
+                    if let Some(new_tab_id) = params.get("tab_id").and_then(|v| v.as_str()) {
+                        // If discover_pane_identity failed at startup, self.tab_id is None.
+                        // Use from_tab_id (sent by C++) to initialize it before saving.
+                        if self.tab_id.is_none() {
+                            if let Some(from_id) = params.get("from_tab_id").and_then(|v| v.as_str()) {
+                                tracing::info!(target: "tab_session", from_tab_id = from_id, "initializing tab_id from from_tab_id");
+                                self.tab_id = Some(from_id.to_string());
+                            }
+                        }
+                        self.switch_tab_session(new_tab_id.to_string());
+                    } else {
+                        tracing::warn!(target: "tab_session", "tab_changed: missing tab_id in params");
                     }
                     return;
                 }
@@ -1014,12 +1029,7 @@ impl App {
                     }
                     WtEventSeverity::Actionable => {
                         if method == "agent_prompt" {
-                            if self.shared_mode {
-                                tracing::debug!(target: "autofix", "shared_mode: ignoring agent_prompt event (host handles delegation)");
-                                return;
-                            }
                             // Command palette prompt: delegate directly to a new tab agent.
-                            // No UI feedback in agent pane — it stays hidden.
                             let prompt = params
                                 .get("prompt")
                                 .and_then(|v| v.as_str())
@@ -1032,17 +1042,8 @@ impl App {
                             return;
                         }
 
-                        // When auto-fix is disabled, skip notification display entirely —
-                        // there's nothing actionable for the user.
+                        // When auto-fix is disabled, skip notification display entirely.
                         if !self.autofix_enabled {
-                            return;
-                        }
-
-                        // In shared (attach) mode the host handles autofix: it
-                        // submits the prompt and owns autofix_pane_id.  The TUI
-                        // only shows the result via SharedStateSnapshot, so we
-                        // must NOT submit a duplicate prompt here.
-                        if self.shared_mode {
                             return;
                         }
 
@@ -1248,16 +1249,7 @@ impl App {
                 self.progress_status = None;
                 self.inflight_autofix_generation = None;
                 if let Some(p) = pane {
-                    // Non-shared mode: we own the state, emit directly.
                     self.emit_autofix_state_cleared(&p);
-                } else if self.shared_mode {
-                    // Shared mode: host owns autofix state and is the one that
-                    // emitted autofix_state:armed to the bottom bar. Ask it to
-                    // clear so the badge resets and the stale snapshot (with
-                    // recommendations) is replaced.
-                    if let Some(ref tx) = self.dismiss_autofix_tx {
-                        let _ = tx.send(());
-                    }
                 }
             }
             KeyCode::Esc if self.input.is_empty() => {
@@ -1306,11 +1298,9 @@ impl App {
                     let text = self.input.clone();
                     self.input.clear();
                     self.cursor_pos = 0;
-                    if !self.shared_mode {
-                        self.prepare_for_new_prompt(&text);
-                        self.messages.push(ChatMessage::User(text.clone()));
-                        self.scroll_to_bottom();
-                    }
+                    self.prepare_for_new_prompt(&text);
+                    self.messages.push(ChatMessage::User(text.clone()));
+                    self.scroll_to_bottom();
                     let pane_context = crate::shared_host::PaneContext {
                         pane_id: self.pane_id.clone(),
                         tab_id: self.tab_id.clone(),
@@ -1548,6 +1538,50 @@ impl App {
         self.expanded_history == Some(index)
     }
 
+    fn switch_tab_session(&mut self, new_tab_id: String) {
+        let old_tab = self.tab_id.clone();
+        tracing::info!(
+            target: "tab_session",
+            from = ?old_tab,
+            to = %new_tab_id,
+            completed_turns = self.completed_turns.len(),
+            messages = self.messages.len(),
+            "switch_tab_session"
+        );
+
+        if let Some(ref cur) = old_tab {
+            if *cur != new_tab_id {
+                let s = self.tab_sessions.entry(cur.clone()).or_default();
+                s.messages = std::mem::take(&mut self.messages);
+                s.completed_turns = std::mem::take(&mut self.completed_turns);
+                s.selected_history = self.selected_history.take();
+                s.expanded_history = self.expanded_history.take();
+                s.scroll_offset = self.scroll_offset;
+                tracing::info!(
+                    target: "tab_session",
+                    tab = %cur,
+                    saved_turns = s.completed_turns.len(),
+                    "saved session"
+                );
+            }
+        }
+
+        let loaded = self.tab_sessions.remove(&new_tab_id).unwrap_or_default();
+        tracing::info!(
+            target: "tab_session",
+            tab = %new_tab_id,
+            loaded_turns = loaded.completed_turns.len(),
+            "loaded session"
+        );
+        self.messages = loaded.messages;
+        self.completed_turns = loaded.completed_turns;
+        self.selected_history = loaded.selected_history;
+        self.expanded_history = loaded.expanded_history;
+        self.scroll_offset = loaded.scroll_offset;
+
+        self.tab_id = Some(new_tab_id);
+    }
+
     fn clear_chat_history(&mut self) {
         self.messages.clear();
         self.tool_calls.clear();
@@ -1604,7 +1638,7 @@ impl App {
     /// This is the same path used by the command palette — single code path for
     /// context capture, prompt building, and tab creation.
     pub fn delegate_to_tab_agent(&self, prompt: &str, source_pane_id: Option<&str>) {
-        tracing::info!(target: "autofix", prompt_len = prompt.len(), shared_mode = self.shared_mode, "delegate_to_tab_agent called");
+        tracing::info!(target: "autofix", prompt_len = prompt.len(), "delegate_to_tab_agent called");
         let exe = match std::env::current_exe() {
             Ok(p) => p,
             Err(_) => return,
@@ -1651,8 +1685,6 @@ impl App {
             // Same pane, already Pending: re-emit pending with new summary
             // but don't send another prompt (agent is already working on it).
             tracing::info!(target: "autofix", pane_id = %notification.pane_id, "autofix re-trigger same pane while pending — re-emit only");
-            self.messages.push(ChatMessage::Error(notification.summary.clone()));
-            self.scroll_to_bottom();
             self.emit_autofix_state_pending(&notification.pane_id, &notification.summary);
             return;
         }
@@ -1684,20 +1716,10 @@ impl App {
         // Store the failing pane ID so we can auto-fill `parent` on execution.
         self.autofix_pane_id = Some(notification.pane_id.clone());
 
-        // Push the error line (red dot) so the user sees it directly. We
-        // intentionally skip prepare_for_new_prompt: clearing history and
-        // setting current_prompt_text to "[auto-fix] ..." would produce a
-        // noisy "> [auto-fix] Pane N: command failed ..." turn header with
-        // no information. Leaving current_prompt_text=None means the
-        // response won't fold into a CompletedTurn — the error + the
-        // recommendation card render as flat, one-by-one messages.
-        self.messages
-            .push(ChatMessage::Error(notification.summary.clone()));
         self.prompt_in_flight = true;
         self.inflight_autofix_generation = Some(self.autofix_generation);
         self.progress_status = Some("Preparing context...".to_string());
         self.activity_frame = 0;
-        self.scroll_to_bottom();
 
         let prompt = PromptSubmission::new_autofix(prompt_text, Some(pane_context));
         self.current_prompt_id = Some(prompt.id);
@@ -1823,13 +1845,7 @@ impl App {
         self.activity_frame = 0;
     }
 
-    fn push_execution_info(&mut self, message: String) {
-        if let Some(turn) = self.completed_turns.last_mut() {
-            turn.details.push(ChatMessage::System(message));
-        } else {
-            self.messages.push(ChatMessage::System(message));
-        }
-    }
+    fn push_execution_info(&mut self, _message: String) {}
 
     fn current_turn_details(&self) -> Vec<ChatMessage> {
         self.messages
@@ -2106,6 +2122,7 @@ impl App {
         self.state = snapshot.state;
         self.agent_name = snapshot.agent_name;
         self.agent_model = snapshot.agent_model;
+        self.agent_version = snapshot.agent_version;
         self.prompt_name = snapshot.prompt_name;
         self.progress_status = snapshot.progress_status;
         self.session_id = snapshot.session_id;
@@ -2218,7 +2235,9 @@ fn rec_card_height(choice: &RecommendationChoice, panel_width: u16) -> usize {
         .sum::<usize>()
         .max(1);
 
-    // title(1) + top_border(1) + content + separator(1) + buttons(1) + bottom_border(1) + blank(1)
+    // title(at most 1) + top_pad(1) + content + divider(1) + buttons(1) + bottom_pad(1) + blank(1)
+    // No outer border — card is a filled rectangle with a single divider
+    // and one row of CARD_BG padding above/below the content groups.
     6 + content_lines
 }
 
@@ -2389,7 +2408,7 @@ mod tests {
         let (recommendation_tx, _recommendation_rx) = tokio::sync::mpsc::unbounded_channel();
         let (permission_tx, _permission_rx) = tokio::sync::mpsc::unbounded_channel();
         let debug_capture = Arc::new(AtomicBool::new(false));
-        App::new(prompt_tx, recommendation_tx, permission_tx, debug_capture, true, false, true)
+        App::new(prompt_tx, recommendation_tx, permission_tx, debug_capture, true, false)
     }
 
     // ─── classify_wt_event ──────────────────────────────────────────────────

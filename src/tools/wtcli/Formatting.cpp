@@ -125,6 +125,7 @@ Json::Value PaneInfoToJson(const Protocol::PaneInfo& p)
     v["pid"] = static_cast<Json::UInt>(p.Pid);
     v["size"]["rows"] = p.Rows;
     v["size"]["columns"] = p.Columns;
+    v["cwd"] = winrt::to_string(p.Cwd);
     return v;
 }
 
@@ -135,6 +136,7 @@ Json::Value PaneOutputToJson(const Protocol::PaneOutput& o)
     v["content"] = winrt::to_string(o.Content);
     v["line_count"] = o.LineCount;
     v["truncated"] = o.Truncated;
+    v["has_marks"] = o.HasMarks;
     return v;
 }
 

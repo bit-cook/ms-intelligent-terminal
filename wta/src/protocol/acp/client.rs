@@ -685,149 +685,240 @@ fn json_str_or_num(value: Option<&serde_json::Value>) -> Option<String> {
     }
 }
 
+/// Read the most recent shell-integration command (prompt + command + output)
+/// for `pane_id`. Falls back to a line-count read when shell integration is
+/// not active (e.g. CMD, plain bash without OSC 133 support).
+///
+/// Returns the (possibly truncated) content as a string. `None` on failure.
+///
+/// Emits structured tracing under target `acp.last_message` so the call chain
+/// is visible in `wta-{process}.log`:
+///   * `last_message_request`  — start, with pane_id and budgets
+///   * `last_message_result`   — outcome: marks_hit | fallback_used | empty
+async fn read_pane_last_message(
+    shell_mgr: &ShellManager,
+    pane_id: &str,
+    fallback_lines: u32,
+    max_chars: usize,
+) -> Option<String> {
+    let started = std::time::Instant::now();
+    tracing::debug!(
+        target: "acp.last_message",
+        pane_id,
+        fallback_lines,
+        max_chars,
+        "last_message_request"
+    );
+
+    let mark_call_started = std::time::Instant::now();
+    let mark_result = shell_mgr.wt_read_pane_last_command(pane_id).await;
+    let mark_call_ms = mark_call_started.elapsed().as_millis() as u64;
+
+    match &mark_result {
+        Ok(value) => {
+            let has_marks = value
+                .get("has_marks")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let raw_len = value
+                .get("content")
+                .and_then(|c| c.as_str())
+                .map(str::len)
+                .unwrap_or(0);
+            tracing::debug!(
+                target: "acp.last_message",
+                pane_id,
+                has_marks,
+                raw_len,
+                rpc_ms = mark_call_ms,
+                "last_message_rpc_ok"
+            );
+            if has_marks {
+                if let Some(content) = value.get("content").and_then(|c| c.as_str()) {
+                    if !content.is_empty() {
+                        let truncated = truncate_for_prompt(content, max_chars);
+                        tracing::debug!(
+                            target: "acp.last_message",
+                            pane_id,
+                            path = "marks_hit",
+                            out_len = truncated.len(),
+                            total_ms = started.elapsed().as_millis() as u64,
+                            "last_message_result"
+                        );
+                        return Some(truncated);
+                    }
+                }
+            }
+        }
+        Err(err) => {
+            tracing::debug!(
+                target: "acp.last_message",
+                pane_id,
+                rpc_ms = mark_call_ms,
+                error = %err,
+                "last_message_rpc_err"
+            );
+        }
+    }
+
+    // Fallback: shell integration absent or call failed — use line-count read.
+    let fb_started = std::time::Instant::now();
+    let result = shell_mgr
+        .wt_read_pane_output(pane_id, Some(fallback_lines))
+        .await
+        .ok()
+        .and_then(|value| {
+            value
+                .get("content")
+                .and_then(|content| content.as_str())
+                .map(|content| truncate_for_prompt(content, max_chars))
+        });
+    let fb_ms = fb_started.elapsed().as_millis() as u64;
+
+    match &result {
+        Some(text) => tracing::debug!(
+            target: "acp.last_message",
+            pane_id,
+            path = "fallback_used",
+            fallback_lines,
+            out_len = text.len(),
+            fallback_ms = fb_ms,
+            total_ms = started.elapsed().as_millis() as u64,
+            "last_message_result"
+        ),
+        None => tracing::debug!(
+            target: "acp.last_message",
+            pane_id,
+            path = "empty",
+            fallback_lines,
+            fallback_ms = fb_ms,
+            total_ms = started.elapsed().as_millis() as u64,
+            "last_message_result"
+        ),
+    }
+
+    result
+}
+
 async fn build_terminal_context_json(
     shell_mgr: &ShellManager,
     pane_context: Option<&PaneContext>,
 ) -> Option<String> {
-    let coordinator_target = pane_context.and_then(|context| context.pane_id.clone());
     let source_pane_id = pane_context
         .and_then(|context| context.effective_source_pane_id())
         .map(str::to_string);
     let source_tab_id = pane_context.and_then(|context| context.tab_id.clone());
     let source_window_id = pane_context.and_then(|context| context.window_id.clone());
     let source_cwd = pane_context.and_then(|context| context.cwd.clone());
+
     let active = shell_mgr.wt_get_active_pane().await.ok();
     let active_pane_id = active
         .as_ref()
         .and_then(|v| json_str_or_num(v.get("pane_id")));
+    let active_cwd = active
+        .as_ref()
+        .and_then(|v| v.get("cwd"))
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string());
 
-    let mut highlighted_panes = std::collections::BTreeSet::new();
-    if let Some(pane_id) = &source_pane_id {
-        highlighted_panes.insert(pane_id.clone());
-    }
-    if let Some(pane_id) = &active_pane_id {
-        highlighted_panes.insert(pane_id.clone());
-    }
+    // Always have a cwd in the prompt: use the explicit pane_context cwd when
+    // present, otherwise fall back to the active pane's cwd.
+    let effective_cwd = source_cwd.clone().or_else(|| active_cwd.clone());
 
-    let windows = shell_mgr.wt_list_windows().await.ok()?;
-    let windows_arr = windows.get("windows")?.as_array()?;
-    let mut tabs_json = Vec::new();
-
-    for win in windows_arr {
-        let window_id = json_str_or_num(win.get("window_id"))?;
-        let window_title = win
-            .get("title")
-            .and_then(|value| value.as_str())
-            .unwrap_or("")
-            .to_string();
-        let tabs = shell_mgr.wt_list_tabs(&window_id).await.ok()?;
-        let tabs_arr = tabs.get("tabs")?.as_array()?;
-
-        for tab in tabs_arr {
-            let tab_id = json_str_or_num(tab.get("tab_id"))?;
-            let panes = shell_mgr.wt_list_panes(&tab_id).await.ok()?;
-            let panes_arr = panes.get("panes")?.as_array()?;
-            let mut panels_json = Vec::new();
-
-            for pane in panes_arr {
-                let pane_id = json_str_or_num(pane.get("pane_id"))?;
-
-                // Skip agent panes — no need to expose them in context
-                let is_agent_pane = pane
-                    .get("is_agent_pane")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false);
-                if is_agent_pane {
-                    continue;
-                }
-
-                let pid = pane.get("pid").and_then(|value| value.as_u64());
-                let is_active = pane
-                    .get("is_active")
-                    .and_then(|value| value.as_bool())
-                    .unwrap_or(false);
-
-                let buffer = if highlighted_panes.contains(&pane_id) {
-                    // Prefer the most recent completed shell prompt
-                    // (command + output, OSC 133 marks). Falls back to
-                    // the trailing 24 lines if shell integration is not
-                    // active or no prompt has completed yet. This keeps
-                    // unrelated history (and any secrets it may contain)
-                    // out of the LLM context.
-                    let from_last_prompt = shell_mgr
-                        .wt_read_last_prompt(&pane_id)
-                        .await
-                        .ok()
-                        .and_then(|value| {
-                            value
-                                .get("content")
-                                .and_then(|content| content.as_str())
-                                .map(str::to_string)
-                        })
-                        .filter(|content| !content.trim().is_empty());
-
-                    let raw = if let Some(content) = from_last_prompt {
-                        Some(content)
-                    } else {
-                        shell_mgr
-                            .wt_read_pane_output(&pane_id, Some(24))
-                            .await
-                            .ok()
-                            .and_then(|value| {
-                                value
-                                    .get("content")
-                                    .and_then(|content| content.as_str())
-                                    .map(str::to_string)
-                            })
-                    };
-
-                    raw.map(|content| {
-                        truncate_for_prompt(&content, ACTIVE_PANE_CONTEXT_MAX_CHARS / 2)
-                    })
-                } else {
-                    None
-                };
-
-                let pane_role = if source_pane_id.as_deref() == Some(pane_id.as_str()) {
-                    Some("source")
-                } else if active_pane_id.as_deref() == Some(pane_id.as_str()) {
-                    Some("active")
-                } else {
-                    None
-                };
-
-                panels_json.push(serde_json::json!({
-                    "id": pane_id.clone(),
-                    "pane_id": pane_id.clone(),
-                    "window_id": window_id.clone(),
-                    "tab_id": tab_id.clone(),
-                    "window_title": window_title.clone(),
-                    "is_active": is_active,
-                    "pid": pid,
-                    "role": pane_role,
-                    "cwd": if source_pane_id.as_deref() == Some(pane_id.as_str()) { source_cwd.clone() } else { None },
-                    "buffer": buffer,
-                }));
+    // Send only the active tab's active pane. Prefer the user's source pane
+    // (the terminal they were using before invoking the agent); fall back to
+    // whatever WT reports as currently active, skipping the agent's own pane.
+    let (target_pane_id, target_tab_id, target_window_id, target_window_title, target_pid) =
+        if let Some(src) = source_pane_id.clone() {
+            (
+                src,
+                source_tab_id.clone(),
+                source_window_id.clone(),
+                None,
+                None,
+            )
+        } else if let (Some(act_value), Some(act_id)) =
+            (active.as_ref(), active_pane_id.clone())
+        {
+            let is_agent = act_value
+                .get("is_agent_pane")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if is_agent {
+                return None;
             }
+            (
+                act_id,
+                json_str_or_num(act_value.get("tab_id")),
+                json_str_or_num(act_value.get("window_id")),
+                act_value
+                    .get("title")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                act_value.get("pid").and_then(|v| v.as_u64()),
+            )
+        } else {
+            return None;
+        };
 
-            tabs_json.push(serde_json::json!({
-                "id": tab_id.clone(),
-                "tab_id": tab_id.clone(),
-                "window_id": window_id.clone(),
-                "label": tab.get("title").and_then(|value| value.as_str()).unwrap_or(""),
-                "is_active": tab.get("is_active").and_then(|value| value.as_bool()).unwrap_or(false),
-                "panels": panels_json,
-            }));
-        }
-    }
+    let target_is_source = source_pane_id.as_deref() == Some(target_pane_id.as_str());
+    let pane_role = if target_is_source { "source" } else { "active" };
+
+    tracing::debug!(
+        target: "acp.terminal_context",
+        target_pane_id = %target_pane_id,
+        target_role = pane_role,
+        source_pane_id = source_pane_id.as_deref().unwrap_or(""),
+        active_pane_id = active_pane_id.as_deref().unwrap_or(""),
+        "terminal_context_target_resolved"
+    );
+
+    let buffer = read_pane_last_message(
+        shell_mgr,
+        &target_pane_id,
+        24,
+        ACTIVE_PANE_CONTEXT_MAX_CHARS,
+    )
+    .await;
+    // Per-pane cwd: prefer source's explicit cwd, else active's cwd. Always
+    // populate when we know one.
+    let pane_cwd = if target_is_source {
+        source_cwd.clone().or_else(|| active_cwd.clone())
+    } else {
+        active_cwd.clone()
+    };
+    let pane_is_active = active_pane_id.as_deref() == Some(target_pane_id.as_str());
+
+    let panel_json = serde_json::json!({
+        "id": target_pane_id.clone(),
+        "pane_id": target_pane_id.clone(),
+        "window_id": target_window_id.clone(),
+        "tab_id": target_tab_id.clone(),
+        "window_title": target_window_title,
+        "is_active": pane_is_active,
+        "pid": target_pid,
+        "role": pane_role,
+        "cwd": pane_cwd,
+        "buffer": buffer,
+    });
+
+    let tab_json = serde_json::json!({
+        "id": target_tab_id.clone(),
+        "tab_id": target_tab_id.clone(),
+        "window_id": target_window_id.clone(),
+        "label": "",
+        "is_active": true,
+        "panels": [panel_json],
+    });
 
     serde_json::to_string(&serde_json::json!({
         "activeTarget": active_pane_id,
         "sourceTarget": source_pane_id,
         "sourceTabId": source_tab_id,
         "sourceWindowId": source_window_id,
-        "sourceCwd": source_cwd,
-        "tabs": tabs_json,
+        "sourceCwd": effective_cwd,
+        "tabs": [tab_json],
     }))
     .ok()
 }
@@ -907,45 +998,29 @@ async fn build_prompt_text(
         }
     } else {
         // Auto-fix prompt: only read the source pane buffer, no layout.
+        // Prefer shell-integration mark slicing — falls back to a 30-line read
+        // when shell integration is unavailable.
         if wt_connected {
             if let Some(source_pane_id) = pane_context
                 .and_then(|ctx| ctx.effective_source_pane_id())
             {
-                // Prefer the last completed prompt (just the failed
-                // command + its output) over the trailing 30 lines —
-                // narrower context, less risk of dragging in unrelated
-                // commands or secrets.
-                let last_prompt_text = shell_mgr
-                    .wt_read_last_prompt(source_pane_id)
-                    .await
-                    .ok()
-                    .and_then(|value| {
-                        value
-                            .get("content")
-                            .and_then(|c| c.as_str())
-                            .map(str::to_string)
-                    })
-                    .filter(|content| !content.trim().is_empty());
-
-                let content_opt = if last_prompt_text.is_some() {
-                    last_prompt_text
-                } else {
-                    shell_mgr
-                        .wt_read_pane_output(source_pane_id, Some(30))
-                        .await
-                        .ok()
-                        .and_then(|value| {
-                            value
-                                .get("content")
-                                .and_then(|c| c.as_str())
-                                .map(str::to_string)
-                        })
-                };
-
-                if let Some(content) = content_opt {
+                tracing::debug!(
+                    target: "acp.terminal_context",
+                    source_pane_id,
+                    mode = "autofix",
+                    "terminal_context_target_resolved"
+                );
+                if let Some(content) = read_pane_last_message(
+                    shell_mgr,
+                    source_pane_id,
+                    30,
+                    ACTIVE_PANE_CONTEXT_MAX_CHARS,
+                )
+                .await
+                {
                     runtime_sections.push(format!(
                         "### Terminal Output\n```\n{}\n```",
-                        truncate_for_prompt(&content, ACTIVE_PANE_CONTEXT_MAX_CHARS)
+                        content
                     ));
                 }
             }
@@ -1561,10 +1636,21 @@ async fn run_inner(
     }
 
     // Notify app of connection
-    let (agent_name, agent_model) = summarize_agent_identity(raw_program, args);
+    let (registry_name, agent_model) = summarize_agent_identity(raw_program, args);
+    let agent_version = init_resp
+        .agent_info
+        .as_ref()
+        .map(|info| format!("v{}", info.version));
+    // Prefer the agent's self-reported title/name from ACP over the registry fallback.
+    let agent_name = init_resp
+        .agent_info
+        .as_ref()
+        .and_then(|info| info.title.clone().or_else(|| Some(info.name.clone())))
+        .unwrap_or(registry_name);
     let _ = event_tx.send(AppEvent::AgentConnected {
         name: agent_name,
         model: agent_model,
+        version: agent_version,
         session_id: session_id.to_string(),
     });
 

@@ -20,6 +20,13 @@
     <!-- Map MSBuild Platform to Rust target triple for wta.exe inclusion. -->
     <WtaRustTarget Condition="'$(Platform)'=='x64'">x86_64-pc-windows-msvc</WtaRustTarget>
     <WtaRustTarget Condition="'$(Platform)'=='ARM64'">aarch64-pc-windows-msvc</WtaRustTarget>
+    <!-- Pick the matching Cargo profile for the package configuration so a
+         Debug F5 picks up `cargo build` output and a Release build picks up
+         the optimized release output. The opposite profile acts as a fallback. -->
+    <WtaRustProfile Condition="'$(Configuration)'=='Debug'">debug</WtaRustProfile>
+    <WtaRustProfile Condition="'$(Configuration)'!='Debug'">release</WtaRustProfile>
+    <WtaRustFallbackProfile Condition="'$(Configuration)'=='Debug'">release</WtaRustFallbackProfile>
+    <WtaRustFallbackProfile Condition="'$(Configuration)'!='Debug'">debug</WtaRustFallbackProfile>
   </PropertyGroup>
   <PropertyGroup>
     <ProjectGuid>CA5CAD1A-224A-4171-B13A-F16E576FDD12</ProjectGuid>
@@ -105,28 +112,31 @@
   </ItemGroup>
   <!-- Deploy wta.exe (Rust-built WTA agent) into the package root.
        wta.exe discovers wtcli.exe as a sibling, so both must be co-located.
-       We check multiple Cargo output paths so that both plain `cargo build`
-       (target/debug) and `cargo build ‑‑target <triple>` layouts are found.
-       The first existing candidate wins (MSBuild evaluates all, but only one
-       Condition should be true in practice). -->
+       Search order, first existing wins:
+         1. target\$triple\$profile\wta.exe   (explicit target, matching profile)
+         2. target\$profile\wta.exe           (host target, matching profile)
+         3. target\$triple\$fallback\wta.exe  (explicit target, other profile)
+         4. target\$fallback\wta.exe          (host target, other profile)
+       Profile defaults to "debug" for Debug builds and "release" for everything
+       else, so a Debug F5 picks up plain `cargo build` output. -->
   <ItemGroup>
-    <Content Include="$(SolutionDir)wta\target\$(WtaRustTarget)\release\wta.exe"
-             Condition="Exists('$(SolutionDir)wta\target\$(WtaRustTarget)\release\wta.exe')">
+    <Content Include="$(SolutionDir)wta\target\$(WtaRustTarget)\$(WtaRustProfile)\wta.exe"
+             Condition="Exists('$(SolutionDir)wta\target\$(WtaRustTarget)\$(WtaRustProfile)\wta.exe')">
       <Link>wta.exe</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(SolutionDir)wta\target\release\wta.exe"
-             Condition="!Exists('$(SolutionDir)wta\target\$(WtaRustTarget)\release\wta.exe') And Exists('$(SolutionDir)wta\target\release\wta.exe')">
+    <Content Include="$(SolutionDir)wta\target\$(WtaRustProfile)\wta.exe"
+             Condition="!Exists('$(SolutionDir)wta\target\$(WtaRustTarget)\$(WtaRustProfile)\wta.exe') And Exists('$(SolutionDir)wta\target\$(WtaRustProfile)\wta.exe')">
       <Link>wta.exe</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(SolutionDir)wta\target\$(WtaRustTarget)\debug\wta.exe"
-             Condition="!Exists('$(SolutionDir)wta\target\$(WtaRustTarget)\release\wta.exe') And !Exists('$(SolutionDir)wta\target\release\wta.exe') And Exists('$(SolutionDir)wta\target\$(WtaRustTarget)\debug\wta.exe')">
+    <Content Include="$(SolutionDir)wta\target\$(WtaRustTarget)\$(WtaRustFallbackProfile)\wta.exe"
+             Condition="!Exists('$(SolutionDir)wta\target\$(WtaRustTarget)\$(WtaRustProfile)\wta.exe') And !Exists('$(SolutionDir)wta\target\$(WtaRustProfile)\wta.exe') And Exists('$(SolutionDir)wta\target\$(WtaRustTarget)\$(WtaRustFallbackProfile)\wta.exe')">
       <Link>wta.exe</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(SolutionDir)wta\target\debug\wta.exe"
-             Condition="!Exists('$(SolutionDir)wta\target\$(WtaRustTarget)\release\wta.exe') And !Exists('$(SolutionDir)wta\target\release\wta.exe') And !Exists('$(SolutionDir)wta\target\$(WtaRustTarget)\debug\wta.exe') And Exists('$(SolutionDir)wta\target\debug\wta.exe')">
+    <Content Include="$(SolutionDir)wta\target\$(WtaRustFallbackProfile)\wta.exe"
+             Condition="!Exists('$(SolutionDir)wta\target\$(WtaRustTarget)\$(WtaRustProfile)\wta.exe') And !Exists('$(SolutionDir)wta\target\$(WtaRustProfile)\wta.exe') And !Exists('$(SolutionDir)wta\target\$(WtaRustTarget)\$(WtaRustFallbackProfile)\wta.exe') And Exists('$(SolutionDir)wta\target\$(WtaRustFallbackProfile)\wta.exe')">
       <Link>wta.exe</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

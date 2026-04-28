@@ -171,6 +171,7 @@ namespace Microsoft.Terminal.Control
 
         String ReadEntireBuffer();
         String ReadLastPrompt();
+        String ReadLastCommandOutput();
         CommandHistoryContext CommandHistory();
         Boolean QuickFixesAvailable { get; };
 

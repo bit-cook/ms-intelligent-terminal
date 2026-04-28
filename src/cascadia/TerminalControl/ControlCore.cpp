@@ -2423,6 +2423,62 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         return hstring{};
     }
 
+    // Returns the recent shell-integration history as a single string. Slices
+    // from the start of the second-to-last OSC 133 prompt mark (so the agent
+    // sees the previous completed command + its output, plus the current
+    // prompt line) to the last non-space row. When only one mark exists, slices
+    // from that single mark. Returns empty when no marks — callers fall back to
+    // a line-count read.
+    hstring ControlCore::ReadLastCommandOutput() const
+    {
+        const auto lock = _terminal->LockForWriting();
+
+        const auto& marks = _terminal->GetMarkExtents();
+        if (marks.empty())
+        {
+            return {};
+        }
+
+        // Prefer the second-to-last mark when available so we capture a full
+        // previous QA cycle plus the current prompt line.
+        const auto& slicingFrom = marks.size() >= 2 ? marks[marks.size() - 2] : marks.back();
+        const auto& last = marks.back();
+        const auto& textBuffer = _terminal->GetTextBuffer();
+        const auto lastNonSpaceY = textBuffer.GetLastNonSpaceCharacter().y;
+
+        const auto startY = slicingFrom.start.y;
+        // Endpoint: if the last mark's command is fully finished, clip to its
+        // outputEnd. Otherwise, the latest activity is still in flight or only
+        // a fresh prompt line — extend to the last non-space row.
+        auto endY = last.outputEnd.has_value()
+                        ? std::min<til::CoordType>(last.outputEnd->y, lastNonSpaceY)
+                        : lastNonSpaceY;
+
+        if (endY < startY)
+        {
+            return {};
+        }
+
+        std::wstring str;
+        for (auto rowIndex = startY; rowIndex <= endY; rowIndex++)
+        {
+            const auto& row = textBuffer.GetRowByOffset(rowIndex);
+            const auto rowText = row.GetText();
+            const auto strEnd = rowText.find_last_not_of(UNICODE_SPACE);
+            if (strEnd != decltype(rowText)::npos)
+            {
+                str.append(rowText.substr(0, strEnd + 1));
+            }
+
+            if (!row.WasWrapForced())
+            {
+                str.append(L"\r\n");
+            }
+        }
+
+        return hstring{ str };
+    }
+
     // Get all of our recent commands. This will only really work if the user has enabled shell integration.
     Control::CommandHistoryContext ControlCore::CommandHistory() const
     {

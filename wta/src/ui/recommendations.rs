@@ -11,77 +11,89 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     };
 
     let mut lines: Vec<Line> = Vec::new();
+    let single_choice = recommendations.choices.len() == 1;
 
     for (idx, choice) in recommendations.choices.iter().enumerate() {
         let is_selected = idx == app.selected_recommendation;
         let is_recommended = recommendations.recommended_choice == Some(choice.choice);
 
-        // Title line: green ● marks the recommended fix, others get indent.
-        // Example: "● 1. Install missing build tools" or "  2. Explain further"
-        let title_style = if is_selected {
-            theme::RECOMMENDATION_TITLE
-        } else {
-            theme::RECOMMENDATION_DETAIL
-        };
-        let mut title_spans: Vec<Span> = Vec::new();
-        if is_recommended {
-            title_spans.push(Span::styled("● ", theme::DOT_AGENT));
-        } else {
-            title_spans.push(Span::raw("  "));
+        // Skip the numbered title row when there is only one choice — the
+        // agent's intro text in the chat already conveys what the action is,
+        // and the Figma design omits this header for single-choice cards.
+        if !single_choice {
+            let title_style = if is_selected {
+                theme::RECOMMENDATION_TITLE
+            } else {
+                theme::RECOMMENDATION_DETAIL
+            };
+            let mut title_spans: Vec<Span> = Vec::new();
+            if is_recommended {
+                title_spans.push(Span::styled("● ", theme::DOT_AGENT));
+            } else {
+                title_spans.push(Span::raw("  "));
+            }
+            title_spans.push(Span::styled(
+                format!("{}. {}", choice.choice, choice.title),
+                title_style,
+            ));
+            lines.push(Line::from(title_spans));
         }
-        title_spans.push(Span::styled(
-            format!("{}. {}", choice.choice, choice.title),
-            title_style,
-        ));
-        lines.push(Line::from(title_spans));
 
         // Determine card content based on action type
         let (command_text, buttons) = extract_card_content(choice, app, is_selected);
-        let border_style = if is_selected {
+        let divider_style = if is_selected {
             theme::CARD_BORDER_SELECTED
         } else {
             theme::CARD_BORDER
         };
 
-        // Top border
-        let card_width = area.width.saturating_sub(4) as usize; // indent 2 + margin
-        let inner_width = card_width.saturating_sub(2); // minus left/right border chars
-        lines.push(Line::from(Span::styled(
-            format!("  ┌{}┐", "─".repeat(inner_width)),
-            border_style,
-        )));
+        // Card width = full available width minus a 2-col indent on each side.
+        // No outer border — the card is just a filled rectangle (CARD_BG)
+        // with a single horizontal divider between command and buttons.
+        let card_width = area.width.saturating_sub(4) as usize;
+        // Inner content area = card minus 2 chars of left/right padding inside
+        // the fill so text/buttons have breathing room from the card edge.
+        let content_width = card_width.saturating_sub(4);
 
-        // Command/content lines
-        for cmd_line in wrap_text(&command_text, inner_width.saturating_sub(2)) {
-            let padded = format!(" {} ", pad_right(&cmd_line, inner_width.saturating_sub(2)));
+        // Helper to push an empty CARD_BG row that fills the full card width,
+        // used for vertical padding so glyphs aren't flush with card edges.
+        let push_pad_row = |lines: &mut Vec<Line>| {
             lines.push(Line::from(vec![
-                Span::styled("  │", border_style),
+                Span::raw("  "),
+                Span::styled(" ".repeat(card_width), theme::CARD_FILL),
+            ]));
+        };
+
+        // Top padding inside the card.
+        push_pad_row(&mut lines);
+
+        // Command/content lines — full card_width painted with CARD_BG.
+        for cmd_line in wrap_text(&command_text, content_width) {
+            let padded = format!("  {}  ", pad_right(&cmd_line, content_width));
+            lines.push(Line::from(vec![
+                Span::raw("  "),
                 Span::styled(padded, theme::CARD_CODE),
-                Span::styled("│", border_style),
             ]));
         }
 
-        // Separator line
-        lines.push(Line::from(Span::styled(
-            format!("  ├{}┤", "─".repeat(inner_width)),
-            border_style,
-        )));
+        // Divider line — `─` glyphs across the full card width, painted on
+        // CARD_BG so it reads as a hairline inside the card.
+        lines.push(Line::from(vec![
+            Span::raw("  "),
+            Span::styled("─".repeat(card_width), divider_style),
+        ]));
 
-        // Button row
+        // Button row — same card_width fill, buttons right-aligned.
         let button_spans = build_button_spans(
             &buttons,
             is_selected,
             app.selected_button,
-            inner_width,
-            border_style,
+            card_width,
         );
         lines.push(Line::from(button_spans));
 
-        // Bottom border
-        lines.push(Line::from(Span::styled(
-            format!("  └{}┘", "─".repeat(inner_width)),
-            border_style,
-        )));
+        // Bottom padding inside the card.
+        push_pad_row(&mut lines);
 
         // Spacing between cards
         lines.push(Line::default());
@@ -89,7 +101,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
 
     // Hint line
     lines.push(Line::from(Span::styled(
-        "↑↓: switch | ←→: button | Enter: activate | Esc: dismiss",
+        "Enter: activate | Esc: dismiss",
         theme::DIM,
     )));
 
@@ -137,47 +149,50 @@ fn extract_card_content(
 }
 
 /// Builds styled spans for the button row inside a card.
+///
+/// The whole `card_width` is painted with `CARD_FILL` so the row reads as
+/// part of the same filled card. Buttons are right-aligned; each button is
+/// padded with one space on either side so that its own bg paints a
+/// button-shaped pill within the card fill.
 fn build_button_spans<'a>(
     buttons: &[String],
     is_selected: bool,
     focused_button: usize,
-    inner_width: usize,
-    border_style: Style,
+    card_width: usize,
 ) -> Vec<Span<'a>> {
     let mut spans = Vec::new();
-    spans.push(Span::styled("  │", border_style));
+    spans.push(Span::raw("  "));
 
-    // Build button text pieces
     let mut button_pieces: Vec<(String, Style)> = Vec::new();
     for (i, label) in buttons.iter().enumerate() {
         if i > 0 {
-            button_pieces.push((" ".into(), theme::DIM));
+            // Gap between buttons takes the card fill, not the button bg.
+            button_pieces.push((" ".into(), theme::CARD_FILL));
         }
         let style = if is_selected && i == focused_button {
             theme::BUTTON_FOCUSED
         } else {
             theme::BUTTON
         };
-        button_pieces.push((format!("[{}]", label), style));
+        button_pieces.push((format!(" {} ", label), style));
     }
 
-    // Calculate total button text width
-    let buttons_width: usize = button_pieces.iter().map(|(t, _)| t.len()).sum();
-    // Right-align: pad left
-    let pad_left = inner_width.saturating_sub(buttons_width + 1);
-    spans.push(Span::raw(" ".repeat(pad_left)));
+    let buttons_width: usize = button_pieces.iter().map(|(t, _)| t.chars().count()).sum();
+    // Right-align with two cells of right padding before the card edge,
+    // matching the 2-cell horizontal inset used by command lines.
+    let right_pad = 2usize.min(card_width.saturating_sub(buttons_width));
+    let pad_left = card_width.saturating_sub(buttons_width + right_pad);
+    spans.push(Span::styled(" ".repeat(pad_left), theme::CARD_FILL));
 
     for (text, style) in button_pieces {
         spans.push(Span::styled(text, style));
     }
 
-    // Fill remaining space
     let used: usize = pad_left + buttons_width;
-    if used < inner_width {
-        spans.push(Span::raw(" ".repeat(inner_width - used)));
+    if used < card_width {
+        spans.push(Span::styled(" ".repeat(card_width - used), theme::CARD_FILL));
     }
 
-    spans.push(Span::styled("│", border_style));
     spans
 }
 
