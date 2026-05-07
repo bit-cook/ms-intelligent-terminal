@@ -3652,6 +3652,132 @@ std::wstring TextBuffer::CurrentCommand() const
     return L"";
 }
 
+TextBuffer::EditLineSnapshot TextBuffer::CurrentEditLineSnapshot() const
+{
+    EditLineSnapshot result{};
+
+    const auto cursorPosition = GetCursor().GetPosition();
+    const auto bottom = _estimateOffsetOfLastCommittedRow();
+    const auto safeBottom = std::max(bottom, cursorPosition.y);
+
+    auto promptY = cursorPosition.y;
+    for (; promptY >= 0; promptY--)
+    {
+        const auto& currRow = GetRowByOffset(promptY);
+        const auto& rowPromptData = currRow.GetScrollbarData();
+        if (!rowPromptData.has_value() || rowPromptData->category == MarkCategory::Default)
+        {
+            // Skip rows without a real shell-integration prompt mark.
+            // Default-category marks come from user scroll marks, not OSC 133;A.
+            continue;
+        }
+
+        result.hasPromptMark = true;
+        break;
+    }
+
+    if (!result.hasPromptMark)
+    {
+        return result;
+    }
+
+    result.cursorPrefix = _commandForRow(promptY, safeBottom, true);
+
+    const auto hasCommandAfterCursor = [&]() {
+        // Walks attribute runs to find any MarkKind::Command cells beyond the cursor.
+        // Empty rows or rows with only ScrollbarData (prompt marks) but no Command-
+        // marked cells contribute nothing — that's correct: there's no command text
+        // after the cursor in that case.
+        for (auto y = cursorPosition.y; y <= safeBottom; y++)
+        {
+            if (y > cursorPosition.y && !GetRowByOffset(y - 1).WasWrapForced())
+            {
+                break;
+            }
+
+            const auto& row = GetRowByOffset(y);
+            const auto runs = row.Attributes().runs();
+            const auto startX = y == cursorPosition.y ?
+                                    gsl::narrow_cast<uint16_t>(std::clamp(cursorPosition.x, til::CoordType{ 0 }, gsl::narrow_cast<til::CoordType>(_width))) :
+                                    uint16_t{ 0 };
+            auto x = 0;
+            for (const auto& [attr, length] : runs)
+            {
+                const auto nextX = gsl::narrow_cast<uint16_t>(x + length);
+                if (nextX > startX)
+                {
+                    const auto markKind{ attr.GetMarkAttributes() };
+                    if (markKind == MarkKind::Command)
+                    {
+                        return true;
+                    }
+                    if (y > cursorPosition.y && markKind != MarkKind::None)
+                    {
+                        return false; // we hit a definitively non-Command mark below cursor
+                    }
+                }
+                x = nextX;
+            }
+        }
+        return false;
+    };
+
+    result.cursorAtEnd = !hasCommandAfterCursor();
+
+    const auto mark = _scrollMarkExtentForRow(promptY, safeBottom);
+    const auto hasNewPromptBelow = [&]() {
+        for (auto y = promptY + 1; y <= safeBottom; y++)
+        {
+            const auto& rowPromptData = GetRowByOffset(y).GetScrollbarData();
+            if (rowPromptData.has_value() && rowPromptData->category != MarkCategory::Default)
+            {
+                return true;
+            }
+        }
+        return false;
+    }();
+
+    if (mark.HasCommand() && !hasNewPromptBelow)
+    {
+        const auto commandEnd = *mark.commandEnd;
+
+        // Cursor is in the command's wrapped span if every row from commandEnd.y
+        // up to (but not including) cursorPosition.y was wrap-forced. If cursor
+        // is exactly on commandEnd.y, that's still the editable command region.
+        bool cursorInCommandWrappedSpan = true;
+        if (cursorPosition.y < commandEnd.y)
+        {
+            cursorInCommandWrappedSpan = false; // cursor scrolled above the command — odd state
+        }
+        else if (cursorPosition.y == commandEnd.y)
+        {
+            cursorInCommandWrappedSpan = true; // still on the editable command row
+        }
+        else
+        {
+            // cursor is BELOW commandEnd.y. We're in the wrapped span only if
+            // every row from commandEnd.y to cursorPosition.y - 1 has WasWrapForced.
+            cursorInCommandWrappedSpan = true;
+            for (auto y = commandEnd.y; y < cursorPosition.y; y++)
+            {
+                if (!GetRowByOffset(y).WasWrapForced())
+                {
+                    cursorInCommandWrappedSpan = false;
+                    break;
+                }
+            }
+        }
+
+        // Command is running iff:
+        //   - we have a real command (HasCommand)
+        //   - no new prompt has appeared since (no ;A below)
+        //   - cursor is BELOW the wrapped command span (i.e., in output region)
+        result.commandRunning = !cursorInCommandWrappedSpan && cursorPosition.y > commandEnd.y;
+    }
+
+    return result;
+}
+
 std::vector<std::wstring> TextBuffer::Commands() const
 {
     std::vector<std::wstring> commands{};

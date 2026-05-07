@@ -302,11 +302,21 @@ public:
     std::optional<std::vector<til::point_span>> SearchText(const std::wstring_view& needle, SearchFlag flags, til::CoordType rowBeg, til::CoordType rowEnd) const;
 
     // Mark handling
+    struct EditLineSnapshot
+    {
+        std::wstring cursorPrefix;
+        bool cursorAtEnd = true;
+        bool hasPromptMark = false;
+        bool commandRunning = false;
+        bool inAltBuffer = false;
+    };
+
     std::vector<ScrollMark> GetMarkRows() const;
     std::vector<MarkExtents> GetMarkExtents(size_t limit = SIZE_T_MAX) const;
     void ClearMarksInRange(const til::point start, const til::point end);
     void ClearAllMarks();
     std::wstring CurrentCommand() const;
+    [[nodiscard]] EditLineSnapshot CurrentEditLineSnapshot() const;
     std::vector<std::wstring> Commands() const;
     void StartPrompt();
     bool StartCommand();

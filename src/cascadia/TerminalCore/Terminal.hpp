@@ -126,6 +126,7 @@ public:
     til::property<bool> AlwaysNotifyOnBufferRotation;
 
     std::wstring CurrentCommand() const;
+    [[nodiscard]] TextBuffer::EditLineSnapshot CurrentEditLineSnapshot() const;
 
     void SerializeMainBuffer(HANDLE handle) const;
 

@@ -1522,6 +1522,21 @@ std::wstring Terminal::CurrentCommand() const
     return _activeBuffer().CurrentCommand();
 }
 
+TextBuffer::EditLineSnapshot Terminal::CurrentEditLineSnapshot() const
+{
+    const auto lock = LockForReading();
+    auto result = _activeBuffer().CurrentEditLineSnapshot();
+    result.inAltBuffer = _inAltBuffer();
+    if (result.inAltBuffer)
+    {
+        result.cursorPrefix.clear();
+        result.cursorAtEnd = true;
+        result.hasPromptMark = false;
+        result.commandRunning = false;
+    }
+    return result;
+}
+
 void Terminal::SerializeMainBuffer(HANDLE handle) const
 {
     _mainBuffer->SerializeTo(handle);
