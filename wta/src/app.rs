@@ -355,7 +355,7 @@ pub struct App {
     pub agent_streaming: bool,
     pub recommendations: Option<RecommendationSet>,
     pub selected_recommendation: usize,
-    pub selected_button: usize, // Send: 0 = Copy, 1 = Insert, 2 = Run (default). OpenAndSend: 0 = sole button.
+    pub selected_button: usize, // Send: 0 = Run (default), 1 = Insert. OpenAndSend: 0 = sole button.
     pub rec_scroll: usize,
     pub terminal_rows: u16,
     pub terminal_cols: u16,
@@ -434,7 +434,7 @@ impl App {
             agent_streaming: false,
             recommendations: None,
             selected_recommendation: 0,
-            selected_button: 2, // default to "Run" button (Send: Copy=0, Insert=1, Run=2)
+            selected_button: 0, // default to "Run" button (Send: Run=0, Insert=1)
             rec_scroll: 0,
             terminal_rows: 24,
             terminal_cols: 80,
@@ -1135,7 +1135,7 @@ impl App {
                 if self.input.is_empty() && self.recommendations.is_some() =>
             {
                 // Cycle button focus forward within the selected card.
-                // Send: 0=Copy, 1=Insert, 2=Run. OpenAndSend has only index 0.
+                // Send: 0=Run, 1=Insert. OpenAndSend has only index 0.
                 let button_count = self.button_count_for_selected();
                 if button_count > 1 {
                     self.selected_button = (self.selected_button + 1) % button_count;
@@ -1233,54 +1233,36 @@ impl App {
                     && self.recommendations.is_some()
                 {
                     if let Some(mut choice) = self.selected_recommendation().cloned() {
-                        // Copy button (Send index 0): copy the command text to
-                        // clipboard via OSC 52, then dismiss the card the same
-                        // way Insert/Run do. We still commit the pending turn
-                        // and clear any armed autofix state so the UI returns
-                        // to its quiescent state.
-                        if self.selected_button == 0 && self.is_send_choice(&choice) {
-                            if let Some(input) = first_send_input(&choice) {
-                                crate::osc52::copy(&input);
-                            }
-                            let armed_pane = self.autofix_pane_id.take();
-                            self.commit_pending_completed_turn();
-                            self.clear_recommendations();
-                            self.push_execution_info("Copied to clipboard.".to_string());
-                            if let Some(pane_id) = armed_pane {
-                                self.emit_autofix_state_cleared(&pane_id);
-                            }
-                        } else {
-                            // Send: index 1 = Insert, index 2 = Run.
-                            // OpenAndSend: sole index 0 = open target.
-                            let insert_only = self.selected_button == 1
-                                && self.is_send_choice(&choice);
-                            tracing::info!(target: "autofix", choice = choice.choice, actions = choice.actions.len(), insert_only, "Executing choice");
-                            // Auto-fill parent for Send actions from auto-fix.
-                            if let Some(ref pane_id) = self.autofix_pane_id {
-                                for action in &mut choice.actions {
-                                    if let crate::coordinator::RecommendedAction::Send {
-                                        ref mut parent, ..
-                                    } = action
-                                    {
-                                        if parent.is_empty() {
-                                            *parent = pane_id.clone();
-                                        }
+                        // Send: index 0 = Run, index 1 = Insert.
+                        // OpenAndSend: sole index 0 = open target.
+                        let insert_only = self.selected_button == 1
+                            && self.is_send_choice(&choice);
+                        tracing::info!(target: "autofix", choice = choice.choice, actions = choice.actions.len(), insert_only, "Executing choice");
+                        // Auto-fill parent for Send actions from auto-fix.
+                        if let Some(ref pane_id) = self.autofix_pane_id {
+                            for action in &mut choice.actions {
+                                if let crate::coordinator::RecommendedAction::Send {
+                                    ref mut parent, ..
+                                } = action
+                                {
+                                    if parent.is_empty() {
+                                        *parent = pane_id.clone();
                                     }
                                 }
                             }
-                            let armed_pane = self.autofix_pane_id.take();
-                            self.commit_pending_completed_turn();
-                            self.clear_recommendations();
-                            let label = if insert_only { "Inserting" } else { "Executing" };
-                            self.push_execution_info(format!("{} choice {}.", label, choice.choice));
-                            let _ = self.recommendation_tx.send(
-                                crate::coordinator::ChoiceExecution { choice, insert_only }
-                            );
-                            // Clear the bottom-bar Armed state — the fix has been
-                            // dispatched to the source pane.
-                            if let Some(pane_id) = armed_pane {
-                                self.emit_autofix_state_cleared(&pane_id);
-                            }
+                        }
+                        let armed_pane = self.autofix_pane_id.take();
+                        self.commit_pending_completed_turn();
+                        self.clear_recommendations();
+                        let label = if insert_only { "Inserting" } else { "Executing" };
+                        self.push_execution_info(format!("{} choice {}.", label, choice.choice));
+                        let _ = self.recommendation_tx.send(
+                            crate::coordinator::ChoiceExecution { choice, insert_only }
+                        );
+                        // Clear the bottom-bar Armed state — the fix has been
+                        // dispatched to the source pane.
+                        if let Some(pane_id) = armed_pane {
+                            self.emit_autofix_state_cleared(&pane_id);
                         }
                     }
                 } else if self.history_navigation_enabled() {
@@ -1458,7 +1440,7 @@ impl App {
     fn clear_recommendations(&mut self) {
         self.recommendations = None;
         self.selected_recommendation = 0;
-        self.selected_button = 2;
+        self.selected_button = 0;
         self.rec_scroll = 0;
     }
 
@@ -1933,19 +1915,17 @@ impl App {
     }
 
     /// Returns the number of buttons for the currently selected choice card.
-    /// Send actions have 3 buttons (Copy, Insert, Run); OpenAndSend has 1 button.
+    /// Send actions have 2 buttons (Run, Insert); OpenAndSend has 1 button.
     fn button_count_for_selected(&self) -> usize {
         self.selected_recommendation()
-            .map(|c| if self.is_send_choice(c) { 3 } else { 1 })
+            .map(|c| if self.is_send_choice(c) { 2 } else { 1 })
             .unwrap_or(1)
     }
 
-    /// Default focused button index when landing on a card.
-    /// Send cards default to the rightmost button (Run); OpenAndSend cards
-    /// have a single button at index 0.
+    /// Default focused button index when landing on a card. Always 0 — the
+    /// leftmost button (Run for Send cards, the sole button for OpenAndSend).
     fn default_button_for_selected(&self) -> usize {
-        let count = self.button_count_for_selected();
-        if count > 1 { count - 1 } else { 0 }
+        0
     }
 
     /// Returns true if the choice's primary action is Send (shell command).
@@ -2249,18 +2229,6 @@ fn append_thought_preview(buffer: &mut String, chunk: &str) {
         .skip(char_count.saturating_sub(THOUGHT_PREVIEW_MAX_CHARS))
         .collect();
     *buffer = format!("...{tail}");
-}
-
-/// Returns the `input` string of the first `Send` action in this choice,
-/// if any. Used by the Copy button to extract the command text to put on
-/// the clipboard.
-fn first_send_input(choice: &RecommendationChoice) -> Option<String> {
-    for action in &choice.actions {
-        if let crate::coordinator::RecommendedAction::Send { input, .. } = action {
-            return Some(input.clone());
-        }
-    }
-    None
 }
 
 /// Extract a short preview string from the recommended choice's first

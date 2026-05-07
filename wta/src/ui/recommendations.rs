@@ -140,11 +140,7 @@ fn extract_card_content(
             RecommendedAction::Send { input, .. } => {
                 return (
                     input.clone(),
-                    vec![
-                        "Copy".into(),
-                        "Insert in Terminal".into(),
-                        "Run ↵".into(),
-                    ],
+                    vec!["[ Run ]".into(), "Insert in Terminal".into()],
                     CardBodyKind::Code,
                 );
             }
@@ -219,15 +215,20 @@ fn build_button_spans<'a>(
     let mut button_pieces: Vec<(String, Style)> = Vec::new();
     for (i, label) in buttons.iter().enumerate() {
         if i > 0 {
-            // Gap between buttons takes the card fill, not the button bg.
-            button_pieces.push((" ".into(), theme::CARD_FILL));
+            // Wider gap between buttons (~Figma's gap-[24px]) takes the card
+            // fill, not the button bg.
+            button_pieces.push(("   ".into(), theme::CARD_FILL));
         }
+        // Focused button: tight white pill (label rendered as-is, no extra
+        // padding — `[ Run ]` already carries its own brackets).
+        // Non-focused button: plain white text, no pill — matches Figma's
+        // secondary-action look.
         let style = if is_selected && i == focused_button {
             theme::BUTTON_FOCUSED
         } else {
-            theme::BUTTON
+            theme::BUTTON_PLAIN
         };
-        button_pieces.push((format!(" {} ", label), style));
+        button_pieces.push((label.clone(), style));
     }
 
     let buttons_width: usize = button_pieces.iter().map(|(t, _)| t.chars().count()).sum();

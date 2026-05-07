@@ -38,6 +38,10 @@ pub const BUTTON_FOCUSED: Style = Style::new()
     .fg(Color::Black)
     .bg(Color::White)
     .add_modifier(Modifier::BOLD);
+/// Non-focused button: plain white text on the card bg, no pill. Used for
+/// secondary actions in the recommendation card so only the focused button
+/// carries the white-pill highlight (matches Figma).
+pub const BUTTON_PLAIN: Style = Style::new().fg(Color::White).bg(CARD_BG);
 // Chat message dot indicators
 pub const DOT_ERROR: Style = Style::new().fg(Color::Red).add_modifier(Modifier::BOLD);
 pub const DOT_AGENT: Style = Style::new().fg(Color::DarkGray);
