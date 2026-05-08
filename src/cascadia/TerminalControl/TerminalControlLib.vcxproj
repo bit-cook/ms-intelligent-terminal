@@ -65,6 +65,7 @@
     <ClInclude Include="HwndTerminalAutomationPeer.hpp" />
     <ClInclude Include="IInlineSuggestionProvider.h" />
     <ClInclude Include="StubProvider.h" />
+    <ClInclude Include="AcpProvider.h" />
     <ClInclude Include="InlineSuggestionController.h" />
   </ItemGroup>
   <!-- ========================= Cpp Files ======================== -->
@@ -108,6 +109,7 @@
     <ClCompile Include="HwndTerminal.cpp" />
     <ClCompile Include="HwndTerminalAutomationPeer.cpp" />
     <ClCompile Include="InlineSuggestionController.cpp" />
+    <ClCompile Include="AcpProvider.cpp" />
   </ItemGroup>
   <!-- ========================= idl Files ======================== -->
   <ItemGroup>

@@ -9,6 +9,7 @@
 #include "TermControlAutomationPeer.h"
 #include "../../renderer/atlas/AtlasEngine.h"
 #include "../../tsf/Handle.h"
+#include "AcpProvider.h"
 #include "StubProvider.h"
 
 #include "TermControl.g.cpp"
@@ -1455,7 +1456,17 @@ namespace winrt::Microsoft::Terminal::Control::implementation
         auto dispatcher = winrt::Windows::System::DispatcherQueue::GetForCurrentThread();
 
         _inlineSuggestionController = std::make_unique<InlineSuggestionController>(coreImpl, dispatcher);
-        _inlineSuggestionController->SetProvider(std::make_unique<StubProvider>());
+
+        // Try ACP provider first (real AI), fall back to stub for dev/test
+        auto acpProvider = std::make_unique<AcpProvider>(L"copilot --acp --stdio");
+        if (acpProvider->IsAvailable())
+        {
+            _inlineSuggestionController->SetProvider(std::move(acpProvider));
+        }
+        else
+        {
+            _inlineSuggestionController->SetProvider(std::make_unique<StubProvider>());
+        }
         _inlineSuggestionController->SetEnabled(true); // TODO: gate behind setting
 
         // Wire EditLineStateChanged (fires from IO thread) with DispatcherQueue marshaling
