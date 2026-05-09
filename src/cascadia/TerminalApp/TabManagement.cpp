@@ -1126,8 +1126,10 @@ namespace winrt::TerminalApp::implementation
                 const auto tab{ _tabs.GetAt(selectedIndex) };
                 _UpdatedSelectedTab(tab);
             }
-            // Refresh the bottom bar state for the newly focused tab
-            _UpdateBottomBarState();
+            // Reconcile the shared agent pane against the newly active tab's
+            // AgentPaneOpen() flag — makes per-tab open/closed state independent.
+            // Also refreshes the bottom bar internally.
+            _ReconcileAgentPaneForActiveTab();
         }
     }
 

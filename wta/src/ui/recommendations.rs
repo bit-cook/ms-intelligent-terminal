@@ -6,7 +6,7 @@ use crate::coordinator::{OpenTarget, RecommendedAction};
 use crate::theme;
 
 pub fn render(frame: &mut Frame, app: &App, area: Rect) {
-    let Some(recommendations) = &app.recommendations else {
+    let Some(recommendations) = &app.current_tab().recommendations else {
         return;
     };
 
@@ -14,7 +14,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let single_choice = recommendations.choices.len() == 1;
 
     for (idx, choice) in recommendations.choices.iter().enumerate() {
-        let is_selected = idx == app.selected_recommendation;
+        let is_selected = idx == app.current_tab().selected_recommendation;
         let is_recommended = recommendations.recommended_choice == Some(choice.choice);
 
         // Skip the numbered title row when there is only one choice — the
@@ -91,7 +91,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         let button_spans = build_button_spans(
             &buttons,
             is_selected,
-            app.selected_button,
+            app.current_tab().selected_button,
             card_width,
         );
         lines.push(Line::from(button_spans));
@@ -112,7 +112,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let paragraph = Paragraph::new(lines)
         .block(Block::default().borders(Borders::NONE).padding(Padding::zero()))
         .wrap(Wrap { trim: false })
-        .scroll((app.rec_scroll as u16, 0));
+        .scroll((app.current_tab().rec_scroll as u16, 0));
     frame.render_widget(paragraph, area);
 }
 
@@ -140,11 +140,7 @@ fn extract_card_content(
             RecommendedAction::Send { input, .. } => {
                 return (
                     input.clone(),
-                    vec![
-                        "Copy".into(),
-                        "Insert in Terminal".into(),
-                        "Run ↵".into(),
-                    ],
+                    vec!["[ Run ]".into(), "Insert in Terminal".into()],
                     CardBodyKind::Code,
                 );
             }
@@ -219,15 +215,20 @@ fn build_button_spans<'a>(
     let mut button_pieces: Vec<(String, Style)> = Vec::new();
     for (i, label) in buttons.iter().enumerate() {
         if i > 0 {
-            // Gap between buttons takes the card fill, not the button bg.
-            button_pieces.push((" ".into(), theme::CARD_FILL));
+            // Wider gap between buttons (~Figma's gap-[24px]) takes the card
+            // fill, not the button bg.
+            button_pieces.push(("   ".into(), theme::CARD_FILL));
         }
+        // Focused button: tight white pill (label rendered as-is, no extra
+        // padding — `[ Run ]` already carries its own brackets).
+        // Non-focused button: plain white text, no pill — matches Figma's
+        // secondary-action look.
         let style = if is_selected && i == focused_button {
             theme::BUTTON_FOCUSED
         } else {
-            theme::BUTTON
+            theme::BUTTON_PLAIN
         };
-        button_pieces.push((format!(" {} ", label), style));
+        button_pieces.push((label.clone(), style));
     }
 
     let buttons_width: usize = button_pieces.iter().map(|(t, _)| t.chars().count()).sum();

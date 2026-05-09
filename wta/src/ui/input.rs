@@ -32,9 +32,10 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         .border_style(theme::INPUT_BORDER)
         .style(Style::new().bg(theme::INPUT_BG))
         .padding(Padding::new(INPUT_LEFT_PAD, 0, 0, 0));
-    let viewport = input_viewport(&app.input, app.cursor_pos, area.width.saturating_sub(INPUT_LEFT_PAD + 2));
+    let tab = app.current_tab();
+    let viewport = input_viewport(&tab.input, tab.cursor_pos, area.width.saturating_sub(INPUT_LEFT_PAD + 2));
 
-    let lines: Vec<Line> = if app.input.is_empty() {
+    let lines: Vec<Line> = if tab.input.is_empty() {
         // Show a placeholder reflecting connection state.
         let placeholder = match &app.state {
             ConnectionState::Connected => ">  Ask anything, / for commands..".to_string(),
@@ -71,7 +72,8 @@ pub(crate) fn cursor_position(app: &App, area: Rect) -> Option<Position> {
     }
 
     let text_width = area.width.saturating_sub(INPUT_LEFT_PAD + 2);
-    let viewport = input_viewport(&app.input, app.cursor_pos, text_width);
+    let tab = app.current_tab();
+    let viewport = input_viewport(&tab.input, tab.cursor_pos, text_width);
     let cursor_col = viewport.cursor_col.min(text_width.saturating_sub(1) as usize);
     let cursor_row = viewport
         .cursor_row

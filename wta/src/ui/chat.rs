@@ -30,7 +30,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let inner_area = inner.inner(area);
     let visible_height = inner_area.height as usize;
     let requested_lines = visible_height
-        .saturating_add(app.scroll_offset)
+        .saturating_add(app.current_tab().scroll_offset)
         .saturating_add(32);
 
     let mut reversed_lines: Vec<Line> = Vec::new();
@@ -42,19 +42,19 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let mut pending_lines = build_pending_stream_lines(app);
     reversed_lines.extend(pending_lines.drain(..).rev());
 
-    for (idx, msg) in app.messages.iter().enumerate().rev() {
-        let is_last_message = idx + 1 == app.messages.len();
-        let mut message_lines = build_message_lines(msg, is_last_message, app.agent_streaming);
+    for (idx, msg) in app.current_tab().messages.iter().enumerate().rev() {
+        let is_last_message = idx + 1 == app.current_tab().messages.len();
+        let mut message_lines = build_message_lines(msg, is_last_message, app.current_tab().agent_streaming);
         reversed_lines.extend(message_lines.drain(..).rev());
         if reversed_lines.len() >= requested_lines {
             break;
         }
     }
 
-    for (idx, turn) in app.completed_turns.iter().enumerate().rev() {
-        let selected = app.history_row_selected(idx);
-        let expanded = app.history_row_expanded(idx);
-        let mut turn_lines = build_completed_turn_lines(turn, selected, expanded);
+    let selected_idx = app.current_tab().selected_completed_turn_idx;
+    for (idx, turn) in app.current_tab().completed_turns.iter().enumerate().rev() {
+        let is_selected = selected_idx == Some(idx);
+        let mut turn_lines = build_completed_turn_lines(turn, is_selected);
         reversed_lines.extend(turn_lines.drain(..).rev());
         if reversed_lines.len() >= requested_lines {
             break;
@@ -64,7 +64,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let lines: Vec<Line> = reversed_lines.into_iter().rev().collect();
 
     let total_lines = lines.len();
-    let scroll = total_lines.saturating_sub(visible_height.saturating_add(app.scroll_offset));
+    let scroll = total_lines.saturating_sub(visible_height.saturating_add(app.current_tab().scroll_offset));
 
     let paragraph = Paragraph::new(lines)
         .block(inner)
@@ -76,8 +76,8 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     ui_trace::log_slow("chat_render", render_started.elapsed(), || {
         format!(
             "messages={} pending_chars={} requested_lines={} visible_height={} area={}x{}",
-            app.messages.len(),
-            app.pending_agent_response.chars().count(),
+            app.current_tab().messages.len(),
+            app.current_tab().pending_agent_response.chars().count(),
             requested_lines,
             visible_height,
             area.width,
@@ -88,27 +88,37 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
 
 fn build_completed_turn_lines<'a>(
     turn: &'a crate::app::CompletedTurn,
-    selected: bool,
-    expanded: bool,
+    is_selected: bool,
 ) -> Vec<Line<'a>> {
-    let mut lines = Vec::new();
-    let prompt_style = if selected {
+    let chevron = if turn.expanded { "▼ " } else { "▶ " };
+    // Selected row uses the SELECTED theme (reverse video) to make the
+    // current Tab target visible. Unselected rows render in the standard
+    // dim USER_PROMPT style — same as before this feature existed.
+    let prompt_style = if is_selected {
         theme::SELECTED
     } else {
         theme::USER_PROMPT
     };
+    let chevron_style = if is_selected {
+        theme::SELECTED
+    } else {
+        theme::DIM
+    };
 
-    lines.push(Line::from(vec![
+    let mut lines = vec![Line::from(vec![
+        Span::styled(chevron, chevron_style),
         Span::styled("> ", prompt_style),
         Span::styled(truncate_render_text(&turn.prompt), prompt_style),
-    ]));
+    ])];
 
-    if expanded {
-        for message in &turn.details {
-            let mut detail_lines = build_message_lines(message, false, false);
-            for line in detail_lines.drain(..) {
-                lines.push(indent_line(line));
-            }
+    if turn.expanded {
+        // Render the captured details — the agent reply, tool calls,
+        // plans, etc. — using the same builder as the active turn so the
+        // formatting matches. `is_last_message=false` and
+        // `agent_streaming=false` together suppress the streaming-cursor
+        // path; details are always finalized by the time they land here.
+        for msg in turn.details.iter() {
+            lines.extend(build_message_lines(msg, false, false));
         }
     }
 
@@ -117,15 +127,15 @@ fn build_completed_turn_lines<'a>(
 }
 
 fn build_activity_line(app: &App) -> Option<Line<'static>> {
-    if !(app.prompt_in_flight || app.agent_streaming || app.progress_status.is_some()) {
+    if !(app.current_tab().prompt_in_flight || app.current_tab().agent_streaming || app.current_tab().progress_status.is_some()) {
         return None;
     }
 
     let mut spans = Vec::new();
-    let icon = ACTIVITY_ICON_FRAMES[app.activity_frame % ACTIVITY_ICON_FRAMES.len()];
+    let icon = ACTIVITY_ICON_FRAMES[app.current_tab().activity_frame % ACTIVITY_ICON_FRAMES.len()];
     spans.push(Span::styled(icon.to_string(), theme::IN_PROGRESS));
     spans.push(Span::raw(" "));
-    spans.extend(animated_activity_label(app.activity_frame));
+    spans.extend(animated_activity_label(app.current_tab().activity_frame));
 
     if let Some((preview, style)) = activity_preview(app) {
         spans.push(Span::styled(" ", theme::DIM));
@@ -153,7 +163,7 @@ fn animated_activity_label(frame: usize) -> Vec<Span<'static>> {
 }
 
 fn activity_preview(app: &App) -> Option<(String, Style)> {
-    app.progress_status
+    app.current_tab().progress_status
         .as_deref()
         // "Thinking..." is redundant now that the animated label says "thinking".
         .filter(|s| *s != "Thinking...")
@@ -292,19 +302,24 @@ fn build_message_lines<'a>(
             }
             lines.push(Line::default());
         }
+        ChatMessage::AgentEvent(text) => {
+            for (i, line_text) in text.lines().enumerate() {
+                if i == 0 {
+                    lines.push(Line::from(Span::styled(
+                        truncate_render_text(line_text),
+                        theme::AGENT_EVENT_HEADER,
+                    )));
+                } else {
+                    lines.push(Line::from(Span::styled(
+                        truncate_render_text(line_text),
+                        theme::AGENT_EVENT_DETAIL,
+                    )));
+                }
+            }
+            lines.push(Line::default());
+        }
     }
     lines
-}
-
-fn indent_line<'a>(line: Line<'a>) -> Line<'a> {
-    if line.spans.is_empty() {
-        return line;
-    }
-
-    let mut spans = Vec::with_capacity(line.spans.len() + 1);
-    spans.push(Span::styled("  ", theme::DIM));
-    spans.extend(line.spans);
-    Line::from(spans)
 }
 
 fn truncate_render_text(text: &str) -> Cow<'_, str> {

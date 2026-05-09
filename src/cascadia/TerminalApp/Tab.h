@@ -102,6 +102,13 @@ namespace winrt::TerminalApp::implementation
         std::shared_ptr<Pane> GetRootPane() const { return _rootPane; }
         std::vector<uint32_t> GetMruPanes() const { return _mruPanes; }
 
+        // Per-tab "user wants the agent pane open here" flag. The agent pane
+        // itself is a single shared resource that follows the active tab; this
+        // flag is the source of truth for whether reconciliation should make
+        // it visible when this tab is active.
+        bool AgentPaneOpen() const noexcept { return _agentPaneOpen; }
+        void AgentPaneOpen(bool value) noexcept { _agentPaneOpen = value; }
+
         winrt::TerminalApp::TerminalTabStatus TabStatus()
         {
             return _tabStatus;
@@ -209,6 +216,7 @@ namespace winrt::TerminalApp::implementation
         bool _receivedKeyDown{ false };
         bool _iconHidden{ false };
         bool _changingActivePane{ false };
+        bool _agentPaneOpen{ false };
 
         winrt::hstring _runtimeTabText{};
         bool _inRename{ false };

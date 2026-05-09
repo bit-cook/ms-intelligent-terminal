@@ -1,10 +1,12 @@
 mod cli_channel;
+mod pipe_channel;
+mod routed_channel;
 
 pub use cli_channel::CliChannel;
-
-// Re-export CliChannel as PipeChannel for backward compatibility.
-// All callers that used PipeChannel now get CliChannel (wraps wtcli.exe).
-pub use cli_channel::CliChannel as PipeChannel;
+pub use cli_channel::spawn_wtcli_focus_pane;
+pub use pipe_channel::PipeChannel;
+pub use routed_channel::RoutedChannel;
+pub(crate) use cli_channel::resolve_wtcli_path;
 
 /// Connection info discovered from environment variables.
 #[derive(Debug, Clone)]
@@ -17,14 +19,17 @@ pub struct ConnectionInfo {
 #[derive(Debug, Clone)]
 pub enum DiscoverySource {
     VtOsc,
-    EnvVar,
     ComClsid,
+    /// WT inherited a duplex anonymous pipe pair into this process via
+    /// STARTUPINFOEX PROC_THREAD_ATTRIBUTE_HANDLE_LIST. Handle values
+    /// arrived in `WT_PROTOCOL_PIPE_R` / `WT_PROTOCOL_PIPE_W` (consumed).
+    InheritedPipe,
 }
 
-/// Discover WT protocol connection info from environment variables.
-/// Checks WT_COM_CLSID (COM protocol) first, then WT_PIPE_NAME (pipe fallback).
+/// Discover WT protocol connection info from the WT_COM_CLSID env var.
+/// (The legacy WT_PIPE_NAME / WT_MCP_TOKEN fallback was vestigial — WT
+/// never produced those vars — and has been removed.)
 pub fn discover_connection_info() -> Option<ConnectionInfo> {
-    // Prefer COM CLSID (new protocol)
     if let Ok(clsid) = std::env::var("WT_COM_CLSID") {
         return Some(ConnectionInfo {
             pipe_name: clsid,
@@ -32,17 +37,6 @@ pub fn discover_connection_info() -> Option<ConnectionInfo> {
             source: DiscoverySource::ComClsid,
         });
     }
-
-    // Fallback: pipe name
-    if let Ok(pipe_name) = std::env::var("WT_PIPE_NAME") {
-        let token = std::env::var("WT_MCP_TOKEN").unwrap_or_default();
-        return Some(ConnectionInfo {
-            pipe_name,
-            token,
-            source: DiscoverySource::EnvVar,
-        });
-    }
-
     None
 }
 

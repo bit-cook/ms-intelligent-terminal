@@ -2,6 +2,7 @@ use super::prompt;
 use acp::Agent as _;
 use agent_client_protocol as acp;
 use anyhow::Result;
+use std::collections::{HashMap, HashSet};
 use std::pin::Pin;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
@@ -14,7 +15,7 @@ use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
 use crate::app::{AppEvent, PermOption, PlanEntry, PlanEntryStatus};
 use crate::coordinator::default_supported_delegate_agents;
-use crate::shared_host::PaneContext;
+use crate::pane_context::PaneContext;
 use crate::shell::{ShellManager, TerminalConfig};
 
 const ACTIVE_PANE_CONTEXT_MAX_CHARS: usize = 4000;
@@ -30,6 +31,47 @@ pub struct PromptSubmission {
     /// as a User message (the client already shows the error line), and
     /// the planner uses it to pick the auto-fix prompt template.
     pub is_autofix: bool,
+}
+
+/// User-initiated cancel of an in-flight prompt. The App emits one of
+/// these on Ctrl+C; the ACP client task fires `session/cancel` to the
+/// agent and signals the per-prompt oneshot so the local task drops
+/// out of `conn.prompt().await` immediately even if the agent is slow
+/// or doesn't honor cancel.
+#[derive(Debug, Clone)]
+pub struct CancelRequest {
+    pub session_id: String,
+}
+
+/// User-initiated request to spin up a fresh ACP session for a given tab,
+/// dropping the previous session's history. Emitted by the `/new` slash
+/// command. The ACP client task removes the old SessionId from its
+/// per-tab cache and calls `new_session(cwd)`; the resulting
+/// [`AppEvent::SessionAttached`] then propagates back to the UI to
+/// rewire `session_to_tab` and update the model dropdown.
+#[derive(Debug, Clone)]
+pub struct NewSessionForTab {
+    pub tab_id: String,
+    /// Optional cwd override. When `None`, the client falls back to the
+    /// process-wide `current_dir()` (same default as the lazy-create path).
+    pub cwd: Option<String>,
+}
+
+/// User-initiated full reconnect of the ACP client. Emitted by the
+/// `/restart` slash command. The ACP client task kills the agent child
+/// process, drops the connection, then respawns the agent and
+/// re-initializes from scratch.
+#[derive(Debug, Clone, Default)]
+pub struct RestartRequest;
+
+/// How [`run_inner`] terminated. The outer driver in [`run_acp_client`]
+/// uses this to decide whether to respawn the agent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExitReason {
+    /// Loop exited because all sender halves dropped (process shutdown).
+    Done,
+    /// `/restart` requested. Outer driver should re-enter `run_inner`.
+    Restart,
 }
 
 impl PromptSubmission {
@@ -56,21 +98,6 @@ impl PromptSubmission {
         }
     }
 
-    pub fn from_parts(
-        id: u64,
-        text: String,
-        pane_context: Option<PaneContext>,
-        submitted_at_unix_s: f64,
-        is_autofix: bool,
-    ) -> Self {
-        Self {
-            id,
-            text,
-            pane_context,
-            submitted_at_unix_s,
-            is_autofix,
-        }
-    }
 
     pub fn preview(&self) -> String {
         prompt_preview(&self.text)
@@ -184,36 +211,45 @@ struct ActivePromptTiming {
     event_count: u64,
 }
 
+/// Concurrent-prompt-aware timing tracker. With M3's spawn-per-prompt
+/// model, multiple prompts can be in flight at the same time; each is
+/// keyed by its ACP `SessionId`. Byte-level observers (writes/reads on
+/// the shared stdio) update every in-flight prompt that hasn't yet
+/// recorded its first byte — `is_none()` guards make that a no-op
+/// once a value is set.
 #[derive(Default)]
 struct PromptTimingState {
-    active: Mutex<Option<ActivePromptTiming>>,
+    active: Mutex<HashMap<String, ActivePromptTiming>>,
 }
 
 impl PromptTimingState {
-    fn activate(&self, prompt: &PromptSubmission) {
+    fn activate(&self, session_id: &str, prompt: &PromptSubmission) {
         let now = now_unix_s();
         let preview = prompt.preview();
         let mut active = self.active.lock().unwrap();
-        *active = Some(ActivePromptTiming {
-            id: prompt.id,
-            preview: preview.clone(),
-            submitted_at_unix_s: prompt.submitted_at_unix_s,
-            received_at_unix_s: Some(now),
-            context_ready_at_unix_s: None,
-            prompt_sent_at_unix_s: None,
-            first_stdin_write_at_unix_s: None,
-            bytes_written_after_prompt: 0,
-            first_stdout_byte_at_unix_s: None,
-            bytes_read_after_prompt: 0,
-            first_event_at_unix_s: None,
-            first_event_kind: None,
-            first_text_at_unix_s: None,
-            first_tool_call_at_unix_s: None,
-            first_permission_at_unix_s: None,
-            permission_requested_at_unix_s: None,
-            permission_wait_total_s: 0.0,
-            event_count: 0,
-        });
+        active.insert(
+            session_id.to_string(),
+            ActivePromptTiming {
+                id: prompt.id,
+                preview: preview.clone(),
+                submitted_at_unix_s: prompt.submitted_at_unix_s,
+                received_at_unix_s: Some(now),
+                context_ready_at_unix_s: None,
+                prompt_sent_at_unix_s: None,
+                first_stdin_write_at_unix_s: None,
+                bytes_written_after_prompt: 0,
+                first_stdout_byte_at_unix_s: None,
+                bytes_read_after_prompt: 0,
+                first_event_at_unix_s: None,
+                first_event_kind: None,
+                first_text_at_unix_s: None,
+                first_tool_call_at_unix_s: None,
+                first_permission_at_unix_s: None,
+                permission_requested_at_unix_s: None,
+                permission_wait_total_s: 0.0,
+                event_count: 0,
+            },
+        );
         drop(active);
 
         prompt_timing_log(
@@ -228,10 +264,10 @@ impl PromptTimingState {
         );
     }
 
-    fn mark_context_ready(&self, prompt_len: usize) {
+    fn mark_context_ready(&self, session_id: &str, prompt_len: usize) {
         let now = now_unix_s();
         let mut guard = self.active.lock().unwrap();
-        if let Some(active) = guard.as_mut() {
+        if let Some(active) = guard.get_mut(session_id) {
             active.context_ready_at_unix_s = Some(now);
             let turn_id = active.id;
             let submitted_at_unix_s = active.submitted_at_unix_s;
@@ -245,10 +281,10 @@ impl PromptTimingState {
         }
     }
 
-    fn mark_prompt_sent(&self) {
+    fn mark_prompt_sent(&self, session_id: &str) {
         let now = now_unix_s();
         let mut guard = self.active.lock().unwrap();
-        if let Some(active) = guard.as_mut() {
+        if let Some(active) = guard.get_mut(session_id) {
             active.prompt_sent_at_unix_s = Some(now);
             let turn_id = active.id;
             let submitted_at_unix_s = active.submitted_at_unix_s;
@@ -261,10 +297,10 @@ impl PromptTimingState {
         }
     }
 
-    fn observe_session_update(&self, kind: &str) {
+    fn observe_session_update(&self, session_id: &str, kind: &str) {
         let now = now_unix_s();
         let mut guard = self.active.lock().unwrap();
-        if let Some(active) = guard.as_mut() {
+        if let Some(active) = guard.get_mut(session_id) {
             active.event_count += 1;
             if active.first_event_at_unix_s.is_none() {
                 active.first_event_at_unix_s = Some(now);
@@ -285,65 +321,63 @@ impl PromptTimingState {
     fn observe_stdin_write(&self, bytes: usize) {
         let now = now_unix_s();
         let mut guard = self.active.lock().unwrap();
-        if let Some(active) = guard.as_mut() {
+        let mut updates = Vec::new();
+        for active in guard.values_mut() {
             if active.prompt_sent_at_unix_s.is_none() {
-                return;
+                continue;
             }
-
             active.bytes_written_after_prompt += bytes as u64;
             if active.first_stdin_write_at_unix_s.is_none() {
                 active.first_stdin_write_at_unix_s = Some(now);
-                let turn_id = active.id;
-                let submitted_at_unix_s = active.submitted_at_unix_s;
-                let details = format!(
-                    "bytes={} since_prompt_sent={}",
-                    bytes,
-                    format_elapsed(active.prompt_sent_at_unix_s, Some(now))
-                );
-                drop(guard);
-                prompt_timing_log(
-                    turn_id,
-                    submitted_at_unix_s,
-                    "first_transport_write",
-                    &details,
-                );
+                updates.push((
+                    active.id,
+                    active.submitted_at_unix_s,
+                    format!(
+                        "bytes={} since_prompt_sent={}",
+                        bytes,
+                        format_elapsed(active.prompt_sent_at_unix_s, Some(now))
+                    ),
+                ));
             }
+        }
+        drop(guard);
+        for (turn_id, submitted, details) in updates {
+            prompt_timing_log(turn_id, submitted, "first_transport_write", &details);
         }
     }
 
     fn observe_stdout_read(&self, bytes: usize) {
         let now = now_unix_s();
         let mut guard = self.active.lock().unwrap();
-        if let Some(active) = guard.as_mut() {
+        let mut updates = Vec::new();
+        for active in guard.values_mut() {
             if active.prompt_sent_at_unix_s.is_none() {
-                return;
+                continue;
             }
-
             active.bytes_read_after_prompt += bytes as u64;
             if active.first_stdout_byte_at_unix_s.is_none() {
                 active.first_stdout_byte_at_unix_s = Some(now);
-                let turn_id = active.id;
-                let submitted_at_unix_s = active.submitted_at_unix_s;
-                let details = format!(
-                    "bytes={} since_prompt_sent={}",
-                    bytes,
-                    format_elapsed(active.prompt_sent_at_unix_s, Some(now))
-                );
-                drop(guard);
-                prompt_timing_log(
-                    turn_id,
-                    submitted_at_unix_s,
-                    "first_transport_read",
-                    &details,
-                );
+                updates.push((
+                    active.id,
+                    active.submitted_at_unix_s,
+                    format!(
+                        "bytes={} since_prompt_sent={}",
+                        bytes,
+                        format_elapsed(active.prompt_sent_at_unix_s, Some(now))
+                    ),
+                ));
             }
+        }
+        drop(guard);
+        for (turn_id, submitted, details) in updates {
+            prompt_timing_log(turn_id, submitted, "first_transport_read", &details);
         }
     }
 
-    fn observe_first_text(&self, text_len: usize) {
+    fn observe_first_text(&self, session_id: &str, text_len: usize) {
         let now = now_unix_s();
         let mut guard = self.active.lock().unwrap();
-        if let Some(active) = guard.as_mut() {
+        if let Some(active) = guard.get_mut(session_id) {
             if active.first_text_at_unix_s.is_none() {
                 active.first_text_at_unix_s = Some(now);
                 let (visible_gap, visible_gap_source) = first_visible_text_gap(
@@ -366,10 +400,10 @@ impl PromptTimingState {
         }
     }
 
-    fn observe_first_tool_call(&self, title: Option<&str>) {
+    fn observe_first_tool_call(&self, session_id: &str, title: Option<&str>) {
         let now = now_unix_s();
         let mut guard = self.active.lock().unwrap();
-        if let Some(active) = guard.as_mut() {
+        if let Some(active) = guard.get_mut(session_id) {
             if active.first_tool_call_at_unix_s.is_none() {
                 active.first_tool_call_at_unix_s = Some(now);
                 let turn_id = active.id;
@@ -386,10 +420,10 @@ impl PromptTimingState {
         }
     }
 
-    fn permission_requested(&self, description: &str) {
+    fn permission_requested(&self, session_id: &str, description: &str) {
         let now = now_unix_s();
         let mut guard = self.active.lock().unwrap();
-        if let Some(active) = guard.as_mut() {
+        if let Some(active) = guard.get_mut(session_id) {
             if active.first_permission_at_unix_s.is_none() {
                 active.first_permission_at_unix_s = Some(now);
             }
@@ -411,10 +445,10 @@ impl PromptTimingState {
         }
     }
 
-    fn permission_resolved(&self, outcome: &str) {
+    fn permission_resolved(&self, session_id: &str, outcome: &str) {
         let now = now_unix_s();
         let mut guard = self.active.lock().unwrap();
-        if let Some(active) = guard.as_mut() {
+        if let Some(active) = guard.get_mut(session_id) {
             let wait_s = active
                 .permission_requested_at_unix_s
                 .map(|start| (now - start).max(0.0))
@@ -433,10 +467,10 @@ impl PromptTimingState {
         }
     }
 
-    fn complete(&self, success: bool, error: Option<&str>) -> Option<String> {
+    fn complete(&self, session_id: &str, success: bool, error: Option<&str>) -> Option<String> {
         let now = now_unix_s();
         let mut active = self.active.lock().unwrap();
-        let Some(active_prompt) = active.take() else {
+        let Some(active_prompt) = active.remove(session_id) else {
             return None;
         };
         drop(active);
@@ -580,29 +614,51 @@ fn requested_model_id(program: &str, args: &[&str]) -> Option<String> {
     crate::agent_registry::extract_model_from_args(args, profile).map(str::to_string)
 }
 
-fn complete_prompt_request<T, E: std::fmt::Display>(
+async fn complete_prompt_request<T, E: std::fmt::Display>(
     result: std::result::Result<T, E>,
     prompt_timing: &PromptTimingState,
     event_tx: &mpsc::UnboundedSender<AppEvent>,
+    session_id: String,
 ) {
     match result {
         Ok(_) => {
-            let timing_note = prompt_timing.complete(true, None);
+            let timing_note = prompt_timing.complete(&session_id, true, None);
             if let Some(note) = timing_note {
-                let _ = event_tx.send(AppEvent::TimingMetric(note));
+                let _ = event_tx.send(AppEvent::TimingMetric {
+                    session_id: session_id.clone(),
+                    note,
+                });
             }
-            let _ = event_tx.send(AppEvent::AgentMessageEnd);
+            // Defensive workaround for ACP-non-compliant agents.
+            //
+            // ACP requires the Agent to send all pending `session/update`
+            // notifications BEFORE responding to `session/prompt` (see ACP
+            // 0.10 agent.rs:80-101 — `prompt` "Returns when the turn is
+            // complete with a stop reason"). In practice GitHub Copilot
+            // occasionally flushes a few trailing AgentMessageChunk
+            // notifications a few hundred microseconds AFTER the
+            // PromptResponse, which leaves `pending_agent_response`
+            // truncated when `AgentMessageEnd` triggers finalize. We sleep
+            // briefly so stragglers land in pending_agent_response before
+            // finalize_agent_response_for takes ownership of it.
+            //
+            // Once Copilot honors the spec, this delay can be removed.
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let _ = event_tx.send(AppEvent::AgentMessageEnd { session_id });
         }
         Err(e) => {
             let error_message = e.to_string();
-            let timing_note = prompt_timing.complete(false, Some(&error_message));
+            let timing_note = prompt_timing.complete(&session_id, false, Some(&error_message));
             if let Some(note) = timing_note {
-                let _ = event_tx.send(AppEvent::TimingMetric(note));
+                let _ = event_tx.send(AppEvent::TimingMetric {
+                    session_id: session_id.clone(),
+                    note,
+                });
             }
-            let _ = event_tx.send(AppEvent::AgentError(format!(
-                "prompt error: {}",
-                error_message
-            )));
+            let _ = event_tx.send(AppEvent::AgentError {
+                session_id: Some(session_id),
+                message: format!("prompt error: {}", error_message),
+            });
         }
     }
 }
@@ -815,7 +871,7 @@ async fn build_terminal_context_json(shell_mgr: &ShellManager) -> Option<String>
         return None;
     }
 
-    let target_pane_id = json_str_or_num(active.get("pane_id"))?;
+    let target_pane_id = json_str_or_num(active.get("session_id"))?;
     let target_window_title = active
         .get("title")
         .and_then(|v| v.as_str())
@@ -1175,13 +1231,16 @@ impl acp::Client for WtaClient {
         args: acp::RequestPermissionRequest,
     ) -> acp::Result<acp::RequestPermissionResponse> {
         acp_log(&format!("request_permission: {:?}", args.tool_call.fields.title));
+        let session_id = args.session_id.0.to_string();
         let description = args
             .tool_call
             .fields
             .title
             .clone()
             .unwrap_or_else(|| "Permission requested".to_string());
-        self.state.prompt_timing.permission_requested(&description);
+        self.state
+            .prompt_timing
+            .permission_requested(&session_id, &description);
 
         let options: Vec<PermOption> = args
             .options
@@ -1196,6 +1255,7 @@ impl acp::Client for WtaClient {
         let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
 
         let _ = self.state.event_tx.send(AppEvent::PermissionRequest {
+            session_id: session_id.clone(),
             description,
             options,
             responder: resp_tx,
@@ -1204,7 +1264,9 @@ impl acp::Client for WtaClient {
         // Wait for user to choose
         match resp_rx.await {
             Ok(option_id) => {
-                self.state.prompt_timing.permission_resolved("selected");
+                self.state
+                    .prompt_timing
+                    .permission_resolved(&session_id, "selected");
                 Ok(acp::RequestPermissionResponse::new(
                     acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(
                         option_id,
@@ -1212,7 +1274,9 @@ impl acp::Client for WtaClient {
                 ))
             }
             Err(_) => {
-                self.state.prompt_timing.permission_resolved("cancelled");
+                self.state
+                    .prompt_timing
+                    .permission_resolved(&session_id, "cancelled");
                 Ok(acp::RequestPermissionResponse::new(
                     acp::RequestPermissionOutcome::Cancelled,
                 ))
@@ -1222,34 +1286,36 @@ impl acp::Client for WtaClient {
 
     async fn session_notification(&self, args: acp::SessionNotification) -> acp::Result<()> {
         acp_log(&format!("session_notification: {:?}", args.update));
+        let sid = args.session_id.0.to_string();
         self.state
             .prompt_timing
-            .observe_session_update(session_update_kind(&args.update));
+            .observe_session_update(&sid, session_update_kind(&args.update));
         match args.update {
             acp::SessionUpdate::AgentThoughtChunk(chunk) => {
                 if let acp::ContentBlock::Text(text_content) = chunk.content {
-                    let _ = self
-                        .state
-                        .event_tx
-                        .send(AppEvent::AgentThoughtChunk(text_content.text));
+                    let _ = self.state.event_tx.send(AppEvent::AgentThoughtChunk {
+                        session_id: sid,
+                        text: text_content.text,
+                    });
                 }
             }
             acp::SessionUpdate::AgentMessageChunk(chunk) => {
                 if let acp::ContentBlock::Text(text_content) = chunk.content {
                     self.state
                         .prompt_timing
-                        .observe_first_text(text_content.text.len());
-                    let _ = self
-                        .state
-                        .event_tx
-                        .send(AppEvent::AgentMessageChunk(text_content.text));
+                        .observe_first_text(&sid, text_content.text.len());
+                    let _ = self.state.event_tx.send(AppEvent::AgentMessageChunk {
+                        session_id: sid,
+                        text: text_content.text,
+                    });
                 }
             }
             acp::SessionUpdate::ToolCall(tool_call) => {
                 self.state
                     .prompt_timing
-                    .observe_first_tool_call(Some(tool_call.title.as_str()));
+                    .observe_first_tool_call(&sid, Some(tool_call.title.as_str()));
                 let _ = self.state.event_tx.send(AppEvent::ToolCall {
+                    session_id: sid,
                     id: tool_call.tool_call_id.to_string(),
                     title: tool_call.title.clone(),
                     status: format!("{:?}", tool_call.status),
@@ -1258,6 +1324,7 @@ impl acp::Client for WtaClient {
             acp::SessionUpdate::ToolCallUpdate(update) => {
                 if let Some(status) = &update.fields.status {
                     let _ = self.state.event_tx.send(AppEvent::ToolCallUpdate {
+                        session_id: sid,
                         id: update.tool_call_id.to_string(),
                         status: format!("{:?}", status),
                     });
@@ -1276,7 +1343,10 @@ impl acp::Client for WtaClient {
                         },
                     })
                     .collect();
-                let _ = self.state.event_tx.send(AppEvent::Plan(entries));
+                let _ = self.state.event_tx.send(AppEvent::Plan {
+                    session_id: sid,
+                    entries,
+                });
             }
             _ => {} // Ignore other update types for now
         }
@@ -1302,10 +1372,12 @@ impl acp::Client for WtaClient {
             env,
         };
 
+        let session_id = args.session_id.0.to_string();
         match self.state.shell_mgr.create_terminal(config).await {
             Ok(id) => {
                 // Show tool-call-like feedback
                 let _ = self.state.event_tx.send(AppEvent::ToolCall {
+                    session_id,
                     id: id.clone(),
                     title: format!("{} {}", args.command, args.args.join(" ")),
                     status: "running".to_string(),
@@ -1342,11 +1414,13 @@ impl acp::Client for WtaClient {
         args: acp::WaitForTerminalExitRequest,
     ) -> acp::Result<acp::WaitForTerminalExitResponse> {
         let tid = args.terminal_id.to_string();
+        let session_id = args.session_id.0.to_string();
 
         match self.state.shell_mgr.wait_for_exit(&tid).await {
             Ok(code) => {
                 // Update tool call status
                 let _ = self.state.event_tx.send(AppEvent::ToolCallUpdate {
+                    session_id,
                     id: tid,
                     status: format!("exited ({})", code),
                 });
@@ -1389,6 +1463,9 @@ pub async fn run_acp_client(
     acp_model_override: Option<String>,
     event_tx: mpsc::UnboundedSender<AppEvent>,
     mut prompt_rx: mpsc::UnboundedReceiver<PromptSubmission>,
+    mut cancel_rx: mpsc::UnboundedReceiver<CancelRequest>,
+    mut new_session_rx: mpsc::UnboundedReceiver<NewSessionForTab>,
+    mut restart_rx: mpsc::UnboundedReceiver<RestartRequest>,
     shell_mgr: Arc<ShellManager>,
     wt_connected: bool,
 ) {
@@ -1397,32 +1474,81 @@ pub async fn run_acp_client(
         "run_acp_client task start agent_cmd={} acp_model={:?} wt_connected={}",
         agent_cmd, acp_model_override, wt_connected
     ));
-    startup_probe.log("run_acp_client entering run_inner");
-    if let Err(e) = run_inner(
-        agent_cmd,
-        acp_model_override,
-        event_tx.clone(),
-        &mut prompt_rx,
-        shell_mgr,
-        wt_connected,
-    )
-    .await
-    {
-        startup_probe.log(&format!("run_acp_client failed: {:#}", e));
-        let _ = event_tx.send(AppEvent::AgentError(format!("{:#}", e)));
-    } else {
-        startup_probe.log("run_acp_client completed");
+
+    // Restart loop. `run_inner` returns `ExitReason::Restart` when the
+    // user invokes `/restart`; we re-enter to spawn a fresh agent
+    // process. Any other return (Done or Err) breaks the loop.
+    loop {
+        startup_probe.log("run_acp_client entering run_inner");
+        match run_inner(
+            &agent_cmd,
+            acp_model_override.clone(),
+            event_tx.clone(),
+            &mut prompt_rx,
+            &mut cancel_rx,
+            &mut new_session_rx,
+            &mut restart_rx,
+            Arc::clone(&shell_mgr),
+            wt_connected,
+        )
+        .await
+        {
+            Ok(ExitReason::Done) => {
+                startup_probe.log("run_acp_client completed");
+                break;
+            }
+            Ok(ExitReason::Restart) => {
+                startup_probe.log("run_acp_client restart requested — respawning agent");
+                let _ = event_tx.send(AppEvent::ConnectionStage(
+                    "Restarting agent...".to_string(),
+                ));
+                continue;
+            }
+            Err(e) => {
+                startup_probe.log(&format!(
+                    "run_acp_client failed: {:#} — waiting for /restart",
+                    e
+                ));
+                let _ = event_tx.send(AppEvent::AgentError {
+                    session_id: None,
+                    message: format!("{:#}", e),
+                });
+                // Don't break — a transient failure (e.g. agent crashed
+                // during a self-update race) shouldn't permanently kill
+                // the supervisor. Park here listening for /restart so the
+                // user can recover without restarting the whole terminal.
+                match restart_rx.recv().await {
+                    Some(_) => {
+                        startup_probe.log(
+                            "run_acp_client restart requested after failure — respawning agent",
+                        );
+                        let _ = event_tx.send(AppEvent::ConnectionStage(
+                            "Restarting agent...".to_string(),
+                        ));
+                        continue;
+                    }
+                    None => {
+                        startup_probe
+                            .log("run_acp_client restart channel closed — exiting supervisor");
+                        break;
+                    }
+                }
+            }
+        }
     }
 }
 
 async fn run_inner(
-    agent_cmd: String,
+    agent_cmd: &str,
     acp_model_override: Option<String>,
     event_tx: mpsc::UnboundedSender<AppEvent>,
     prompt_rx: &mut mpsc::UnboundedReceiver<PromptSubmission>,
+    cancel_rx: &mut mpsc::UnboundedReceiver<CancelRequest>,
+    new_session_rx: &mut mpsc::UnboundedReceiver<NewSessionForTab>,
+    restart_rx: &mut mpsc::UnboundedReceiver<RestartRequest>,
     shell_mgr: Arc<ShellManager>,
     wt_connected: bool,
-) -> Result<()> {
+) -> Result<ExitReason> {
     let startup_probe = StartupProbe::new();
 
     // Parse agent command into program + args, resolving bare names (e.g.
@@ -1512,11 +1638,31 @@ async fn run_inner(
         });
     }
 
+    // The wait task either logs a natural agent exit, or — when the
+    // /restart slash-command fires `kill_req_tx` — terminates the child
+    // synchronously so the next `run_inner` iteration can spawn a fresh
+    // process without orphaning the old one.
+    let (kill_req_tx, kill_req_rx) = tokio::sync::oneshot::channel::<()>();
+    let mut kill_req_tx = Some(kill_req_tx);
     let child_probe = startup_probe.clone();
     tokio::task::spawn_local(async move {
-        match child.wait().await {
-            Ok(status) => child_probe.log(&format!("Agent process exited: {}", status)),
-            Err(e) => child_probe.log(&format!("Agent wait failed: {}", e)),
+        let mut kill_req_rx = kill_req_rx;
+        tokio::select! {
+            _ = &mut kill_req_rx => {
+                if let Err(e) = child.kill().await {
+                    child_probe.log(&format!("Agent kill failed: {}", e));
+                } else {
+                    child_probe.log("Agent process killed (restart)");
+                }
+                // Reap to avoid zombies on Unix; on Windows it's a no-op.
+                let _ = child.wait().await;
+            }
+            status = child.wait() => {
+                match status {
+                    Ok(s) => child_probe.log(&format!("Agent process exited: {}", s)),
+                    Err(e) => child_probe.log(&format!("Agent wait failed: {}", e)),
+                }
+            }
         }
     });
 
@@ -1686,40 +1832,392 @@ async fn run_inner(
         current_model_id,
     });
 
-    // Prompt loop: wait for user input, send to agent
-    while let Some(prompt) = prompt_rx.recv().await {
-        state.prompt_timing.activate(&prompt);
-        let _ = event_tx.send(AppEvent::ProgressStatus("Preparing context...".to_string()));
-        let (text, prompt_source, prompt_name) = build_prompt_text(
-            prompt.id,
-            prompt.submitted_at_unix_s,
-            &prompt.text,
-            prompt.is_autofix,
-            &shell_mgr,
-            wt_connected,
-            prompt.pane_context.as_ref(),
-        )
-        .await;
-        let _ = event_tx.send(AppEvent::PromptTemplateLoaded { name: prompt_name });
-        state.prompt_timing.mark_context_ready(text.len());
-        acp_log_built_prompt(
-            &prompt.text,
-            prompt.pane_context.as_ref(),
-            &prompt_source,
-            &text,
-        );
-        let _ = event_tx.send(AppEvent::ProgressStatus("Thinking...".to_string()));
-        state.prompt_timing.mark_prompt_sent();
-        let result = conn
-            .prompt(acp::PromptRequest::new(
-                session_id.clone(),
-                vec![text.into()],
-            ))
-            .await;
-        complete_prompt_request(result, &state.prompt_timing, &event_tx);
+    // Per-tab session cache, shared across all in-flight prompt tasks.
+    // The startup session is bound to tab "0" so the agent_status event
+    // pipeline lights up immediately. New tabs lazily create their own
+    // session on first prompt — see `ensure_session_for_tab`.
+    let tab_to_session: Arc<tokio::sync::Mutex<HashMap<String, acp::SessionId>>> =
+        Arc::new(tokio::sync::Mutex::new(HashMap::new()));
+    {
+        let mut g = tab_to_session.lock().await;
+        g.insert("0".to_string(), session_id.clone());
     }
 
-    Ok(())
+    // Same-tab single-flight guard: at most one prompt in flight per tab.
+    // The ACP protocol allows concurrent prompts across sessions, but
+    // within a session the turns must be ordered, so we enforce per-tab
+    // serialization here. Per-tab + per-session match because each tab
+    // gets its own session.
+    let in_flight_tabs: Arc<std::sync::Mutex<HashSet<String>>> =
+        Arc::new(std::sync::Mutex::new(HashSet::new()));
+
+    // Per-prompt cancel oneshot, keyed on SessionId. Each spawned prompt
+    // task registers a sender here on entry and removes it on exit. The
+    // cancel listener task signals through it to break the spawned task
+    // out of `conn.prompt().await` even if the agent is slow to honor
+    // session/cancel.
+    let cancel_signals: Arc<std::sync::Mutex<HashMap<String, tokio::sync::oneshot::Sender<()>>>> =
+        Arc::new(std::sync::Mutex::new(HashMap::new()));
+
+    // The connection is shared across all spawned prompt tasks.
+    let conn = Arc::new(conn);
+
+    // Main event loop. `tokio::select!` lets the cancel/new_session/restart
+    // receivers stay borrowed by `&mut` (rather than moved into detached
+    // tasks via `mem::replace`) so they survive across reconnects.
+    //
+    // The async work for cancel and new_session is offloaded to
+    // `spawn_local` subtasks so a slow agent (e.g. a 15s new_session
+    // call) doesn't stall prompt dispatch.
+    let exit_reason = loop {
+        tokio::select! {
+            biased;
+            // /restart: priority over other arms via `biased;` so a
+            // queued prompt can't sneak in front of a kill request.
+            Some(_) = restart_rx.recv() => {
+                tracing::info!(target: "acp_restart", "restart requested");
+                if let Some(tx) = kill_req_tx.take() {
+                    let _ = tx.send(());
+                }
+                // Signal every in-flight prompt task to drop out, so
+                // they don't keep emitting chunks against the dead
+                // connection.
+                let mut signals = cancel_signals.lock().unwrap();
+                for (_, sig) in signals.drain() {
+                    let _ = sig.send(());
+                }
+                break ExitReason::Restart;
+            }
+            Some(req) = cancel_rx.recv() => {
+                let session_id_str = req.session_id.clone();
+                tracing::info!(target: "acp_cancel", session_id = %session_id_str, "cancel requested");
+                // Local oneshot first — it's the critical path for
+                // breaking the spawned prompt task out of conn.prompt().
+                if let Some(sig) = cancel_signals.lock().unwrap().remove(&session_id_str) {
+                    let _ = sig.send(());
+                }
+                // Best-effort agent notification. Spawned so the loop
+                // stays responsive even if the agent is slow to ack.
+                let conn_for_cancel = Arc::clone(&conn);
+                tokio::task::spawn_local(async move {
+                    let session_id = acp::SessionId::new(session_id_str.clone());
+                    if let Err(e) = conn_for_cancel
+                        .cancel(acp::CancelNotification::new(session_id))
+                        .await
+                    {
+                        tracing::warn!(target: "acp_cancel", session_id = %session_id_str, error = ?e, "session/cancel rpc failed (likely unsupported)");
+                    }
+                });
+            }
+            Some(req) = new_session_rx.recv() => {
+                tracing::info!(
+                    target: "acp_new_session",
+                    tab = %req.tab_id,
+                    "new_session requested"
+                );
+                let conn_for_new = Arc::clone(&conn);
+                let tab_to_session_for_new = Arc::clone(&tab_to_session);
+                let cancel_signals_for_new = Arc::clone(&cancel_signals);
+                let event_tx_for_new = event_tx.clone();
+                tokio::task::spawn_local(async move {
+                    let cwd = req
+                        .cwd
+                        .clone()
+                        .map(std::path::PathBuf::from)
+                        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+
+                    let old_sid: Option<acp::SessionId> = {
+                        let mut g = tab_to_session_for_new.lock().await;
+                        g.remove(&req.tab_id)
+                    };
+
+                    if let Some(ref old) = old_sid {
+                        let old_str = old.to_string();
+                        if let Some(sig) = cancel_signals_for_new
+                            .lock()
+                            .unwrap()
+                            .remove(&old_str)
+                        {
+                            let _ = sig.send(());
+                        }
+                        let _ = conn_for_new
+                            .cancel(acp::CancelNotification::new(old.clone()))
+                            .await;
+                    }
+
+                    let new_session = match conn_for_new
+                        .new_session(acp::NewSessionRequest::new(cwd))
+                        .await
+                    {
+                        Ok(s) => s,
+                        Err(e) => {
+                            let _ = event_tx_for_new.send(AppEvent::AgentError {
+                                session_id: None,
+                                message: format!("/new failed for tab {}: {}", req.tab_id, e),
+                            });
+                            return;
+                        }
+                    };
+
+                    let new_sid = new_session.session_id.clone();
+                    let (per_tab_models, per_tab_current) = match &new_session.models {
+                        Some(state) => {
+                            let models: Vec<crate::app::AcpModelInfo> = state
+                                .available_models
+                                .iter()
+                                .map(|m| crate::app::AcpModelInfo {
+                                    id: m.model_id.0.to_string(),
+                                    name: m.name.clone(),
+                                    description: m.description.clone(),
+                                })
+                                .collect();
+                            (models, Some(state.current_model_id.0.to_string()))
+                        }
+                        None => (Vec::new(), None),
+                    };
+
+                    {
+                        let mut g = tab_to_session_for_new.lock().await;
+                        g.insert(req.tab_id.clone(), new_sid.clone());
+                    }
+
+                    let _ = event_tx_for_new.send(AppEvent::SessionAttached {
+                        tab_id: req.tab_id.clone(),
+                        session_id: new_sid.to_string(),
+                        available_models: per_tab_models,
+                        current_model_id: per_tab_current,
+                    });
+                });
+            }
+            Some(prompt) = prompt_rx.recv() => {
+                dispatch_prompt(
+                    prompt,
+                    &conn,
+                    &tab_to_session,
+                    &in_flight_tabs,
+                    &cancel_signals,
+                    &event_tx,
+                    &shell_mgr,
+                    &state.prompt_timing,
+                    wt_connected,
+                );
+            }
+            else => break ExitReason::Done,
+        }
+    };
+
+    Ok(exit_reason)
+}
+
+/// Spawn a per-prompt task that resolves the tab's ACP session (lazily
+/// creating one if needed), instruments timing, runs `conn.prompt`, and
+/// cleans up state on completion. Extracted from the old inline body in
+/// the prompt while-loop so the new select-based loop body stays terse.
+#[allow(clippy::too_many_arguments)]
+fn dispatch_prompt(
+    prompt: PromptSubmission,
+    conn: &Arc<acp::ClientSideConnection>,
+    tab_to_session: &Arc<tokio::sync::Mutex<HashMap<String, acp::SessionId>>>,
+    in_flight_tabs: &Arc<std::sync::Mutex<HashSet<String>>>,
+    cancel_signals: &Arc<std::sync::Mutex<HashMap<String, tokio::sync::oneshot::Sender<()>>>>,
+    event_tx: &mpsc::UnboundedSender<AppEvent>,
+    shell_mgr: &Arc<ShellManager>,
+    prompt_timing: &Arc<PromptTimingState>,
+    wt_connected: bool,
+) {
+    let tab_key = prompt
+        .pane_context
+        .as_ref()
+        .and_then(|c| c.tab_id.clone())
+        .unwrap_or_else(|| "0".to_string());
+
+    {
+        let mut g = in_flight_tabs.lock().unwrap();
+        if !g.insert(tab_key.clone()) {
+            let _ = event_tx.send(AppEvent::AgentBusy {
+                tab_id: tab_key.clone(),
+            });
+            return;
+        }
+    }
+
+    let conn_task = Arc::clone(conn);
+    let tab_to_session_task = Arc::clone(tab_to_session);
+    let in_flight_tabs_task = Arc::clone(in_flight_tabs);
+    let cancel_signals_task = Arc::clone(cancel_signals);
+    let event_tx_task = event_tx.clone();
+    let shell_mgr_task = Arc::clone(shell_mgr);
+    let prompt_timing_task = Arc::clone(prompt_timing);
+    let tab_key_task = tab_key.clone();
+
+    tokio::task::spawn_local(dispatch_prompt_body(
+        prompt,
+        conn_task,
+        tab_to_session_task,
+        in_flight_tabs_task,
+        cancel_signals_task,
+        event_tx_task,
+        shell_mgr_task,
+        prompt_timing_task,
+        tab_key_task,
+        wt_connected,
+    ));
+}
+
+/// The per-prompt task body: lazily resolves the tab's ACP session,
+/// streams the prompt, listens for cancel, and cleans up. Spawned by
+/// [`dispatch_prompt`] and never called directly from the event loop.
+#[allow(clippy::too_many_arguments)]
+async fn dispatch_prompt_body(
+    prompt: PromptSubmission,
+    conn_task: Arc<acp::ClientSideConnection>,
+    tab_to_session_task: Arc<tokio::sync::Mutex<HashMap<String, acp::SessionId>>>,
+    in_flight_tabs_task: Arc<std::sync::Mutex<HashSet<String>>>,
+    cancel_signals_task: Arc<std::sync::Mutex<HashMap<String, tokio::sync::oneshot::Sender<()>>>>,
+    event_tx_task: mpsc::UnboundedSender<AppEvent>,
+    shell_mgr_task: Arc<ShellManager>,
+    prompt_timing_task: Arc<PromptTimingState>,
+    tab_key_task: String,
+    wt_connected: bool,
+) {
+            // Resolve (or lazily create) the ACP session for this tab.
+            let prompt_session_id = {
+                let mut g = tab_to_session_task.lock().await;
+                if let Some(sid) = g.get(&tab_key_task) {
+                    sid.clone()
+                } else {
+                    let cwd = prompt
+                        .pane_context
+                        .as_ref()
+                        .and_then(|c| c.cwd.clone())
+                        .map(std::path::PathBuf::from)
+                        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+                    let new_session = match conn_task
+                        .new_session(acp::NewSessionRequest::new(cwd))
+                        .await
+                    {
+                        Ok(s) => s,
+                        Err(e) => {
+                            let _ = event_tx_task.send(AppEvent::AgentError {
+                                session_id: None,
+                                message: format!(
+                                    "new_session failed for tab {}: {}",
+                                    tab_key_task, e
+                                ),
+                            });
+                            in_flight_tabs_task.lock().unwrap().remove(&tab_key_task);
+                            return;
+                        }
+                    };
+                    let new_sid = new_session.session_id.clone();
+                    let (per_tab_models, per_tab_current) = match &new_session.models {
+                        Some(state) => {
+                            let models: Vec<crate::app::AcpModelInfo> = state
+                                .available_models
+                                .iter()
+                                .map(|m| crate::app::AcpModelInfo {
+                                    id: m.model_id.0.to_string(),
+                                    name: m.name.clone(),
+                                    description: m.description.clone(),
+                                })
+                                .collect();
+                            (models, Some(state.current_model_id.0.to_string()))
+                        }
+                        None => (Vec::new(), None),
+                    };
+                    let _ = event_tx_task.send(AppEvent::SessionAttached {
+                        tab_id: tab_key_task.clone(),
+                        session_id: new_sid.to_string(),
+                        available_models: per_tab_models,
+                        current_model_id: per_tab_current,
+                    });
+                    g.insert(tab_key_task.clone(), new_sid.clone());
+                    new_sid
+                }
+            };
+            let prompt_session_id_str = prompt_session_id.to_string();
+
+            prompt_timing_task.activate(&prompt_session_id_str, &prompt);
+            let _ = event_tx_task.send(AppEvent::ProgressStatus {
+                session_id: Some(prompt_session_id_str.clone()),
+                status: "Preparing context...".to_string(),
+            });
+            let (text, prompt_source, prompt_name) = build_prompt_text(
+                prompt.id,
+                prompt.submitted_at_unix_s,
+                &prompt.text,
+                prompt.is_autofix,
+                &shell_mgr_task,
+                wt_connected,
+                prompt.pane_context.as_ref(),
+            )
+            .await;
+            let _ = event_tx_task.send(AppEvent::PromptTemplateLoaded { name: prompt_name });
+            prompt_timing_task.mark_context_ready(&prompt_session_id_str, text.len());
+            acp_log_built_prompt(
+                &prompt.text,
+                prompt.pane_context.as_ref(),
+                &prompt_source,
+                &text,
+            );
+            let _ = event_tx_task.send(AppEvent::ProgressStatus {
+                session_id: Some(prompt_session_id_str.clone()),
+                status: "Thinking...".to_string(),
+            });
+            prompt_timing_task.mark_prompt_sent(&prompt_session_id_str);
+
+            // Register a cancel oneshot for this prompt. The cancel
+            // listener picks the sender out by session_id and signals it
+            // when the user presses Ctrl+C.
+            let (cancel_tx, cancel_rx) = tokio::sync::oneshot::channel::<()>();
+            cancel_signals_task
+                .lock()
+                .unwrap()
+                .insert(prompt_session_id_str.clone(), cancel_tx);
+
+            let prompt_fut = conn_task.prompt(acp::PromptRequest::new(
+                prompt_session_id.clone(),
+                vec![text.into()],
+            ));
+            tokio::pin!(prompt_fut);
+
+            let cancelled = tokio::select! {
+                result = &mut prompt_fut => {
+                    complete_prompt_request(
+                        result,
+                        &prompt_timing_task,
+                        &event_tx_task,
+                        prompt_session_id_str.clone(),
+                    )
+                    .await;
+                    false
+                }
+                _ = cancel_rx => {
+                    // The user cancelled. Synthesize an AgentMessageEnd
+                    // so the App's session_tab cleanup runs even if the
+                    // agent never resolves the prompt future.
+                    tracing::info!(target: "acp_cancel", session_id = %prompt_session_id_str, "prompt task aborted by cancel");
+                    let _ = prompt_timing_task.complete(
+                        &prompt_session_id_str,
+                        false,
+                        Some("cancelled"),
+                    );
+                    let _ = event_tx_task.send(AppEvent::AgentMessageEnd {
+                        session_id: prompt_session_id_str.clone(),
+                    });
+                    true
+                }
+            };
+            // Drop the in-flight prompt future eagerly when cancelled to
+            // release the connection slot for the next prompt on this tab.
+            drop(prompt_fut);
+            let _ = cancelled;
+
+            cancel_signals_task
+                .lock()
+                .unwrap()
+                .remove(&prompt_session_id_str);
+            in_flight_tabs_task.lock().unwrap().remove(&tab_key_task);
 }
 
 #[cfg(test)]
@@ -1768,30 +2266,45 @@ mod tests {
         );
     }
 
-    #[test]
-    fn successful_prompt_completion_emits_message_end_only() {
+    #[tokio::test]
+    async fn successful_prompt_completion_emits_message_end_only() {
         let (event_tx, mut event_rx) = mpsc::unbounded_channel();
         let prompt_timing = PromptTimingState::default();
 
-        complete_prompt_request(Ok::<(), &str>(()), &prompt_timing, &event_tx);
+        complete_prompt_request(
+            Ok::<(), &str>(()),
+            &prompt_timing,
+            &event_tx,
+            "test-session".to_string(),
+        )
+        .await;
 
         match event_rx.try_recv() {
-            Ok(AppEvent::AgentMessageEnd) => {}
+            Ok(AppEvent::AgentMessageEnd { session_id }) => {
+                assert_eq!(session_id, "test-session");
+            }
             Ok(_) => panic!("expected AgentMessageEnd"),
             Err(err) => panic!("expected AgentMessageEnd, got channel error: {err}"),
         }
         assert!(event_rx.try_recv().is_err());
     }
 
-    #[test]
-    fn failed_prompt_completion_emits_error_only() {
+    #[tokio::test]
+    async fn failed_prompt_completion_emits_error_only() {
         let (event_tx, mut event_rx) = mpsc::unbounded_channel();
         let prompt_timing = PromptTimingState::default();
 
-        complete_prompt_request(Err::<(), _>("boom"), &prompt_timing, &event_tx);
+        complete_prompt_request(
+            Err::<(), _>("boom"),
+            &prompt_timing,
+            &event_tx,
+            "test-session".to_string(),
+        )
+        .await;
 
         match event_rx.try_recv() {
-            Ok(AppEvent::AgentError(message)) => {
+            Ok(AppEvent::AgentError { session_id, message }) => {
+                assert_eq!(session_id.as_deref(), Some("test-session"));
                 assert_eq!(message, "prompt error: boom");
             }
             Ok(_) => panic!("expected AgentError"),

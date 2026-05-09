@@ -194,6 +194,8 @@
       <DependentUpon>FreOverlay.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="WindowsPackageManagerFactory.h" />
+    <ClInclude Include="WtaProcessLauncher.h" />
+    <ClInclude Include="TerminalProtocolPipeServer.h" />
   </ItemGroup>
   <!-- ========================= Cpp Files ======================== -->
   <ItemGroup>
@@ -236,6 +238,8 @@
       <DependentUpon>TerminalPage.xaml</DependentUpon>
       <SubType>Code</SubType>
     </ClCompile>
+    <ClCompile Include="WtaProcessLauncher.cpp" />
+    <ClCompile Include="TerminalProtocolPipeServer.cpp" />
     <ClCompile Include="TerminalTabStatus.cpp">
       <DependentUpon>TerminalTabStatus.idl</DependentUpon>
       <SubType>Code</SubType>

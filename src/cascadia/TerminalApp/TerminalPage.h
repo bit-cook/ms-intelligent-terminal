@@ -48,6 +48,10 @@ namespace winrt::TerminalApp::implementation
         Initialized = 2
     };
 
+    // Forward decls for the per-wta protocol pipe transport (Phase 1 — used by
+    // the delegation flow at present; will be extended to the agent pane).
+    struct AgentDelegationEntry;
+
     enum ScrollDirection : int
     {
         ScrollUp = 0,
@@ -183,15 +187,15 @@ namespace winrt::TerminalApp::implementation
         Windows::Foundation::IAsyncOperation<Microsoft::Terminal::Protocol::PaneInfo> GetProtocolActivePane();
         Windows::Foundation::IAsyncOperation<Windows::Foundation::Collections::IVector<Microsoft::Terminal::Protocol::TabInfo>> GetProtocolTabs();
         Windows::Foundation::IAsyncOperation<Windows::Foundation::Collections::IVector<Microsoft::Terminal::Protocol::PaneInfo>> GetProtocolPanes(uint32_t tabIdFilter);
-        Windows::Foundation::IAsyncOperation<Microsoft::Terminal::Protocol::PaneOutput> ReadProtocolPaneOutput(uint32_t paneId, hstring source, int32_t maxLines);
-        Windows::Foundation::IAsyncOperation<Microsoft::Terminal::Protocol::ProcessStatus> GetProtocolProcessStatus(uint32_t paneId);
-        Windows::Foundation::IAsyncOperation<Microsoft::Terminal::Protocol::SessionVariable> GetProtocolSessionVariable(uint32_t paneId, hstring name);
-        Windows::Foundation::IAsyncOperation<bool> SetProtocolSessionVariable(uint32_t paneId, hstring name, hstring value);
+        Windows::Foundation::IAsyncOperation<Microsoft::Terminal::Protocol::PaneOutput> ReadProtocolPaneOutput(winrt::guid sessionId, hstring source, int32_t maxLines);
+        Windows::Foundation::IAsyncOperation<Microsoft::Terminal::Protocol::ProcessStatus> GetProtocolProcessStatus(winrt::guid sessionId);
+        Windows::Foundation::IAsyncOperation<Microsoft::Terminal::Protocol::SessionVariable> GetProtocolSessionVariable(winrt::guid sessionId, hstring name);
+        Windows::Foundation::IAsyncOperation<bool> SetProtocolSessionVariable(winrt::guid sessionId, hstring name, hstring value);
         Windows::Foundation::IAsyncOperation<Microsoft::Terminal::Protocol::TabCreationResult> CreateProtocolTab(Microsoft::Terminal::Settings::Model::NewTerminalArgs args, bool background);
-        Windows::Foundation::IAsyncOperation<Microsoft::Terminal::Protocol::TabCreationResult> SplitProtocolPane(uint32_t paneId, Microsoft::Terminal::Settings::Model::SplitDirection direction, float size, Microsoft::Terminal::Settings::Model::NewTerminalArgs args, bool background);
-        Windows::Foundation::IAsyncOperation<bool> CloseProtocolPane(uint32_t paneId);
-        Windows::Foundation::IAsyncOperation<bool> SendProtocolInput(uint32_t paneId, hstring text);
-        Windows::Foundation::IAsyncOperation<bool> FocusProtocolPane(uint32_t paneId);
+        Windows::Foundation::IAsyncOperation<Microsoft::Terminal::Protocol::TabCreationResult> SplitProtocolPane(winrt::guid sessionId, Microsoft::Terminal::Settings::Model::SplitDirection direction, float size, Microsoft::Terminal::Settings::Model::NewTerminalArgs args, bool background);
+        Windows::Foundation::IAsyncOperation<bool> CloseProtocolPane(winrt::guid sessionId);
+        Windows::Foundation::IAsyncOperation<bool> SendProtocolInput(winrt::guid sessionId, hstring text);
+        Windows::Foundation::IAsyncOperation<bool> FocusProtocolPane(winrt::guid sessionId);
         Windows::Foundation::IAsyncOperation<hstring> ShowProtocolQuickPick(hstring title, hstring choicesJson, bool allowFreeInput);
         void OnAutofixStateChanged(hstring eventJson);
         void OnAgentStatusChanged(hstring eventJson);
@@ -301,6 +305,14 @@ namespace winrt::TerminalApp::implementation
         // Single agent pane shared across all tabs in this window.
         std::weak_ptr<Pane> _agentPane;
 
+        // True from when _AutoCreateHiddenAgentPane splits the pane into the
+        // visual tree until its TermControl raises Initialized. While set,
+        // _ReconcileAgentPaneForActiveTab must NOT hide the pane: hiding it
+        // before SwapChainPanel.LayoutUpdated fires kills the chain that
+        // launches wta.exe (no LayoutUpdated -> no _InitializeTerminal -> no
+        // connection.Start()), defeating pre-warming.
+        bool _agentPanePreWarming{ false };
+
         // --- Bottom bar (AI toolbar) ---
         enum class AutofixState
         {
@@ -311,7 +323,7 @@ namespace winrt::TerminalApp::implementation
         };
         struct DiagnosticState
         {
-            std::wstring lastErrorPaneId;
+            std::wstring lastErrorSessionId;
             AutofixState autofixState{ AutofixState::Idle };
             std::wstring fixPreview;        // Armed
             std::wstring hotkeyHint;        // Armed
@@ -345,6 +357,18 @@ namespace winrt::TerminalApp::implementation
         void _TeardownAgentPane();
         void _RebuildAgentStack();
         void _AutoCreateHiddenAgentPane(winrt::com_ptr<Tab> tab);
+
+        // Per-tab agent-pane state reconciliation. The single shared agent
+        // pane follows the active tab based on each tab's AgentPaneOpen()
+        // flag.
+        void _RelocateAgentPaneToTab(winrt::com_ptr<Tab> targetTab);
+        void _ReconcileAgentPaneForActiveTab();
+        void _ClearAllAgentPaneFlags();
+        // Tells wta which tab is currently active so it routes per-tab events
+        // (autofix triggers, prompt deliveries, ...) to the right TabSession.
+        // Deduped against _lastNotifiedAgentTabId so we only emit on change.
+        void _NotifyAgentTabChanged(const winrt::com_ptr<Tab>& targetTab);
+        std::optional<uint32_t> _lastNotifiedAgentTabId{};
 
         winrt::Windows::UI::Xaml::Controls::TextBox::LayoutUpdated_revoker _renamerLayoutUpdatedRevoker;
         int _renamerLayoutCount{ 0 };
@@ -432,7 +456,7 @@ namespace winrt::TerminalApp::implementation
 
         void _InitializeTab(winrt::com_ptr<Tab> newTabImpl, uint32_t insertPosition = -1, bool openInBackground = false);
         void _RegisterTerminalEvents(Microsoft::Terminal::Control::TermControl term);
-        std::string _FindPaneIdForControl(const Microsoft::Terminal::Control::TermControl& control);
+        std::string _FindSessionIdForControl(const Microsoft::Terminal::Control::TermControl& control);
         void _RegisterTabEvents(Tab& hostingTab);
 
         void _DismissTabContextMenus();
@@ -552,6 +576,42 @@ namespace winrt::TerminalApp::implementation
         winrt::com_ptr<Tab> _FindTabContainingAgentPane();
         std::optional<uint32_t> _FindSourceOfAgentPaneId(const std::shared_ptr<Pane>& root);
         void _DelegatePromptToAgent(const winrt::hstring& prompt);
+
+        // Per-wta protocol pipe transport (delegation in-flight processes).
+        // Each entry pairs a PipeServer (IO thread + JSON-RPC dispatcher)
+        // with the spawned wta's process info; entries self-remove on IO
+        // thread exit (peer EOF or wta crash).
+        std::mutex _agentPipeServersMutex;
+        std::vector<std::shared_ptr<AgentDelegationEntry>> _agentPipeServers;
+        void _RemoveAgentPipeServer(AgentDelegationEntry* entry);
+
+        // Pending pipe handles for the next agent-pane wta launch. Set by
+        // _OpenOrReuseAgentPane just before _MakeTerminalPane runs, consumed
+        // by _CreateConnectionFromSettings when it builds the ConptyConnection
+        // valueSet. The unique_handles ensure exception-safe cleanup if the
+        // launch path bails before Initialize takes ownership.
+        struct PendingProtocolPipe
+        {
+            wil::unique_handle wtaRead;
+            wil::unique_handle wtaWrite;
+        };
+        std::optional<PendingProtocolPipe> _pendingProtocolPipeHandles;
+        void _ConsumePendingProtocolPipeIntoValueSet(
+            Windows::Foundation::Collections::ValueSet& valueSet);
+
+        // Set up the pending pipe pair for the next agent-pane wta launch.
+        // wtRead/wtWrite are the wt-side handles owned by the caller; the
+        // wta-side handles are stashed into _pendingProtocolPipeHandles.
+        // Returns false if pipe creation failed (caller proceeds without pipe).
+        bool _PrepareAgentPanePipe(wil::unique_handle& wtRead,
+                                   wil::unique_handle& wtWrite);
+
+        // After _MakeTerminalPane has run, attach a TerminalProtocolPipeServer
+        // backed by the wt-side handles. Caller already verified that
+        // _ConsumePendingProtocolPipeIntoValueSet did fire (i.e. the wta
+        // received the handles).
+        void _AttachAgentPanePipeServer(wil::unique_handle wtRead,
+                                        wil::unique_handle wtWrite);
         void _OpenOrReuseAgentPane(const winrt::hstring& prompt);
         void _FocusAgentPane();
         void _RepositionAgentPanes();

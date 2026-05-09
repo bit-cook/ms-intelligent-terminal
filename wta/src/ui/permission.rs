@@ -5,7 +5,7 @@ use crate::app::App;
 use crate::theme;
 
 pub fn render(frame: &mut Frame, app: &App, area: Rect) {
-    let perm = match &app.permission {
+    let perm = match &app.current_tab().permission {
         Some(p) => p,
         None => return,
     };

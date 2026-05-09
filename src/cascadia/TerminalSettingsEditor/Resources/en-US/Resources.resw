@@ -694,68 +694,80 @@
     <comment>Header for the "extensions" menu item. This navigates to a page that lets you see and modify extensions for the app.</comment>
   </data>
   <data name="Nav_AIAgents.Content" xml:space="preserve">
-    <value>AI Agents</value>
-    <comment>Header for the "AI Agents" menu item. This navigates to a page that lets you configure AI agent integration settings.</comment>
+    <value>Agents</value>
+    <comment>Header for the "Agents" menu item. This navigates to a page that lets you configure AI agent integration settings.</comment>
+  </data>
+  <data name="AIAgents_PageSubtitle.Text" xml:space="preserve">
+    <value>Configure how agents work across your terminal experience</value>
+    <comment>Subtitle shown beneath the page title on the AI Agents settings page.</comment>
   </data>
   <data name="AIAgents_AcpGroupHeader.Text" xml:space="preserve">
-    <value>Agent Pane</value>
-    <comment>Section header for the ACP agent pane settings group.</comment>
+    <value>Agent pane</value>
+    <comment>Section header for the agent pane settings group.</comment>
   </data>
   <data name="AIAgents_DelegateGroupHeader.Text" xml:space="preserve">
-    <value>Delegate Agent</value>
-    <comment>Section header for the delegate agent settings group.</comment>
-  </data>
-  <data name="AIAgents_GeneralGroupHeader.Text" xml:space="preserve">
-    <value>General</value>
-    <comment>Section header for general AI agent settings.</comment>
-  </data>
-  <data name="AIAgents_DelegateModel.Header" xml:space="preserve">
-    <value>Model</value>
-    <comment>Header for the setting that specifies an optional model override for the delegate agent.</comment>
-  </data>
-  <data name="AIAgents_DelegateModel.HelpText" xml:space="preserve">
-    <value>Optional model override for the delegate agent (e.g. claude-sonnet-4-20250514).</value>
-    <comment>Supplementary description for the delegate model setting.</comment>
+    <value>Command palette</value>
+    <comment>Section header for the command palette agent settings group.</comment>
   </data>
   <data name="AIAgents_AcpAgent.Header" xml:space="preserve">
-    <value>ACP Agent</value>
-    <comment>Header for the setting that specifies which AI agent powers the agent pane (e.g. copilot, gemini).</comment>
+    <value>Agent</value>
+    <comment>Header for the setting that specifies which AI agent CLI powers the agent pane.</comment>
   </data>
   <data name="AIAgents_AcpAgent.HelpText" xml:space="preserve">
-    <value>The AI agent that powers the agent pane (e.g. copilot, gemini).</value>
-    <comment>Supplementary description for the ACP agent setting.</comment>
+    <value>Choose the agent CLI used in the agent pane. Any compatible ACP CLI will be detected.</value>
+    <comment>Supplementary description for the agent pane CLI setting.</comment>
   </data>
   <data name="AIAgents_AcpModel.Header" xml:space="preserve">
     <value>Model</value>
-    <comment>Header for the setting that specifies an optional model override for the ACP agent.</comment>
+    <comment>Header for the setting that specifies the model used by the agent pane agent.</comment>
   </data>
   <data name="AIAgents_AcpModel.HelpText" xml:space="preserve">
-    <value>Optional model override (e.g. gpt-5, claude-haiku-4.5).</value>
+    <value>Choose the model used by this agent.</value>
     <comment>Supplementary description for the model setting.</comment>
   </data>
   <data name="AIAgents_DelegateAgent.Header" xml:space="preserve">
-    <value>Delegate Agent</value>
-    <comment>Header for the setting that specifies which agent CLI handles delegated tasks.</comment>
+    <value>Agent</value>
+    <comment>Header for the setting that specifies which agent CLI handles command palette / on-demand requests.</comment>
   </data>
   <data name="AIAgents_DelegateAgent.HelpText" xml:space="preserve">
-    <value>Agent CLI for delegated tasks from the command palette (e.g. claude, codex).</value>
-    <comment>Supplementary description for the delegate agent setting.</comment>
+    <value>Choose the agent used for quick actions in the command palette.</value>
+    <comment>Supplementary description for the command palette agent setting.</comment>
   </data>
   <data name="AIAgents_AutoFix.Header" xml:space="preserve">
-    <value>Auto-fix on command failure</value>
+    <value>Auto-error detection</value>
     <comment>Header for the toggle that enables automatic fix suggestions when commands fail.</comment>
   </data>
   <data name="AIAgents_AutoFix.HelpText" xml:space="preserve">
-    <value>When enabled, automatically suggest fixes when commands fail. Also installs OSC 133 shell integration into your PowerShell and Windows PowerShell profiles so command exit codes are detected. Restart PowerShell after enabling for changes to take effect.</value>
-    <comment>Supplementary description for the auto-fix setting. Explains that enabling also sets up shell integration in both PowerShell profiles.</comment>
+    <value>Detect command errors and suggest fixes automatically.</value>
+    <comment>Supplementary description for the auto-error-detection setting.</comment>
   </data>
   <data name="AIAgents_PanePosition.Header" xml:space="preserve">
-    <value>Agent Pane Position</value>
-    <comment>Header for the setting that controls where the agent pane appears (right or bottom).</comment>
+    <value>Pane position</value>
+    <comment>Header for the setting that controls where the agent pane appears relative to the active pane.</comment>
   </data>
   <data name="AIAgents_PanePosition.HelpText" xml:space="preserve">
-    <value>Where the agent pane opens relative to the active pane (right or bottom).</value>
+    <value>Where the agent pane opens relative to your terminal.</value>
     <comment>Supplementary description for the pane position setting.</comment>
+  </data>
+  <data name="AIAgents_HooksGroupHeader.Text" xml:space="preserve">
+    <value>Agent Hooks</value>
+    <comment>Section header for the Agent Hooks installer (lets users install hook scripts that report agent CLI activity to the agent pane).</comment>
+  </data>
+  <data name="AIAgents_HooksInstall.Header" xml:space="preserve">
+    <value>Install agent hook scripts</value>
+    <comment>Header for the Agent Hooks install section.</comment>
+  </data>
+  <data name="AIAgents_HooksInstall.HelpText" xml:space="preserve">
+    <value>Required for agent session management. Installs hooks into each detected CLI (Copilot, Claude, Gemini) so they report sessions and status to the agent pane. Restart any open agent CLIs after installing.</value>
+    <comment>Description for the Agent Hooks install section.</comment>
+  </data>
+  <data name="AIAgents_HooksInstallButton.Content" xml:space="preserve">
+    <value>Install hooks</value>
+    <comment>Button label that triggers installation of the wt-agent-hooks plugin/extension into all detected agent CLIs (Copilot, Claude, Gemini).</comment>
+  </data>
+  <data name="AIAgents_HooksRefreshButton.Content" xml:space="preserve">
+    <value>Refresh</value>
+    <comment>Button label that re-detects which agent CLIs are present and which already have hooks installed.</comment>
   </data>
   <data name="Profile_OpacitySlider.[using:Windows.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Background opacity</value>
