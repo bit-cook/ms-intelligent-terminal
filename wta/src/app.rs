@@ -3513,14 +3513,7 @@ impl App {
         };
         let mut cmd = std::process::Command::new(exe);
         cmd.arg("delegate").arg(prompt);
-
-        // Pass pipe credentials from environment (set when agent pane was created).
-        if let Ok(pipe_name) = std::env::var("WT_PIPE_NAME") {
-            cmd.arg("--pipe-name").arg(&pipe_name);
-        }
-        if let Ok(token) = std::env::var("WT_MCP_TOKEN") {
-            cmd.arg("--pipe-token").arg(&token);
-        }
+        // The delegate child inherits WT_COM_CLSID from our env; no explicit pass needed.
 
         // Fire-and-forget: spawn hidden, don't wait.
         #[cfg(windows)]

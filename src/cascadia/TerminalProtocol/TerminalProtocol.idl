@@ -84,12 +84,6 @@ namespace Microsoft.Terminal.Protocol
         String ProtocolVersion;
     };
 
-    struct QuickPickResult
-    {
-        Boolean Cancelled;
-        String Selected;
-    };
-
     // Callback interface — implemented by clients (e.g. wtcli) to receive
     // push-based event notifications from Terminal.
     interface IProtocolEventCallback
@@ -120,16 +114,12 @@ namespace Microsoft.Terminal.Protocol
         TabCreationResult CreateTab(UInt64 windowId, String profile, String commandline, String title, String startingDirectory, Boolean suppressAppTitle, Boolean background);
         TabCreationResult SplitPane(Guid sessionId, String direction, Single size, String profile, String commandline, Boolean background);
         void ClosePane(Guid sessionId);
-        // SendInput moved off the COM interface — see TerminalProtocolPipeServer.
-        // Only the wta processes WT itself launches (with an inherited pipe pair)
-        // can drive SendInput. Any caller that needs keystroke injection must
-        // route through that wta — wtcli's send-keys verb has been removed.
+        // SendInput is exposed via TerminalProtocolPipeServer only; it is not
+        // available over COM. Only the wta processes WT itself launches (with
+        // an inherited pipe pair) can drive it.
         void FocusPane(Guid sessionId);
         void SetSessionVariable(Guid sessionId, String name, String value);
         String SetSettings(String settingsContent);
-
-        // Interactive
-        Windows.Foundation.IAsyncOperation<QuickPickResult> QuickPick(String title, String[] choices, Boolean allowFreeInput);
 
         // Events — push-based via callback
         void Subscribe(IProtocolEventCallback callback);

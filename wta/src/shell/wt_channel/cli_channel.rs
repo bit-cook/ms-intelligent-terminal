@@ -335,7 +335,7 @@ pub fn spawn_wtcli_split_then_focus_with_callback(
 }
 
 /// Channel that invokes `wtcli.exe` for protocol operations.
-/// Used for read-only methods until those also migrate to PipeChannel.
+/// Used for COM-backed methods; direct shell input stays on PipeChannel.
 pub struct CliChannel {
     available: AtomicBool,
     debug_tx: Option<mpsc::UnboundedSender<DebugMessage>>,
@@ -358,21 +358,6 @@ impl CliChannel {
         })
     }
 
-    pub async fn connect_with(pipe_name: &str, _token: &str) -> anyhow::Result<Self> {
-        // For backward compat: pipe_name may be a COM CLSID or an actual pipe name.
-        // Either way, wtcli handles it via its own environment.
-        if pipe_name.is_empty() {
-            bail!("Empty connection identifier");
-        }
-
-        Ok(Self {
-            available: AtomicBool::new(true),
-            debug_tx: None,
-            event_tx: std::sync::Mutex::new(None),
-            wtcli_path: resolve_wtcli_path(),
-        })
-    }
-
     pub fn with_debug_sender(mut self, tx: mpsc::UnboundedSender<DebugMessage>) -> Self {
         self.debug_tx = Some(tx);
         self
@@ -385,6 +370,7 @@ impl CliChannel {
     }
 
     /// Start background event listener (wraps `wtcli listen --json`).
+    /// wtcli inherits WT_COM_CLSID from this process's env.
     pub async fn start_reader(self: &std::sync::Arc<Self>) {
         let wtcli = self.wtcli_path.clone();
         let weak = std::sync::Arc::downgrade(self);
@@ -423,10 +409,12 @@ impl CliChannel {
     }
 
     /// Run a wtcli subcommand and return the parsed JSON output.
+    /// wtcli inherits WT_COM_CLSID from this process's env.
     async fn run_wtcli(&self, args: &[&str]) -> anyhow::Result<serde_json::Value> {
-        let output = tokio::process::Command::new(&self.wtcli_path)
-            .arg("--json")
-            .args(args)
+        let mut cmd = tokio::process::Command::new(&self.wtcli_path);
+        cmd.arg("--json").args(args);
+
+        let output = cmd
             .output()
             .await
             .context("Failed to run wtcli")?;
@@ -560,22 +548,6 @@ impl WtChannel for CliChannel {
             // PipeChannel attached via inherited handles — only the wta
             // processes WT itself launches can satisfy it.
             "get_capabilities" => self.run_wtcli(&["info"]).await,
-            "quick_pick" => {
-                let title = params.get("title").and_then(|v| v.as_str()).unwrap_or("");
-                let title_owned = title.to_string();
-                let mut args = vec!["quick-pick"];
-                if !title_owned.is_empty() {
-                    args.extend(["--title", &title_owned]);
-                }
-                if let Some(choices) = params.get("choices").and_then(|v| v.as_array()) {
-                    for c in choices {
-                        if let Some(s) = c.as_str() {
-                            args.push(s);
-                        }
-                    }
-                }
-                self.run_wtcli(&args).await
-            }
             other => bail!("Unsupported method: {}", other),
         }
     }

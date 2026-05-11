@@ -739,7 +739,7 @@ namespace winrt::TerminalApp::implementation
     // - Auto-detects the WTA (Windows Terminal Agent) executable by searching
     //   the system PATH. WTA is the preferred way to launch agents because it
     //   handles protocol config injection, giving agents access to Windows Terminal
-    //   tools (pane management, send-keys, etc.) via the Terminal Protocol (wtcli).
+    //   tools (pane management, capture-pane, etc.) via the Terminal Protocol (wtcli).
     // Arguments:
     // - <none>
     // Return Value:

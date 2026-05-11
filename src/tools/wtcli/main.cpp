@@ -323,11 +323,6 @@ int main()
         }
     });
 
-    // send-keys removed: keystroke injection is now confined to per-wta
-    // secure pipes (see TerminalProtocolPipeServer in TerminalApp). Any
-    // caller that previously used `wtcli send-keys` must route through
-    // the wta process WT spawned for it.
-
     // ── new-tab ──
     std::string newTabCommand, newTabTitle, newTabCwd;
     auto* newTabCmd = app.add_subcommand("new-tab", "Create a new tab")->alias("neww");
@@ -651,51 +646,6 @@ int main()
         else if (setEnvShell == "cmd")
         {
             if (!cl.empty()) printf("set WT_COM_CLSID=%s\n", cl.c_str());
-        }
-    });
-
-    // ── quick-pick ──
-    std::string quickPickTitle;
-    std::vector<std::string> quickPickChoices;
-    bool quickPickFreeInput = false;
-    auto* quickPickCmd = app.add_subcommand("quick-pick", "Show a quick-pick dialog in Windows Terminal");
-    quickPickCmd->add_option("choices", quickPickChoices, "Choices to present")->required();
-    quickPickCmd->add_option("--title", quickPickTitle, "Dialog title");
-    quickPickCmd->add_flag("--free-input", quickPickFreeInput, "Allow freeform text input");
-    quickPickCmd->callback([&]() {
-        auto server = connect();
-        if (!server) return;
-        try
-        {
-            std::vector<winrt::hstring> hstringChoices;
-            hstringChoices.reserve(quickPickChoices.size());
-            for (const auto& c : quickPickChoices)
-                hstringChoices.push_back(winrt::to_hstring(c));
-
-            auto result = server.QuickPick(
-                winrt::to_hstring(quickPickTitle),
-                hstringChoices,
-                quickPickFreeInput).get();
-
-            if (jsonMode)
-            {
-                Json::Value v;
-                v["cancelled"] = result.Cancelled;
-                v["selected"] = winrt::to_string(result.Selected);
-                PrintJson(v);
-            }
-            else
-            {
-                if (result.Cancelled)
-                    printf("(cancelled)\n");
-                else
-                    printf("%s\n", winrt::to_string(result.Selected).c_str());
-            }
-        }
-        catch (const winrt::hresult_error& e)
-        {
-            fprintf(stderr, "QuickPick failed: 0x%08X\n", static_cast<uint32_t>(e.code()));
-            exitCode = 1;
         }
     });
 

@@ -9,7 +9,7 @@ AI-native Windows Terminal — agents (Copilot, Claude, Gemini, custom) can unde
 - **WT Protocol** (`IProtocolServer`) — sole integration surface. WinRT IDL + COM out-of-process server (MBM marshaling, MTA thread). Discovery via `WT_COM_CLSID` env var.
   - IDL: `src/cascadia/TerminalProtocol/TerminalProtocol.idl`
   - Server: `src/cascadia/WindowsTerminal/TerminalProtocolComServer.cpp`
-- **WTCLI** — CLI client consuming `IProtocolServer` via `CoCreateInstance(CLSCTX_LOCAL_SERVER)`. Agents shell out to `wtcli list-panes`, `wtcli send-keys`, etc.
+- **WTCLI** — CLI client consuming `IProtocolServer` via `CoCreateInstance(CLSCTX_LOCAL_SERVER)`. Agents shell out to `wtcli list-panes`, `wtcli capture-pane`, etc.
 - **ACP** (Agent Control Protocol) — JSON-RPC 2.0 over stdio for in-pane agent experience (`AcpConnection.cpp`).
 
 ## UX
