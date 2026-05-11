@@ -1,6 +1,6 @@
 use ratatui::{
     layout::Rect,
-    style::{Modifier, Style, Stylize},
+    style::{Color, Modifier, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState},
     Frame,
@@ -35,18 +35,18 @@ pub fn render(
         load_state = ?history_load_state,
         "rendering agents view"
     );
-    // Show "Loading…" while the lazy history scan is still in flight AND
-    // we have no live sessions to display yet. Live sessions (from
-    // agent_event hooks) can populate the registry independently of the
-    // disk scan, so if any are present we render those instead of
-    // covering them with a loading line.
-    let mut rows: Vec<ListItem> = sorted.into_iter().map(row_for).collect();
-    if rows.is_empty() && history_load_state == HistoryLoadState::Loading {
-        rows.push(ListItem::new(Line::from(Span::styled(
-            "  Loading historical sessions…",
-            Style::default().add_modifier(Modifier::DIM | Modifier::ITALIC),
-        ))));
-    }
+    // While the lazy history scan is in flight, replace the whole list
+    // with a single high-visibility loading row. Showing live rows alongside
+    // a dim "loading…" hint led users to think the list was complete (only
+    // the 1 live session) and dismiss the view before the scan finished.
+    let rows: Vec<ListItem> = if history_load_state == HistoryLoadState::Loading {
+        vec![ListItem::new(Line::from(Span::styled(
+            "  Loading historical sessions… (first open scans ~hundreds of files)",
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+        )))]
+    } else {
+        sorted.into_iter().map(row_for).collect()
+    };
     let list = List::new(rows)
         .block(block)
         .highlight_style(Style::default().add_modifier(Modifier::REVERSED));

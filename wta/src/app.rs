@@ -3382,11 +3382,17 @@ impl App {
                 // are immediately useful. Esc / F2 still close the view.
                 // Per-tab — only flips the active tab's view state.
                 let has_sessions = !self.agent_sessions.iter_sorted().is_empty();
-                let tab = self.current_tab_mut();
-                if tab.agents_list_state.selected().is_none() && has_sessions {
-                    tab.agents_list_state.select(Some(0));
+                {
+                    let tab = self.current_tab_mut();
+                    if tab.agents_list_state.selected().is_none() && has_sessions {
+                        tab.agents_list_state.select(Some(0));
+                    }
+                    tab.current_view = View::Agents;
                 }
-                tab.current_view = View::Agents;
+                // F2 path also kicks the lazy history scan here. Without this,
+                // /sessions left the registry empty and rendered a blank view
+                // forever (state stuck at NotStarted, no Loading row, no rows).
+                self.ensure_history_loaded();
             }
             CommandKind::Restart => {
                 // Full reconnect. Reset every tab: drop session_id (the
