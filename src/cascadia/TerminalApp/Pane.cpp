@@ -1738,11 +1738,20 @@ void Pane::_CloseChildRoutine(const bool closeFirst)
 
     // GH#7252: If either child is zoomed, just skip the animation. It won't work.
     const auto eitherChildZoomed = _firstChild->_zoomed || _secondChild->_zoomed;
+    // Agent panes close synchronously: TerminalPage's rebuild path
+    // (_TeardownAgentPane → _AutoCreateHiddenAgentPane) mutates this same
+    // parent's children on the very next line, so a deferred _CloseChild
+    // would land on a tree that's already been re-split and crash inside
+    // its XAML re-parenting (observed: TerminalApp.dll AV / 0xC000041D on
+    // model switch). The close animation is barely visible on the small
+    // agent bar anyway, so dropping it for all agent-pane closes (not
+    // just the rebuild path) is an acceptable trade.
+    const auto closingChildIsAgent = (closeFirst ? _firstChild : _secondChild)->_isAgentPane;
     // If animations are disabled, just skip this and go straight to
     // _CloseChild. Curiously, the pane opening animation doesn't need this,
     // and will skip straight to Completed when animations are disabled, but
     // this one doesn't seem to.
-    if (!animationsEnabledInOS || !animationsEnabledInApp || eitherChildZoomed)
+    if (!animationsEnabledInOS || !animationsEnabledInApp || eitherChildZoomed || closingChildIsAgent)
     {
         _CloseChild(closeFirst);
         return;

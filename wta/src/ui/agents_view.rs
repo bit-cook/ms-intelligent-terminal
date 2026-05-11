@@ -8,12 +8,14 @@ use ratatui::{
 use std::time::SystemTime;
 
 use crate::agent_sessions::{AgentSession, AgentSessionRegistry, AgentStatus};
+use crate::app::HistoryLoadState;
 
 pub fn render(
     f:    &mut Frame,
     area: Rect,
     reg:  &AgentSessionRegistry,
     list_state: &mut ListState,
+    history_load_state: HistoryLoadState,
 ) {
     let block = Block::default()
         .borders(Borders::ALL)
@@ -30,9 +32,21 @@ pub fn render(
         )).collect::<Vec<_>>(),
         area_w = area.width,
         area_h = area.height,
+        load_state = ?history_load_state,
         "rendering agents view"
     );
-    let rows: Vec<ListItem> = sorted.into_iter().map(row_for).collect();
+    // Show "Loading…" while the lazy history scan is still in flight AND
+    // we have no live sessions to display yet. Live sessions (from
+    // agent_event hooks) can populate the registry independently of the
+    // disk scan, so if any are present we render those instead of
+    // covering them with a loading line.
+    let mut rows: Vec<ListItem> = sorted.into_iter().map(row_for).collect();
+    if rows.is_empty() && history_load_state == HistoryLoadState::Loading {
+        rows.push(ListItem::new(Line::from(Span::styled(
+            "  Loading historical sessions…",
+            Style::default().add_modifier(Modifier::DIM | Modifier::ITALIC),
+        ))));
+    }
     let list = List::new(rows)
         .block(block)
         .highlight_style(Style::default().add_modifier(Modifier::REVERSED));

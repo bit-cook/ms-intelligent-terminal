@@ -1592,13 +1592,18 @@ async fn run_acp_app(
             // ResumePaneAssigned) back into the event loop.
             app_state.set_agent_event_tx(event_tx.clone());
 
-            // ── seed Agents view from on-disk history ─────────────────────
-            // history_loader scans Claude/Copilot/Gemini per-CLI session
-            // dirs and returns historical AgentSession rows. merge_historical
-            // inserts only those whose key isn't already live.
-            app_state
-                .agent_sessions
-                .merge_historical(history_loader::load_all());
+            // NOTE: historical agent sessions used to be loaded here via
+            // `history_loader::load_all()` (later as a `spawn_blocking`).
+            // That work is now deferred — the registry is scanned lazily
+            // on the first F2 press via `App::ensure_history_loaded()`.
+            //
+            // Why: load_all() is hundreds of file opens (one per Copilot
+            // session-state dir, reading events.jsonl for the autofix
+            // fingerprint). On a populated machine it's ~10s of disk I/O.
+            // Every wta spawn — including every model switch in the agent
+            // pane — paid that cost, even though the data is only ever
+            // consumed by the Agents view. Lazy-loading on F2 keeps the
+            // model-switch path free of this overhead entirely.
 
             // Enter setup mode if --setup <reason> was passed.
             tracing::info!("cli.setup = {:?}", cli.setup);

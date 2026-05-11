@@ -57,7 +57,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     if app.current_tab().current_view == View::Agents {
         let tab_id = app.tab_id.as_deref().unwrap_or(DEFAULT_TAB_ID).to_string();
         let tab = app.tab_sessions.entry(tab_id).or_default();
-        agents_view::render(frame, area, &app.agent_sessions, &mut tab.agents_list_state);
+        agents_view::render(frame, area, &app.agent_sessions, &mut tab.agents_list_state, app.history_load_state);
         return;
     }
 
