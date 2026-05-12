@@ -304,7 +304,6 @@ winrt::hstring TerminalProtocolComServer::GetCapabilities()
         "split_pane",
         "close_pane",
         "set_session_variable",
-        "set_settings",
         "subscribe",
         "unsubscribe",
         "send_event",
@@ -632,57 +631,6 @@ void TerminalProtocolComServer::SetSessionVariable(
     }
 
     winrt::throw_hresult(E_FAIL);
-}
-
-winrt::hstring TerminalProtocolComServer::SetSettings(
-    winrt::hstring const& settingsContent)
-{
-    const auto contentStr = winrt::to_string(settingsContent);
-    THROW_HR_IF(E_INVALIDARG, contentStr.empty());
-
-    // Validate that it's valid JSON.
-    Json::Value parsedSettings;
-    THROW_HR_IF(E_INVALIDARG, !_parseJson(contentStr, parsedSettings));
-
-    // Get the settings path and create a backup.
-    const std::filesystem::path settingsPath{
-        std::wstring_view{ winrt::Microsoft::Terminal::Settings::Model::CascadiaSettings::SettingsPath() }
-    };
-    const auto settingsDir = settingsPath.parent_path();
-
-    // Create timestamped backup.
-    const auto now = std::chrono::system_clock::now();
-    const auto time = std::chrono::system_clock::to_time_t(now);
-    std::tm tm{};
-    localtime_s(&tm, &time);
-
-    wchar_t timeStr[64];
-    wcsftime(timeStr, std::size(timeStr), L"%Y-%m-%dT%H-%M-%S", &tm);
-
-    const auto backup = settingsDir / fmt::format(L"settings.backup.{}.json", timeStr);
-
-    // Copy current settings to backup.
-    std::error_code ec;
-    std::filesystem::copy_file(settingsPath, backup, std::filesystem::copy_options::overwrite_existing, ec);
-
-    // Clean up old backups — keep only the most recent 5.
-    std::vector<std::filesystem::path> backups;
-    for (const auto& entry : std::filesystem::directory_iterator(settingsDir, ec))
-    {
-        if (entry.is_regular_file() && entry.path().filename().wstring().starts_with(L"settings.backup."))
-            backups.push_back(entry.path());
-    }
-    if (backups.size() > 5)
-    {
-        std::sort(backups.begin(), backups.end());
-        for (size_t i = 0; i < backups.size() - 5; ++i)
-            std::filesystem::remove(backups[i], ec);
-    }
-
-    // Write the new settings.
-    til::io::write_utf8_string_to_file_atomic(settingsPath, contentStr);
-
-    return winrt::hstring{ backup.wstring() };
 }
 
 // ============================================================================

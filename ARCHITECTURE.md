@@ -221,7 +221,6 @@ pub enum WtAction {
     ClosePane { pane_id: String },
     SendInput { pane_id: String, text: String },
     SetSessionVariable { pane_id: String, name: String, value: Option<String> },
-    SetSettings { settings: String },
 }
 ```
 
@@ -376,7 +375,6 @@ to WtChannel actions:
 | `get_session_variable` | `GetSessionVariable` |
 | `set_session_variable` | `SetSessionVariable` |
 | `get_settings` | `GetSettings` |
-| `set_settings` | `SetSettings` |
 | `run_command` | `CreateTab` + `SendInput` + poll `ReadPaneOutput` |
 
 ---

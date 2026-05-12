@@ -89,7 +89,6 @@ TerminalProtocolComServer : winrt::implements<TerminalProtocolComServer, Protoco
     void SetSessionVariable(winrt::guid sessionId,
                             winrt::hstring const& name,
                             winrt::hstring const& value);
-    winrt::hstring SetSettings(winrt::hstring const& settingsContent);
 
     // Events — push-based via callback
     void Subscribe(Protocol::IProtocolEventCallback const& callback);

@@ -119,7 +119,6 @@ namespace Microsoft.Terminal.Protocol
         // an inherited pipe pair) can drive it.
         void FocusPane(Guid sessionId);
         void SetSessionVariable(Guid sessionId, String name, String value);
-        String SetSettings(String settingsContent);
 
         // Events — push-based via callback
         void Subscribe(IProtocolEventCallback callback);

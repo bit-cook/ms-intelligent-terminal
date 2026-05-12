@@ -7,20 +7,28 @@ use crate::app::{App, ChatMessage, PlanEntryStatus};
 use crate::theme;
 use crate::ui_trace;
 
-const ACTIVITY_LABEL: &str = "thinking";
-const ACTIVITY_ICON_FRAMES: [&str; 4] = [".", "o", "O", "o"];
-const ACTIVITY_HIGHLIGHT_WINDOWS: [(usize, usize); 10] = [
-    (0, 1),
-    (0, 2),
-    (0, 3),
-    (1, 4),
-    (2, 5),
-    (3, 6),
-    (4, 7),
-    (5, 8),
-    (6, 8),
-    (7, 8),
-];
+const ACTIVITY_LABEL: &str = "Thinking…";
+
+// Soft white "shimmer" sweeps right→left across the label, matching the
+// CSS `linear-gradient(90deg, …) + background-position` animation used by
+// the web chat UI. The web version runs at 1.6s/cycle on a 60FPS canvas;
+// we run on the TUI Tick (120ms ≈ 8FPS), so to keep per-frame motion under
+// one cell — required for the band to read as "sweeping" rather than
+// "stepping" — the cycle is stretched. At 36 ticks across the padded
+// 15-cell span (9 label + 2×3 padding) each frame moves ~0.42 cells.
+pub const ACTIVITY_CYCLE_FRAMES: usize = 36;
+
+// Padding on both sides lets the highlight enter from off-screen-right and
+// exit off-screen-left instead of clamping at the label edges.
+const SHIMMER_PAD: f32 = 3.0;
+// Half-width of the cosine falloff, in cells. ≥2σ from the center → fully dim.
+const SHIMMER_SIGMA: f32 = 1.8;
+// White composited on the default dark Terminal background at ~25% / ~85%
+// opacity — matches the CSS gradient's two stops. (Terminal cells have no
+// real alpha, so the values are pre-multiplied against an assumed dark bg.)
+const SHIMMER_DIM_RGB: (u8, u8, u8) = (64, 64, 64);
+const SHIMMER_BRIGHT_RGB: (u8, u8, u8) = (217, 217, 217);
+
 const ACTIVITY_PREVIEW_MAX_CHARS: usize = 180;
 const MAX_RENDER_LINE_CHARS: usize = 4096;
 
@@ -131,11 +139,7 @@ fn build_activity_line(app: &App) -> Option<Line<'static>> {
         return None;
     }
 
-    let mut spans = Vec::new();
-    let icon = ACTIVITY_ICON_FRAMES[app.current_tab().activity_frame % ACTIVITY_ICON_FRAMES.len()];
-    spans.push(Span::styled(icon.to_string(), theme::IN_PROGRESS));
-    spans.push(Span::raw(" "));
-    spans.extend(animated_activity_label(app.current_tab().activity_frame));
+    let mut spans = shimmer_label(app.current_tab().activity_frame);
 
     if let Some((preview, style)) = activity_preview(app) {
         spans.push(Span::styled(" ", theme::DIM));
@@ -145,27 +149,44 @@ fn build_activity_line(app: &App) -> Option<Line<'static>> {
     Some(Line::from(spans))
 }
 
-fn animated_activity_label(frame: usize) -> Vec<Span<'static>> {
-    let (start, end) = ACTIVITY_HIGHLIGHT_WINDOWS[frame % ACTIVITY_HIGHLIGHT_WINDOWS.len()];
-    let prefix = &ACTIVITY_LABEL[..start];
-    let highlighted = &ACTIVITY_LABEL[start..end];
-    let suffix = &ACTIVITY_LABEL[end..];
+fn shimmer_label(frame: usize) -> Vec<Span<'static>> {
+    let chars: Vec<char> = ACTIVITY_LABEL.chars().collect();
+    let n = chars.len() as f32;
+    let span = n + 2.0 * SHIMMER_PAD;
+    let phase = (frame % ACTIVITY_CYCLE_FRAMES) as f32 / ACTIVITY_CYCLE_FRAMES as f32;
+    // Center starts at (n + pad), off the right edge, and walks down to
+    // (-pad) at phase=1 — i.e. right→left across the padded span.
+    let center = (n + SHIMMER_PAD) - phase * span;
 
-    let mut spans = Vec::new();
-    if !prefix.is_empty() {
-        spans.push(Span::styled(prefix.to_string(), theme::DIM));
-    }
-    spans.push(Span::styled(highlighted.to_string(), theme::IN_PROGRESS));
-    if !suffix.is_empty() {
-        spans.push(Span::styled(suffix.to_string(), theme::DIM));
-    }
-    spans
+    chars
+        .into_iter()
+        .enumerate()
+        .map(|(i, ch)| {
+            let d = (i as f32 + 0.5) - center;
+            let w = if d.abs() >= 2.0 * SHIMMER_SIGMA {
+                0.0
+            } else {
+                0.5 * (1.0 + (std::f32::consts::PI * d / (2.0 * SHIMMER_SIGMA)).cos())
+            };
+            let r = lerp_u8(SHIMMER_DIM_RGB.0, SHIMMER_BRIGHT_RGB.0, w);
+            let g = lerp_u8(SHIMMER_DIM_RGB.1, SHIMMER_BRIGHT_RGB.1, w);
+            let b = lerp_u8(SHIMMER_DIM_RGB.2, SHIMMER_BRIGHT_RGB.2, w);
+            Span::styled(ch.to_string(), Style::new().fg(Color::Rgb(r, g, b)))
+        })
+        .collect()
+}
+
+fn lerp_u8(a: u8, b: u8, t: f32) -> u8 {
+    let t = t.clamp(0.0, 1.0);
+    (a as f32 + (b as f32 - a as f32) * t).round() as u8
 }
 
 fn activity_preview(app: &App) -> Option<(String, Style)> {
     app.current_tab().progress_status
         .as_deref()
-        // "Thinking..." is redundant now that the animated label says "thinking".
+        // Server-side "Thinking..." (three ASCII dots) would duplicate the
+        // shimmer label; drop it. The shimmer uses U+2026 so the strings
+        // don't collide on equality.
         .filter(|s| *s != "Thinking...")
         .map(single_line_tail_preview)
         .filter(|text| !text.is_empty())

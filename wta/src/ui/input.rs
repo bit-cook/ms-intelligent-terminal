@@ -8,6 +8,16 @@ use crate::theme;
 pub(crate) const INPUT_MIN_HEIGHT: u16 = 3;
 pub(crate) const INPUT_MAX_HEIGHT: u16 = 8;
 const INPUT_LEFT_PAD: u16 = 1;
+// Persistent prompt prefix: rendered in its own column at the very left of
+// every visible line so it stays put when the user types, and so the
+// placeholder, typed text and cursor all align under it. Width matches the
+// span's literal cell width.
+const INPUT_PROMPT: &str = "> ";
+const INPUT_PROMPT_WIDTH: u16 = 2;
+// Continuation lines (wrap rows past the first) get a space-only prefix of
+// the same width so typed text stays vertically aligned with the column
+// right of "> ".
+const INPUT_PROMPT_CONT: &str = "  ";
 const INPUT_MIN_INNER_ROWS: usize = (INPUT_MIN_HEIGHT - 2) as usize;
 const INPUT_MAX_INNER_ROWS: usize = (INPUT_MAX_HEIGHT - 2) as usize;
 
@@ -33,17 +43,43 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         .style(Style::new().bg(theme::INPUT_BG))
         .padding(Padding::new(INPUT_LEFT_PAD, 0, 0, 0));
     let tab = app.current_tab();
-    let viewport = input_viewport(&tab.input, tab.cursor_pos, area.width.saturating_sub(INPUT_LEFT_PAD + 2));
+    let text_width = area
+        .width
+        .saturating_sub(INPUT_LEFT_PAD + 2 + INPUT_PROMPT_WIDTH);
+    let viewport = input_viewport(&tab.input, tab.cursor_pos, text_width);
 
     let lines: Vec<Line> = if tab.input.is_empty() {
-        // Show a placeholder reflecting connection state.
+        // Show a placeholder reflecting connection state. The "> " is its
+        // own span so the placeholder/typed text/cursor all sit in the same
+        // column whether the input is empty or not.
         let placeholder = match &app.state {
-            ConnectionState::Connected => ">  Ask anything, / for commands..".to_string(),
+            ConnectionState::Connected => "Ask anything, / for commands..".to_string(),
             ConnectionState::Connecting(_) => "connecting...".to_string(),
             ConnectionState::Disconnected => "disconnect".to_string(),
             ConnectionState::Failed(_) => "disconnect".to_string(),
         };
-        let mut placeholder_lines = vec![Line::from(Span::styled(placeholder, theme::DIM))];
+        // Paint the first cell of the placeholder as "white block with
+        // black glyph" directly in the buffer. The WT block cursor lands
+        // on this exact cell (input is empty ⇒ cursor_pos == 0) and is
+        // alpha-overlaid onto an already-white cell — same color in, same
+        // color out — so the visible result is a stable white block with
+        // a readable black character. Setting only fg=Black wouldn't work:
+        // the glyph would be painted onto the black cell bg first (Black
+        // on Black = invisible) before the cursor overlay had anything to
+        // reveal.
+        let mut placeholder_spans = vec![Span::styled(INPUT_PROMPT, theme::DIM)];
+        let mut chars = placeholder.chars();
+        if let Some(first) = chars.next() {
+            placeholder_spans.push(Span::styled(
+                first.to_string(),
+                Style::new().fg(Color::Black).bg(Color::White),
+            ));
+            let rest: String = chars.collect();
+            if !rest.is_empty() {
+                placeholder_spans.push(Span::styled(rest, theme::DIM));
+            }
+        }
+        let mut placeholder_lines = vec![Line::from(placeholder_spans)];
         // Keep the same number of visible rows so layout doesn't jump.
         while placeholder_lines.len() < viewport.visible_lines.len() {
             placeholder_lines.push(Line::default());
@@ -53,7 +89,19 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         viewport
             .visible_lines
             .iter()
-            .map(|line| Line::from(Span::styled(line.clone(), theme::INPUT_TEXT)))
+            .enumerate()
+            .map(|(i, line)| {
+                // The "> " marker only marks wrap-row 0 of the input;
+                // continuations get a same-width space prefix so text stays
+                // column-aligned.
+                let absolute_row = viewport.scroll_row + i;
+                let prefix = if absolute_row == 0 {
+                    Span::styled(INPUT_PROMPT, theme::DIM)
+                } else {
+                    Span::raw(INPUT_PROMPT_CONT)
+                };
+                Line::from(vec![prefix, Span::styled(line.clone(), theme::INPUT_TEXT)])
+            })
             .collect()
     };
 
@@ -62,16 +110,22 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 pub(crate) fn input_height(input: &str, cursor_pos: usize, total_width: u16) -> u16 {
-    let viewport = input_viewport(input, cursor_pos, total_width.saturating_sub(INPUT_LEFT_PAD + 2));
+    let viewport = input_viewport(
+        input,
+        cursor_pos,
+        total_width.saturating_sub(INPUT_LEFT_PAD + 2 + INPUT_PROMPT_WIDTH),
+    );
     (viewport.visible_lines.len() as u16 + 2).clamp(INPUT_MIN_HEIGHT, INPUT_MAX_HEIGHT)
 }
 
 pub(crate) fn cursor_position(app: &App, area: Rect) -> Option<Position> {
-    if area.width <= INPUT_LEFT_PAD + 2 || area.height <= 2 {
+    if area.width <= INPUT_LEFT_PAD + 2 + INPUT_PROMPT_WIDTH || area.height <= 2 {
         return None;
     }
 
-    let text_width = area.width.saturating_sub(INPUT_LEFT_PAD + 2);
+    let text_width = area
+        .width
+        .saturating_sub(INPUT_LEFT_PAD + 2 + INPUT_PROMPT_WIDTH);
     let tab = app.current_tab();
     let viewport = input_viewport(&tab.input, tab.cursor_pos, text_width);
     let cursor_col = viewport.cursor_col.min(text_width.saturating_sub(1) as usize);
@@ -79,9 +133,10 @@ pub(crate) fn cursor_position(app: &App, area: Rect) -> Option<Position> {
         .cursor_row
         .min(viewport.visible_lines.len().saturating_sub(1));
 
-    // +1 for the left `│` border, then the inner left padding, then column.
+    // +1 for the left `│` border, then inner padding, then the "> " prefix,
+    // then the column inside the text.
     Some(Position::new(
-        area.x + 1 + INPUT_LEFT_PAD + cursor_col as u16,
+        area.x + 1 + INPUT_LEFT_PAD + INPUT_PROMPT_WIDTH + cursor_col as u16,
         area.y + 1 + cursor_row as u16,
     ))
 }
@@ -192,6 +247,8 @@ mod tests {
 
     #[test]
     fn long_input_wraps_and_grows_box() {
+        // `input_viewport` doesn't subtract borders/padding itself, so this
+        // call wraps at exactly width=8.
         let viewport = input_viewport("abcdefghij", 10, 8);
 
         assert_eq!(
@@ -200,7 +257,12 @@ mod tests {
         );
         assert_eq!(viewport.cursor_row, 1);
         assert_eq!(viewport.cursor_col, 2);
-        assert_eq!(input_height("abcdefghij", 10, 8), 4);
+
+        // `input_height` subtracts INPUT_LEFT_PAD + 2 (borders) +
+        // INPUT_PROMPT_WIDTH from the total width before wrapping, so the
+        // usable inner text width here is 8 - 5 = 3. "abcdefghij" wraps to
+        // 4 rows of width 3 → box height = 4 + 2 (borders) = 6.
+        assert_eq!(input_height("abcdefghij", 10, 8), 6);
     }
 
     #[test]

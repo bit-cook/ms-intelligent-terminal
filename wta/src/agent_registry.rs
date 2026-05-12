@@ -86,7 +86,7 @@ pub const KNOWN_AGENTS: &[AgentProfile] = &[
         acp_auth_flow: AcpAuthFlow::External,
         delegate_prompt_flag: PromptFlag::Flag("-i"),
         model_flags: &["--model", "-m"],
-        install_hint: "npm install -g @github/copilot\n     or: winget install GitHub.Copilot",
+        install_hint: "npm install -g @github/copilot",
         install_url: "https://github.com/github/copilot-cli",
         auth_check_command: "",
         auth_hint: "Run 'copilot' to launch the CLI, then type /login to sign in.",

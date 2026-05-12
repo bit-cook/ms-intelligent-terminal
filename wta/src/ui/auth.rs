@@ -60,14 +60,28 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
             )));
         }
     } else {
-        // "● Agent CLI <name> is selected"
-        lines.push(Line::from(vec![
-            Span::styled("● ", Style::new().fg(Color::White).add_modifier(Modifier::BOLD)),
-            Span::styled(
-                format!("Agent CLI {} is selected", auth.agent_name),
-                Style::new().fg(Color::White),
-            ),
-        ]));
+        // "● Agent CLI <name> is selected" + optional reason on same line
+        if auth.status_message.is_empty() {
+            lines.push(Line::from(vec![
+                Span::styled("● ", Style::new().fg(Color::White).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("Agent CLI {} is selected", auth.agent_name),
+                    Style::new().fg(Color::White),
+                ),
+            ]));
+        } else {
+            lines.push(Line::from(vec![
+                Span::styled("● ", Style::new().fg(Color::White).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("Agent CLI {} — ", auth.agent_name),
+                    Style::new().fg(Color::White),
+                ),
+                Span::styled(
+                    &auth.status_message,
+                    Style::new().fg(Color::Yellow),
+                ),
+            ]));
+        }
 
         // Blank line
         lines.push(Line::from(""));
