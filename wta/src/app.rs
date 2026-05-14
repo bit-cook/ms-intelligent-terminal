@@ -203,8 +203,7 @@ pub fn build_setup_options(
                             agent_id: status.id.clone(),
                             display_name: status.display_name.clone(),
                         });
-                    }
-                    if !status.install_hint.is_empty() {
+                    } else if !status.install_hint.is_empty() {
                         opts.push(SetupOption::InstallManually {
                             agent_id: status.id.clone(),
                             display_name: status.display_name.clone(),
