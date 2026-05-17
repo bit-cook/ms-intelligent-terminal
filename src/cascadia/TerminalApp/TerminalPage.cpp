@@ -2004,16 +2004,31 @@ namespace winrt::TerminalApp::implementation
             _agentPaneLog("_RebuildAgentStack: already rebuilding, skipping nested trigger");
             return;
         }
+
+        // Defer the rebuild when there's no terminal tab in focus:
+        // TermControls on non-active tabs never raise
+        // SwapChainPanel.LayoutUpdated, so `connection.Start()` never
+        // runs and wta.exe never launches. _FlushPendingAgentRebuild
+        // re-enters once a terminal tab becomes active.
+        // `_lastAgentSettings` stays unchanged so the dirty diff fires
+        // again on next entry.
+        const auto focusedTab = _GetFocusedTabImpl();
+        // Only `==` auto-generates for projected WinRT types — `!=` doesn't.
+        const bool canHostPane = focusedTab && !(*focusedTab == _settingsTab);
+        if (!canHostPane)
+        {
+            _pendingAgentRebuild = true;
+            return;
+        }
+
         _agentRebuilding = true;
         auto guard = wil::scope_exit([this]() noexcept { _agentRebuilding = false; });
 
         _agentPaneLog("_RebuildAgentStack: agent settings changed, rebuilding");
 
-        // Remember the pane and the tab that owns it BEFORE teardown.
-        // Settings changes are typically authored from the Settings tab, so
-        // _GetFocusedTabImpl() points at Settings — we must not recreate the
-        // agent pane there. If no pane exists yet, just snapshot and bail —
-        // the user gets a fresh pane next time they open one.
+        // No existing pane → first launch of an agent pane in this window;
+        // nothing to tear down, just snapshot so the next launch picks up
+        // the new settings.
         const auto existingPane = _FindAgentPane();
         if (!existingPane)
         {
@@ -2021,8 +2036,7 @@ namespace winrt::TerminalApp::implementation
             _agentPaneLog("_RebuildAgentStack: no existing agent pane, snapshot only");
             return;
         }
-        const bool hadVisiblePane = !existingPane->IsHidden();
-        const auto ownerTab = _FindTabContainingAgentPane();
+        const auto previousOwnerTab = _FindTabContainingAgentPane();
 
         // Snapshot per-tab open/closed flags so the rebuild doesn't lose them
         // when the Closed handler clears them.
@@ -2039,14 +2053,12 @@ namespace winrt::TerminalApp::implementation
         _TeardownAgentPane();
         _lastAgentSettings = current;
 
-        // Recreate the hidden pane on the original tab — never on whatever
-        // happens to be focused (often Settings during a model switch).
-        if (ownerTab)
-        {
-            _AutoCreateHiddenAgentPane(ownerTab);
-        }
+        // Recreate on the active terminal tab — that's where
+        // SwapChainPanel.LayoutUpdated will fire and the ConPty
+        // connection will actually start. The pane moves between tabs
+        // on toggle anyway (see _RelocateAgentPaneToTab).
+        _AutoCreateHiddenAgentPane(focusedTab);
 
-        // Restore the per-tab flags.
         for (const auto& [tabImpl, flag] : savedFlags)
         {
             if (tabImpl)
@@ -2055,25 +2067,23 @@ namespace winrt::TerminalApp::implementation
             }
         }
 
-        // If the pane was visible before the rebuild, restore it on the
-        // *owner* tab. Going through _OpenOrReuseAgentPane would drag the
-        // pane onto the currently focused tab (Settings, when the rebuild
-        // is triggered by a model switch), which is what we just fixed.
-        if (hadVisiblePane && ownerTab)
-        {
-            if (const auto newPane = _FindAgentPane())
-            {
-                if (const auto newRoot = ownerTab->GetRootPane())
-                {
-                    newRoot->RestorePane(newPane);
-                    if (const auto paneId = newPane->Id())
-                    {
-                        ownerTab->FocusPane(paneId.value());
-                    }
-                }
-            }
-        }
+        (void)previousOwnerTab;
         _UpdateBottomBarState();
+    }
+
+    void TerminalPage::_FlushPendingAgentRebuild()
+    {
+        if (!_pendingAgentRebuild)
+        {
+            return;
+        }
+        const auto focusedTab = _GetFocusedTabImpl();
+        if (!focusedTab || *focusedTab == _settingsTab)
+        {
+            return;
+        }
+        _pendingAgentRebuild = false;
+        _RebuildAgentStack();
     }
 
     void TerminalPage::_OpenOrReuseAgentPane(const winrt::hstring& prompt, bool intoSessionsView)

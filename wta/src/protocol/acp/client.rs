@@ -1572,52 +1572,40 @@ async fn run_inner(
 ) -> Result<ExitReason> {
     let startup_probe = StartupProbe::new();
 
-    // Parse agent command into program + args, resolving bare names (e.g.
-    // "gemini" → "gemini.cmd") via the agent registry so npm-installed CLIs
-    // are found on PATH.
+    // Local re-parse for downstream model-handling (selection,
+    // identity summary). The spawn itself reparses inside
+    // `spawn_agent_process` — keeping a local parse avoids threading
+    // lifetimes through the shared helper.
     let parts: Vec<&str> = agent_cmd.split_whitespace().collect();
     let raw_program = parts
         .first()
         .ok_or_else(|| anyhow::anyhow!("empty agent command"))?;
     let args = &parts[1..];
-    let resolved_program = crate::agent_registry::resolve_bare_agent_name(raw_program);
-    let needs_cmd = crate::coordinator::needs_shell_launch(&resolved_program);
 
-    // Spawn agent subprocess
-    let program = if needs_cmd { "cmd" } else { resolved_program.as_str() };
-    // For adapter-style launches (npx -y @zed/...-acp), surface a more
-    // accurate stage hint — first run downloads the package (~10s).
-    let spawn_stage = if resolved_program.eq_ignore_ascii_case("npx")
-        || resolved_program.eq_ignore_ascii_case("npx.cmd")
-        || resolved_program.eq_ignore_ascii_case("npx.exe")
-    {
-        let adapter = args
-            .iter()
-            .find(|a| a.starts_with('@'))
-            .copied()
-            .unwrap_or("agent");
-        format!("Setting up {} (first run downloads adapter, ~10s)…", adapter)
+    let spawned = crate::protocol::acp::spawn::spawn_agent_process(agent_cmd)?;
+    let resolved_program = spawned.resolved_program.clone();
+    let is_npx_launch = spawned.is_npx;
+    let adapter_package = spawned.adapter_package.clone();
+    let mut child = spawned.child;
+
+    // For npx adapter launches, first run downloads the package
+    // (~10s); surface that instead of a generic "Spawning…".
+    let spawn_stage = if is_npx_launch {
+        format!(
+            "Setting up {} (first run downloads adapter, ~10s)…",
+            adapter_package.as_deref().unwrap_or("agent")
+        )
     } else {
         format!("Spawning {}...", resolved_program)
     };
     let _ = event_tx.send(AppEvent::ConnectionStage(spawn_stage.clone()));
-    startup_probe.log(&format!("{} cmd={} resolved={} needs_cmd={}", spawn_stage, agent_cmd, resolved_program, needs_cmd));
-
-    let mut cmd = tokio::process::Command::new(program);
-    if needs_cmd {
-        cmd.arg("/c").arg(&resolved_program);
-    }
-    let mut child = cmd
-        .args(args)
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .kill_on_drop(true)
-        .spawn()
-        .map_err(|e| anyhow::anyhow!("failed to spawn agent '{}': {}", agent_cmd, e))?;
-
-    let child_pid = child.id();
-    startup_probe.log(&format!("Spawned {} pid={:?}", program, child_pid));
+    startup_probe.log(&format!(
+        "{} cmd={} resolved={} pid={:?}",
+        spawn_stage,
+        agent_cmd,
+        resolved_program,
+        child.id()
+    ));
 
     let prompt_timing = Arc::new(PromptTimingState::default());
     let outgoing = InstrumentedAgentWriter::new(child.stdin.take().unwrap(), prompt_timing.clone())
@@ -1725,25 +1713,13 @@ async fn run_inner(
                     .title("Windows Terminal Agent"),
             ),
     );
-    // npx-launched adapters need a generous window because the first run
-    // downloads the package (~5MB, can take 20–30s on slow links). Native
-    // ACP CLIs respond in <1s, so the longer timeout has zero cost on the
-    // hot path — it only matters when a download is actually happening.
-    let is_npx_launch = resolved_program.eq_ignore_ascii_case("npx")
-        || resolved_program.eq_ignore_ascii_case("npx.cmd")
-        || resolved_program.eq_ignore_ascii_case("npx.exe");
+    // npx first-run downloads the adapter package (~5MB, can take
+    // 20–30s on slow links). Native CLIs respond in <1s so the longer
+    // timeout costs nothing on the hot path.
     let init_timeout_secs = if is_npx_launch { 60 } else { 15 };
-    // Pick a friendly name for error reporting. For npx launches the
-    // first @-prefixed arg is the adapter package; otherwise use the
-    // resolved program path.
-    let agent_label: String = if is_npx_launch {
-        args.iter()
-            .find(|a| a.starts_with('@'))
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| raw_program.to_string())
-    } else {
-        raw_program.to_string()
-    };
+    let agent_label: String = adapter_package
+        .clone()
+        .unwrap_or_else(|| raw_program.to_string());
     let init_resp = tokio::time::timeout(
         std::time::Duration::from_secs(init_timeout_secs),
         init_future,

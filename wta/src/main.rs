@@ -277,6 +277,22 @@ enum Command {
         #[command(subcommand)]
         action: HooksAction,
     },
+
+    /// One-shot ACP handshake to read an agent's advertised model list.
+    /// Spawned by the Settings UI when the user picks a new ACP agent so
+    /// the model dropdown can populate before any real agent pane is
+    /// rebuilt. Prints a single JSON object to stdout:
+    ///
+    ///   {"available_models":[{"id":"...","name":"...","description":"..."}],
+    ///    "current_model_id":"..."}
+    ///
+    /// On error: non-zero exit, message on stderr.
+    ProbeModels {
+        /// Full agent cmdline, same shape as `--agent` (e.g.
+        /// "copilot --acp --stdio" or "npx -y @zed-industries/claude-code-acp").
+        #[arg(long)]
+        agent: String,
+    },
 }
 
 /// Subcommands for `wta hooks`.
@@ -559,9 +575,57 @@ async fn main() -> Result<()> {
             HooksAction::Uninstall { cli } => run_hooks_uninstall(cli, json_mode),
         },
 
+        // ── ACP model list probe ──
+        Some(Command::ProbeModels { agent }) => run_probe_models(&agent).await,
+
         // ── No subcommand = ACP TUI mode (default) ──
         None => run_default_tui(cli).await,
     }
+}
+
+/// Drive [`protocol::acp::probe::probe_models`] on a tokio `LocalSet`
+/// (the ACP client connection is `!Send`), serialize the result to
+/// stdout, force-exit. See exit notes below.
+async fn run_probe_models(agent: &str) -> Result<()> {
+    // Logging must go to file, not stderr — the Settings UI captures
+    // our stdout for the JSON payload, and stderr would be folded
+    // into the same pipe and pollute the parser.
+    let _guard = logging::init("probe");
+    tracing::info!("probe-models start: agent={}", agent);
+
+    let local = tokio::task::LocalSet::new();
+    let result = match local
+        .run_until(protocol::acp::probe::probe_models(agent))
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!("probe-models failed: {:#}", e);
+            eprintln!("probe-models failed: {:#}", e);
+            let _ = std::io::Write::flush(&mut std::io::stderr());
+            // See exit rationale below.
+            std::process::exit(1);
+        }
+    };
+    tracing::info!(
+        "probe-models ok: {} model(s), current={:?}",
+        result.available_models.len(),
+        result.current_model_id
+    );
+    let payload = serde_json::to_string(&result)
+        .context("serialize probe result")?;
+    println!("{}", payload);
+
+    // Force-exit before the tokio runtime tries to drop. The agent we
+    // spawned is e.g. `cmd /c npx ...`; kill_on_drop kills cmd but
+    // the npx → node grandchildren survive as orphans. Tokio's IOCP
+    // reactor stays blocked on handles those orphans inherited and
+    // the runtime drop hangs for ~35s. Runtime cleanup is meaningless
+    // for a one-shot CLI — the caller is blocked on our process
+    // handle, exit now. Orphan grandchildren self-exit shortly after
+    // when they notice their pipes are broken.
+    let _ = std::io::Write::flush(&mut std::io::stdout());
+    std::process::exit(0);
 }
 
 // ─── Hooks subcommand handlers ──────────────────────────────────────────────
