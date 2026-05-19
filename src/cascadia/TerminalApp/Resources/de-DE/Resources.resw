@@ -959,8 +959,8 @@
   <data name="InitShellIntegrationErrorMessage" xml:space="preserve"><value>Die Shellintegration konnte nicht initialisiert werden. Der Pfad zu Ihrem PowerShell-Profil konnte nicht ermittelt werden. Stellen Sie sicher, dass die Ziel-Shell installiert ist.</value><comment>{Locked="PowerShell"}</comment></data>
   <data name="AgentNotConfiguredTitle" xml:space="preserve"><value>KI-Agent ist nicht verfügbar</value></data>
   <data name="AgentNotConfiguredSubtitle" xml:space="preserve"><value>Es konnte kein KI-Agent gefunden werden. Installieren Sie eine Agent-CLI (z. B. copilot, gemini) und stellen Sie sicher, dass sie sich in Ihrem PATH befindet, oder konfigurieren Sie eine unter Einstellungen &gt; Agenten.</value><comment>{Locked="CLI","PATH","copilot","gemini"}</comment></data>
-  <data name="FreOverlay_Title" xml:space="preserve"><value>Neu in Intelligent Terminal</value><comment>{Locked="Intelligent Terminal"}</comment></data>
-  <data name="FreOverlay_Card1Title" xml:space="preserve"><value>Willkommen bei Intelligent Terminal</value><comment>{Locked="Intelligent Terminal"}</comment></data>
+  <data name="FreOverlay_Title" xml:space="preserve"><value>Neu in Intelligentem Terminal</value><comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment></data>
+  <data name="FreOverlay_Card1Title" xml:space="preserve"><value>Willkommen bei Intelligentem Terminal</value><comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment></data>
   <data name="FreOverlay_Card1Description" xml:space="preserve"><value>Richten Sie Ihren integrierten KI-Agenten ein, damit er Ihnen direkt bei der Arbeit hilft</value></data>
   <data name="FreOverlay_Card2Title" xml:space="preserve"><value>Automatische Fehlererkennung</value></data>
   <data name="FreOverlay_Card2Description" xml:space="preserve"><value>Der Agentbereich hat immer Kontext und ist mit Ihrer bevorzugten Agent-CLI einsatzbereit</value><comment>{Locked="CLI"}</comment></data>
@@ -968,7 +968,7 @@
   <data name="FreOverlay_Card3Description" xml:space="preserve"><value>Die Sitzungsverwaltung hilft Ihnen dabei, Agenten nachzuverfolgen und zu früheren Sitzungen zurückzukehren</value></data>
   <data name="FreOverlay_Card4Title" xml:space="preserve"><value>Schnelle Agentbefehle</value></data>
   <data name="FreOverlay_Card4Description" xml:space="preserve"><value>Mit der Befehlspalette lassen sich Registerkarten im Hintergrund starten</value></data>
-  <data name="FreOverlay_DetailTitle" xml:space="preserve"><value>Willkommen bei Intelligent Terminal</value><comment>{Locked="Intelligent Terminal"}</comment></data>
+  <data name="FreOverlay_DetailTitle" xml:space="preserve"><value>Willkommen bei Intelligentem Terminal</value><comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment></data>
   <data name="FreOverlay_DetailDescription" xml:space="preserve"><value>Richten Sie Ihren integrierten KI-Agenten ein, damit er Ihnen direkt bei der Arbeit hilft, Fehler zu erklären, Befehle zu entwerfen und Aufgaben wieder in Gang zu bringen.</value></data>
   <data name="FreOverlay_Detail2Title" xml:space="preserve"><value>Automatische Fehlererkennung</value></data>
   <data name="FreOverlay_Detail2Description" xml:space="preserve"><value>Der Agentbereich hat immer Kontext und ist mit Ihrer bevorzugten Agent-CLI einsatzbereit.</value><comment>{Locked="CLI"}</comment></data>
@@ -976,6 +976,6 @@
   <data name="FreOverlay_Detail3Description" xml:space="preserve"><value>Die Sitzungsverwaltung hilft Ihnen dabei, Agenten nachzuverfolgen und zu früheren Sitzungen zurückzukehren.</value></data>
   <data name="FreOverlay_Detail4Title" xml:space="preserve"><value>Schnelle Agentbefehle</value></data>
   <data name="FreOverlay_Detail4Description" xml:space="preserve"><value>Verwenden Sie die Befehlspalette, um agentengestützte Aufgaben von überall in Ihrem Terminal aus schnell auszuführen.</value></data>
-  <data name="FreOverlay_DetailLink" xml:space="preserve"><value>Erfahren Sie mehr über Intelligent Terminal.</value><comment>{Locked="Intelligent Terminal"}</comment></data>
+  <data name="FreOverlay_DetailLink" xml:space="preserve"><value>Erfahren Sie mehr über Intelligentes Terminal.</value><comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment></data>
   <data name="FreOverlay_NextButton" xml:space="preserve"><value>Jetzt entdecken</value></data>
 </root>

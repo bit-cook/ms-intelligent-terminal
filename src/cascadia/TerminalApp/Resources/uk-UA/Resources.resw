@@ -1009,8 +1009,8 @@
   <data name="InitShellIntegrationErrorMessage" xml:space="preserve"><value>Не вдалося ініціалізувати інтеграцію оболонки. Не вдалося визначити шлях до вашого профілю PowerShell. Переконайтеся, що цільову оболонку встановлено.</value><comment>{Locked="PowerShell"}</comment></data>
   <data name="AgentNotConfiguredTitle" xml:space="preserve"><value>Агент ШІ недоступний</value></data>
   <data name="AgentNotConfiguredSubtitle" xml:space="preserve"><value>Не вдалося знайти жодного агента ШІ. Установіть CLI агента (наприклад, copilot або gemini) і переконайтеся, що його додано до PATH, або налаштуйте його в Налаштування &gt; Агенти.</value><comment>{Locked="CLI","PATH","copilot","gemini"}</comment></data>
-  <data name="FreOverlay_Title" xml:space="preserve"><value>Нове в Intelligent Terminal</value><comment>{Locked="Intelligent Terminal"}</comment></data>
-  <data name="FreOverlay_Card1Title" xml:space="preserve"><value>Ласкаво просимо до Intelligent Terminal</value><comment>{Locked="Intelligent Terminal"}</comment></data>
+  <data name="FreOverlay_Title" xml:space="preserve"><value>Нове в Інтелектуальному Терміналі</value><comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment></data>
+  <data name="FreOverlay_Card1Title" xml:space="preserve"><value>Ласкаво просимо до Інтелектуального Терміналу</value><comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment></data>
   <data name="FreOverlay_Card1Description" xml:space="preserve"><value>Налаштуйте вбудованого агента ШІ, щоб він допомагав вам саме там, де ви працюєте</value></data>
   <data name="FreOverlay_Card2Title" xml:space="preserve"><value>Автовиявлення помилок</value></data>
   <data name="FreOverlay_Card2Description" xml:space="preserve"><value>Панель агента завжди має контекст і готова до роботи з вашим улюбленим CLI</value><comment>{Locked="CLI"}</comment></data>
@@ -1018,7 +1018,7 @@
   <data name="FreOverlay_Card3Description" xml:space="preserve"><value>Керування сеансами допомагає відстежувати агентів і повертатися до попередніх сеансів</value></data>
   <data name="FreOverlay_Card4Title" xml:space="preserve"><value>Швидкі команди агента</value></data>
   <data name="FreOverlay_Card4Description" xml:space="preserve"><value>Палітра команд дає змогу запускати завдання агента у фонових вкладках</value></data>
-  <data name="FreOverlay_DetailTitle" xml:space="preserve"><value>Ласкаво просимо до Intelligent Terminal</value><comment>{Locked="Intelligent Terminal"}</comment></data>
+  <data name="FreOverlay_DetailTitle" xml:space="preserve"><value>Ласкаво просимо до Інтелектуального Терміналу</value><comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment></data>
   <data name="FreOverlay_DetailDescription" xml:space="preserve"><value>Налаштуйте вбудованого агента ШІ, щоб він допомагав вам пояснювати помилки, складати команди та розблоковувати завдання саме там, де ви працюєте.</value></data>
   <data name="FreOverlay_Detail2Title" xml:space="preserve"><value>Автовиявлення помилок</value></data>
   <data name="FreOverlay_Detail2Description" xml:space="preserve"><value>Панель агента завжди має контекст і готова до роботи з вашим улюбленим CLI.</value><comment>{Locked="CLI"}</comment></data>
@@ -1026,6 +1026,6 @@
   <data name="FreOverlay_Detail3Description" xml:space="preserve"><value>Керування сеансами допомагає відстежувати агентів і повертатися до попередніх сеансів.</value></data>
   <data name="FreOverlay_Detail4Title" xml:space="preserve"><value>Швидкі команди агента</value></data>
   <data name="FreOverlay_Detail4Description" xml:space="preserve"><value>Використовуйте палітру команд, щоб швидко запускати завдання за участю агента з будь-якого місця у вашому терміналі.</value></data>
-  <data name="FreOverlay_DetailLink" xml:space="preserve"><value>Дізнайтеся більше про Intelligent Terminal.</value><comment>{Locked="Intelligent Terminal"}</comment></data>
+  <data name="FreOverlay_DetailLink" xml:space="preserve"><value>Дізнатися більше про Інтелектуальний Термінал.</value><comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment></data>
   <data name="FreOverlay_NextButton" xml:space="preserve"><value>Почати знайомство</value></data>
 </root>

@@ -1013,11 +1013,11 @@ In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), n
   </data>
   <data name="FreOverlay_Title" xml:space="preserve">
     <value>New in Intelligent Terminal</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <comment>{Locked=qps-ploc,qps-ploca,qps-plocm} "Intelligent Terminal" is the product name.</comment>
   </data>
   <data name="FreOverlay_Card1Title" xml:space="preserve">
     <value>Welcome to Intelligent Terminal</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <comment>{Locked=qps-ploc,qps-ploca,qps-plocm} "Intelligent Terminal" is the product name.</comment>
   </data>
   <data name="FreOverlay_Card1Description" xml:space="preserve">
     <value>Set up your built-in assistant to help you right where you work</value>
@@ -1044,7 +1044,7 @@ In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), n
   <comment>In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment></data>
   <data name="FreOverlay_DetailTitle" xml:space="preserve">
     <value>Welcome to Intelligent Terminal</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <comment>{Locked=qps-ploc,qps-ploca,qps-plocm} "Intelligent Terminal" is the product name.</comment>
   </data>
   <data name="FreOverlay_DetailDescription" xml:space="preserve">
     <value>Set up your built-in assistant to help you explain errors, draft commands, and unblock tasks right where you work.</value>
@@ -1071,7 +1071,7 @@ In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), n
   <comment>In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment></data>
   <data name="FreOverlay_DetailLink" xml:space="preserve">
     <value>Learn more about Intelligent Terminal.</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <comment>{Locked=qps-ploc,qps-ploca,qps-plocm} "Intelligent Terminal" is the product name.</comment>
   </data>
   <data name="FreOverlay_NextButton" xml:space="preserve">
     <value>Start exploring</value>

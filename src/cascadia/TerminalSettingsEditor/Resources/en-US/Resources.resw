@@ -358,7 +358,7 @@
     <comment>This text is shown next to a list of choices.</comment>
   </data>
   <data name="Globals_TextMeasurement.HelpText" xml:space="preserve">
-    <value>This changes the way incoming text is grouped into cells. The "Grapheme clusters" option is the most modern and Unicode-correct way to do so, while "wcswidth" is a common approach on UNIX, and "Windows Console" replicates the way it used to work on Windows. Changing this setting requires a restart of Windows Terminal and it only applies to applications launched from within it.</value>
+    <value>This changes the way incoming text is grouped into cells. The "Grapheme clusters" option is the most modern and Unicode-correct way to do so, while "wcswidth" is a common approach on UNIX, and "Windows Console" replicates the way it used to work on Windows. Changing this setting requires a restart of Intelligent Terminal and it only applies to applications launched from within it.</value>
   </data>
   <data name="Globals_TextMeasurement_Graphemes.Text" xml:space="preserve">
     <value>Grapheme clusters</value>
@@ -376,7 +376,7 @@
     <comment>A label for a drop down selector, referring to the East Asian Ambiguous Width Unicode specification.</comment>
   </data>
   <data name="Globals_AmbiguousWidth.HelpText" xml:space="preserve">
-    <value>Sets the width used for East Asian Ambiguous characters. "Narrow" (default) prioritizes compatibility, while "Wide" prioritizes readability with many CJK fonts. In "Wide" mode, some applications may not work correctly and cause erratic cursor movement. Changing this setting requires a restart of Windows Terminal and it only applies to applications launched from within it.</value>
+    <value>Sets the width used for East Asian Ambiguous characters. "Narrow" (default) prioritizes compatibility, while "Wide" prioritizes readability with many CJK fonts. In "Wide" mode, some applications may not work correctly and cause erratic cursor movement. Changing this setting requires a restart of Intelligent Terminal and it only applies to applications launched from within it.</value>
   </data>
   <data name="Globals_AmbiguousWidth_Narrow.Text" xml:space="preserve">
     <value>Narrow</value>
@@ -574,8 +574,8 @@
     <comment>{Locked="OSC 52"}{Locked="Manipulate Selection Data"}Header for a control to toggle support for applications to change the contents of the Windows system clipboard.</comment>
   </data>
   <data name="Globals_AllowHeadless.Header" xml:space="preserve">
-    <value>Allow Windows Terminal to run in the background</value>
-    <comment>Header for a control to toggle support for Windows Terminal to run in the background.</comment>
+    <value>Allow Intelligent Terminal to run in the background</value>
+    <comment>Header for a control to toggle support for Intelligent Terminal to run in the background.</comment>
   </data>
   <data name="Globals_DebugFeaturesEnabled.Header" xml:space="preserve">
     <value>Enable debugging features</value>
@@ -2334,7 +2334,7 @@ In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), n
     <comment>As in: Always VS Never</comment>
   </data>
   <data name="Settings_PortableModeNote.Text" xml:space="preserve">
-    <value>Windows Terminal is running in portable mode.</value>
+    <value>Intelligent Terminal is running in portable mode.</value>
     <comment>A disclaimer that indicates that Terminal is running in a mode that saves settings to a different folder.</comment>
   </data>
   <data name="Settings_PortableModeInfoLink.NavigateUri" xml:space="preserve">
@@ -2693,7 +2693,7 @@ In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), n
     <comment>Header for a control to toggle allowing unfocused windows to have an acrylic background.</comment>
   </data>
   <data name="Globals_ShowAdminShield.Header" xml:space="preserve">
-    <value>Display a shield in the title bar when Windows Terminal is running as Administrator</value>
+    <value>Display a shield in the title bar when Intelligent Terminal is running as Administrator</value>
     <comment>Header for a control to toggle displaying a shield in the title bar of the app. "Admin" refers to elevated sessions like "run as Admin"</comment>
   </data>
   <data name="Globals_ShowTabsFullscreen.Header" xml:space="preserve">

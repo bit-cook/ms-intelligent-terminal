@@ -1024,12 +1024,12 @@
     <comment>{Locked="CLI","PATH","copilot","gemini"}</comment>
   </data>
   <data name="FreOverlay_Title" xml:space="preserve">
-    <value>Intelligent Terminal 的新增功能</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <value>智能终端的新功能</value>
+    <comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment>
   </data>
   <data name="FreOverlay_Card1Title" xml:space="preserve">
-    <value>欢迎使用 Intelligent Terminal</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <value>欢迎使用智能终端</value>
+    <comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment>
   </data>
   <data name="FreOverlay_Card1Description" xml:space="preserve">
     <value>设置内置智能体，让它在你的工作环境中直接为你提供帮助</value>
@@ -1054,8 +1054,8 @@
     <value>命令面板可快速启动后台标签页</value>
   </data>
   <data name="FreOverlay_DetailTitle" xml:space="preserve">
-    <value>欢迎使用 Intelligent Terminal</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <value>欢迎使用智能终端</value>
+    <comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment>
   </data>
   <data name="FreOverlay_DetailDescription" xml:space="preserve">
     <value>设置内置智能体，让它在你的工作环境中帮助你解释错误、起草命令并扫清任务阻碍。</value>
@@ -1080,8 +1080,8 @@
     <value>使用命令面板可从终端中的任意位置快速运行由智能体驱动的任务。</value>
   </data>
   <data name="FreOverlay_DetailLink" xml:space="preserve">
-    <value>详细了解 Intelligent Terminal。</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <value>详细了解智能终端。</value>
+    <comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment>
   </data>
   <data name="FreOverlay_NextButton" xml:space="preserve">
     <value>开始探索</value>

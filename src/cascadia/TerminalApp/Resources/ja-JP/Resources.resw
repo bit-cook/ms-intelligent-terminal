@@ -957,8 +957,8 @@
   <data name="InitShellIntegrationErrorMessage" xml:space="preserve"><value>シェル統合を初期化できませんでした。PowerShell プロファイルのパスを特定できませんでした。対象のシェルがインストールされていることを確認してください。</value><comment>{Locked="PowerShell"}</comment></data>
   <data name="AgentNotConfiguredTitle" xml:space="preserve"><value>AI エージェントは利用できません</value></data>
   <data name="AgentNotConfiguredSubtitle" xml:space="preserve"><value>AI エージェントが見つかりませんでした。エージェント CLI (例: copilot、gemini) をインストールし、それが PATH に含まれていることを確認するか、[設定] &gt; [AI エージェント] で構成してください。</value><comment>{Locked="CLI","PATH","copilot","gemini"}</comment></data>
-  <data name="FreOverlay_Title" xml:space="preserve"><value>Intelligent Terminal の新機能</value><comment>{Locked="Intelligent Terminal"}</comment></data>
-  <data name="FreOverlay_Card1Title" xml:space="preserve"><value>Intelligent Terminal へようこそ</value><comment>{Locked="Intelligent Terminal"}</comment></data>
+  <data name="FreOverlay_Title" xml:space="preserve"><value>インテリジェント ターミナルの新機能</value><comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment></data>
+  <data name="FreOverlay_Card1Title" xml:space="preserve"><value>インテリジェント ターミナルへようこそ</value><comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment></data>
   <data name="FreOverlay_Card1Description" xml:space="preserve"><value>作業しながらその場で支援してくれる組み込みアシスタントを設定します</value></data>
   <data name="FreOverlay_Card2Title" xml:space="preserve"><value>自動エラー検出</value></data>
   <data name="FreOverlay_Card2Description" xml:space="preserve"><value>エージェント ペインは常にコンテキストを保持し、お好みのエージェント CLI をすぐに利用できます</value><comment>{Locked="CLI"}</comment></data>
@@ -966,7 +966,7 @@
   <data name="FreOverlay_Card3Description" xml:space="preserve"><value>セッション管理により、エージェントを追跡し、以前のセッションに戻れます</value></data>
   <data name="FreOverlay_Card4Title" xml:space="preserve"><value>クイック エージェント コマンド</value></data>
   <data name="FreOverlay_Card4Description" xml:space="preserve"><value>コマンド パレットからバックグラウンド タブを起動できます</value></data>
-  <data name="FreOverlay_DetailTitle" xml:space="preserve"><value>Intelligent Terminal へようこそ</value><comment>{Locked="Intelligent Terminal"}</comment></data>
+  <data name="FreOverlay_DetailTitle" xml:space="preserve"><value>インテリジェント ターミナルへようこそ</value><comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment></data>
   <data name="FreOverlay_DetailDescription" xml:space="preserve"><value>作業しながらその場で、エラーの説明やコマンドの下書き、行き詰まったタスクの打開を手伝ってくれる組み込みアシスタントを設定します。</value></data>
   <data name="FreOverlay_Detail2Title" xml:space="preserve"><value>自動エラー検出</value></data>
   <data name="FreOverlay_Detail2Description" xml:space="preserve"><value>エージェント ペインは常にコンテキストを保持し、お好みのエージェント CLI をすぐに利用できます。</value><comment>{Locked="CLI"}</comment></data>
@@ -974,6 +974,6 @@
   <data name="FreOverlay_Detail3Description" xml:space="preserve"><value>セッション管理により、エージェントを追跡し、以前のセッションに戻れます。</value></data>
   <data name="FreOverlay_Detail4Title" xml:space="preserve"><value>クイック エージェント コマンド</value></data>
   <data name="FreOverlay_Detail4Description" xml:space="preserve"><value>コマンド パレットを使うと、ターミナル内のどこからでもエージェントを使ったタスクをすばやく実行できます。</value></data>
-  <data name="FreOverlay_DetailLink" xml:space="preserve"><value>Intelligent Terminal の詳細を見る</value><comment>{Locked="Intelligent Terminal"}</comment></data>
+  <data name="FreOverlay_DetailLink" xml:space="preserve"><value>インテリジェント ターミナルの詳細を見る</value><comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment></data>
   <data name="FreOverlay_NextButton" xml:space="preserve"><value>使ってみる</value></data>
 </root>

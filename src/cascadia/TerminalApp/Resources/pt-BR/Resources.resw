@@ -1015,12 +1015,12 @@
     <comment>{Locked="CLI","PATH","copilot","gemini"}</comment>
   </data>
   <data name="FreOverlay_Title" xml:space="preserve">
-    <value>Novidades no Intelligent Terminal</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <value>Novidades no Terminal Inteligente</value>
+    <comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment>
   </data>
   <data name="FreOverlay_Card1Title" xml:space="preserve">
-    <value>Boas-vindas ao Intelligent Terminal</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <value>Boas-vindas ao Terminal Inteligente</value>
+    <comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment>
   </data>
   <data name="FreOverlay_Card1Description" xml:space="preserve">
     <value>Configure seu agente integrado para ajudar você exatamente onde trabalha.</value>
@@ -1045,8 +1045,8 @@
     <value>A paleta de comandos pode iniciar guias em segundo plano</value>
   </data>
   <data name="FreOverlay_DetailTitle" xml:space="preserve">
-    <value>Boas-vindas ao Intelligent Terminal</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <value>Boas-vindas ao Terminal Inteligente</value>
+    <comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment>
   </data>
   <data name="FreOverlay_DetailDescription" xml:space="preserve">
     <value>Configure seu agente integrado para ajudar você a explicar erros, redigir comandos e destravar tarefas exatamente onde trabalha.</value>
@@ -1071,8 +1071,8 @@
     <value>Use a paleta de comandos para executar rapidamente tarefas com agentes de qualquer lugar do terminal.</value>
   </data>
   <data name="FreOverlay_DetailLink" xml:space="preserve">
-    <value>Saiba mais sobre o Intelligent Terminal.</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <value>Saiba mais sobre o Terminal Inteligente.</value>
+    <comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment>
   </data>
   <data name="FreOverlay_NextButton" xml:space="preserve">
     <value>Começar a explorar</value>

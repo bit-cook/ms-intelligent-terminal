@@ -997,11 +997,11 @@
     <value>Ниједан ВИ агент није пронађен. Инсталирајте CLI агента (нпр. copilot, gemini) и уверите се да је на вашем PATH-у или га конфигуришите у одељку Подешавања &gt; ВИ агенти.</value>
     <comment>{Locked="CLI","PATH","copilot","gemini"}</comment>
   </data><data name="FreOverlay_Title" xml:space="preserve">
-    <value>Ново у Intelligent Terminal-у</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <value>Ново у Интелигентном Терминалу</value>
+    <comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment>
   </data><data name="FreOverlay_Card1Title" xml:space="preserve">
-    <value>Добро дошли у Intelligent Terminal</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <value>Добро дошли у Интелигентни Терминал</value>
+    <comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment>
   </data><data name="FreOverlay_Card1Description" xml:space="preserve">
     <value>Подесите уграђеног агента да вам помаже тамо где радите</value>
   </data><data name="FreOverlay_Card2Title" xml:space="preserve">
@@ -1018,8 +1018,8 @@
   </data><data name="FreOverlay_Card4Description" xml:space="preserve">
     <value>Палета команди може брзо да покрене агентске задатке у позадини</value>
   </data><data name="FreOverlay_DetailTitle" xml:space="preserve">
-    <value>Добро дошли у Intelligent Terminal</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <value>Добро дошли у Интелигентни Терминал</value>
+    <comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment>
   </data><data name="FreOverlay_DetailDescription" xml:space="preserve">
     <value>Подесите уграђеног агента да вам помогне да објасните грешке, саставите команде и решите блокаде у задацима тамо где радите.</value>
   </data><data name="FreOverlay_Detail2Title" xml:space="preserve">
@@ -1036,8 +1036,8 @@
   </data><data name="FreOverlay_Detail4Description" xml:space="preserve">
     <value>Помоћу палете команди можете брзо да покрећете задатке које покреће агент са било ког места у терминалу.</value>
   </data><data name="FreOverlay_DetailLink" xml:space="preserve">
-    <value>Сазнајте више о Intelligent Terminal-у.</value>
-    <comment>{Locked="Intelligent Terminal"}</comment>
+    <value>Сазнајте више о Интелигентном Терминалу.</value>
+    <comment>"Intelligent Terminal" is the product name. Translate it if a localized product name exists for this language.</comment>
   </data><data name="FreOverlay_NextButton" xml:space="preserve">
     <value>Почните да истражујете</value>
   </data>
