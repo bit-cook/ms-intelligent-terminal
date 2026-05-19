@@ -1526,6 +1526,18 @@ impl App {
         }
     }
 
+    /// Filter to apply to the F2 session-management view based on which
+    /// agent CLI the WTA agent pane is currently driving. Returns
+    /// `Some(CliSource::*)` when `current_agent_id` resolves to a tracked
+    /// CLI (copilot / claude / gemini) so only matching rows are listed.
+    /// Returns `None` when no agent has been selected yet or the agent is
+    /// not one the session registry tracks (codex / unknown) — in that
+    /// case the view falls back to showing every row so the user can still
+    /// see and resume their history.
+    pub fn current_cli_filter(&self) -> Option<crate::agent_sessions::CliSource> {
+        crate::agent_sessions::CliSource::from_agent_id(&self.current_agent_id)
+    }
+
     /// Enter handler for the F2 Agents view. For live rows (Idle / Working
     /// / Attention / Error), focus the underlying WT pane. For terminal-
     /// state rows (Ended / Historical), spawn a new pane that runs the
@@ -3004,7 +3016,10 @@ impl App {
                 // activates immediately. Mirrors the F2 enter-Agents path.
                 if self.current_tab().current_view == View::Agents
                     && self.current_tab().agents_list_state.selected().is_none()
-                    && !self.agent_sessions.iter_sorted().is_empty()
+                    && !self
+                        .agent_sessions
+                        .iter_sorted_filtered(self.current_cli_filter().as_ref())
+                        .is_empty()
                 {
                     self.current_tab_mut().agents_list_state.select(Some(0));
                 }
@@ -3188,8 +3203,10 @@ impl App {
                         "sessions" | "agents" => {
                             let entering_agents =
                                 self.current_tab().current_view != View::Agents;
-                            let has_sessions =
-                                !self.agent_sessions.iter_sorted().is_empty();
+                            let has_sessions = !self
+                                .agent_sessions
+                                .iter_sorted_filtered(self.current_cli_filter().as_ref())
+                                .is_empty();
                             {
                                 let tab = self.current_tab_mut();
                                 tab.current_view = View::Agents;
@@ -3669,7 +3686,8 @@ impl App {
         // selection cursor are per-tab on `TabSession` so each WT tab
         // keeps its own picker state across switches.
         if self.current_tab().current_view == View::Agents {
-            let count = self.agent_sessions.iter_sorted().len();
+            let filter = self.current_cli_filter();
+            let count = self.agent_sessions.iter_sorted_filtered(filter.as_ref()).len();
             match key.code {
                 KeyCode::Down => {
                     let cur = self.current_tab().agents_list_state.selected().unwrap_or(0);
@@ -3686,7 +3704,7 @@ impl App {
                     if let Some(idx) = self.current_tab().agents_list_state.selected() {
                         let selected = self
                             .agent_sessions
-                            .iter_sorted()
+                            .iter_sorted_filtered(filter.as_ref())
                             .get(idx)
                             .map(|s| (*s).clone());
                         if let Some(s) = selected {
@@ -3712,7 +3730,7 @@ impl App {
                     if let Some(idx) = self.current_tab().agents_list_state.selected() {
                         let target = self
                             .agent_sessions
-                            .iter_sorted()
+                            .iter_sorted_filtered(filter.as_ref())
                             .get(idx)
                             .map(|s| (s.key.clone(), s.status.clone()));
                         if let Some((key, status)) = target {
@@ -3723,7 +3741,12 @@ impl App {
                             if matches!(status, Ended | Historical) {
                                 self.agent_sessions.remove(&key);
                                 // Keep the cursor in-bounds after eviction.
-                                let new_count = self.agent_sessions.iter_sorted().len();
+                                // Re-query through the same filter so the
+                                // selection clamp matches the rendered list.
+                                let new_count = self
+                                    .agent_sessions
+                                    .iter_sorted_filtered(filter.as_ref())
+                                    .len();
                                 let tab = self.current_tab_mut();
                                 if new_count == 0 {
                                     tab.agents_list_state.select(None);
@@ -4314,7 +4337,10 @@ impl App {
                 // the Agents picker and seed a selection so Enter/Up/Down
                 // are immediately useful. Esc / F2 still close the view.
                 // Per-tab — only flips the active tab's view state.
-                let has_sessions = !self.agent_sessions.iter_sorted().is_empty();
+                let has_sessions = !self
+                    .agent_sessions
+                    .iter_sorted_filtered(self.current_cli_filter().as_ref())
+                    .is_empty();
                 {
                     let tab = self.current_tab_mut();
                     if tab.agents_list_state.selected().is_none() && has_sessions {
