@@ -2,8 +2,8 @@
 // Licensed under the MIT license.
 //
 // Pure functions extracted from shell_manager for fuzzing.
-// This module is shared between the library target (for cargo-fuzz)
-// and the binary target (via #[path] include in shell_manager.rs).
+// Compiled into the wta library target; the binary and the cargo-fuzz
+// target both consume them via `wta::build_wt_commandline`.
 
 /// Quote the program path (argv[0]). `CommandLineToArgvW` uses different
 /// rules for the first token: backslashes are literal, and the first
@@ -11,7 +11,7 @@
 /// it. So we wrap in plain double quotes and require the input not
 /// contain `"`. (Real executable paths never do.)
 fn append_wt_commandline_program(cmdline: &mut String, value: &str) {
-    debug_assert!(
+    assert!(
         !value.contains('"'),
         "executable path cannot contain a literal double quote"
     );

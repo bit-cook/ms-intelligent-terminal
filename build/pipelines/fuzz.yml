@@ -46,22 +46,62 @@ stages:
             name: SHINE-OSS-L
         steps:
         - checkout: self
-        - bash: |
-            set -ex
-            msrustup toolchain install ms-nightly
-            cargo +ms-nightly install cargo-fuzz --locked
-          displayName: Install Rust nightly + cargo-fuzz
-        - bash: |
-            set -ex
-            cd tools/wta
-            cargo +ms-nightly fuzz build cmdline_builder
+
+        # Install MSRustup + the ms-nightly toolchain required by cargo-fuzz.
+        # Mirrors the canonical Rust install pattern from
+        # build/pipelines/templates-v2/job-build-project.yml.
+        - task: RustInstaller@1
+          displayName: Install Rust toolchain (MSRustup)
+          inputs:
+            rustVersion: ms-nightly
+            toolchainFeed: https://pkgs.dev.azure.com/microsoft/_packaging/RustTools/nuget/v3/index.json
+            additionalTargets: 'x86_64-pc-windows-msvc'
+
+        # CI-only .cargo/config.toml at the repo root pointing cargo at the
+        # Azure Artifacts feed. Not checked into the repo (would break local
+        # dev — feed requires CI-only auth tokens). Cargo discovers this by
+        # walking up from CWD; it must live at the repo root, not under wta/.
+        - pwsh: |-
+            $configDir = '.cargo'
+            New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+            @"
+            [registries]
+            WindowsTerminalCargo = { index = "sparse+https://pkgs.dev.azure.com/microsoft/Dart/_packaging/IntelligentTerminal_Cargo/Cargo/index/" }
+
+            [source.crates-io]
+            replace-with = "WindowsTerminalCargo"
+            "@ | Set-Content "$configDir/config.toml" -Encoding utf8NoBOM
+          displayName: Create Cargo registry config (CI only)
+
+        # Issues a Bearer token for the Azure Artifacts feed referenced in
+        # .cargo/config.toml. Required — without it the sparse-index endpoint
+        # returns 404.
+        - task: CargoAuthenticate@0
+          displayName: Authenticate Cargo feeds
+          inputs:
+            configFile: .cargo/config.toml
+
+        # cargo-fuzz must come from the authenticated feed.
+        - script: cargo +ms-nightly install cargo-fuzz --locked
+          displayName: Install cargo-fuzz
+
+        # Pre-fetch deps so the build step is offline-friendly (some 1ES
+        # pools disable network during the build phase).
+        - script: cargo fetch --manifest-path tools/wta/fuzz/Cargo.toml --locked
+          displayName: Fetch fuzz crate dependencies
+
+        - script: cargo +ms-nightly fuzz build cmdline_builder --fuzz-dir tools/wta/fuzz
           displayName: Build WTA fuzz targets
-        - bash: |
-            set -ex
-            # cargo-fuzz outputs to tools/wta/fuzz/target/<triple>/release/
-            cp tools/wta/fuzz/target/x86_64-pc-windows-msvc/release/cmdline_builder.exe \
-               $(Build.ArtifactStagingDirectory)/WtaCmdlineFuzzer.exe
+
+        # Use pwsh (not bash) so the ADO `$(Build.ArtifactStagingDirectory)`
+        # macro doesn't expand to a backslash-laden path that bash treats as
+        # escape sequences.
+        - pwsh: |-
+            $src = 'tools/wta/fuzz/target/x86_64-pc-windows-msvc/release/cmdline_builder.exe'
+            $dst = "$(Build.ArtifactStagingDirectory)/WtaCmdlineFuzzer.exe"
+            Copy-Item -Path $src -Destination $dst
           displayName: Stage fuzzer artifact
+
         - task: PublishPipelineArtifact@1
           displayName: Publish WTA fuzzer
           inputs:
