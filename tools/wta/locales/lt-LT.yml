@@ -3,3 +3,121 @@ setup.title.first_run: "Sveiki atvykę į Intelligent Terminal!"
 setup.title.agent_missing: "Agentas nerastas"
 setup.title.agent_error: "Nepavyko prisijungti prie agento"
 setup.title.switch_agent: "Pakeisti agentą"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Pasirinkta agento CLI %{name}"
+auth.agent_selected_with_status: "Agento CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Tikrinamas autentifikavimas..."
+auth.waiting_for_authorization: "  %{spinner} Laukiama autorizavimo..."
+auth.code_copied_hint: "  Kodas nukopijuotas į iškarpinę — įklijuokite jį naršyklėje."
+auth.sign_in_prompt: "Prisijunkite, kad galėtumėte naudoti agentą:"
+auth.card_connect: "  Prijunkite %{name}, kad įgalintumėte agento funkcijas"
+auth.button_sign_in_github: "[ Prisijungti naudojant GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Prisijungti naudojant %{name} ]"
+auth.hint_footer: "  Paspauskite Enter, kad prisijungtumėte, Esc – kad grįžtumėte atgal"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Mąstoma…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Sveiki atvykę į Intelligent Terminal!"
+chat.plan_header: "Planas:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Klauskite ko tik norite, / komandoms.."  # {Locked="/"}
+input.placeholder.connecting: "jungiamasi..."
+input.placeholder.disconnected: "atjungta"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / komandos "
+commands.help_title: " Žinynas "
+commands.help_header: "Pasvirojo brūkšnio komandos — įveskite / įvesties laukelyje."
+commands.help_escape_hint: "  //text     Siųsti pažodinį „/“ (apeina komandų analizatorių)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Uždaryti šį žinyną"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ naršyti • Enter pasirinkti • Esc atšaukti)"
+recommendations.button_run_command: "[ Vykdyti komandą ]"
+recommendations.button_insert_in_terminal: "Įterpti terminale"
+recommendations.button_open_in_new_tab: "Atidaryti naujame skirtuke ↵"
+recommendations.button_open_in_new_panel: "Atidaryti naujame skydelyje ↵"
+recommendations.button_open_tab: "Atidaryti skirtuką ↵"
+recommendations.button_open_panel: "Atidaryti skydelį ↵"
+recommendations.button_execute: "Vykdyti ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Prašoma leidimo"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N atsakyti · padidinkite, kad matytumėte visą kortelę]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Neįdiegta — pasirinkite, kad būtų įdiegta automatiškai"
+agent.status.not_found: "Nerasta"
+agent.status.detected: "Aptikta"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Vykdoma: winget install GitHub.Copilot"
+agent.install.launch_failed: "Nepavyko paleisti winget: %{error}"
+agent.install.winget_exited: "winget netikėtai išėjo: %{error}"
+agent.install.winget_failed_code: "winget install nepavyko (išėjimo kodas %{code})"
+agent.install.unsupported: "Automatinis diegimas nepalaikomas: %{agent}"
+agent.custom.auth_hint: "Įsitikinkite, kad %{name} įdiegta ir yra jūsų PATH."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Įkeliama..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ naršyti • Enter paleisti seansą naujame skirtuke • Shift+enter paleisti seansą agento skydelyje • Esc išeiti)"
+agents.status.active: "Aktyvus"
+agents.status.waiting_for_input: "Laukiama įvesties"
+agents.status.error: "Klaida"
+agents.status.idle: "Neveiklus"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. rodyti / slėpti agento skydelį • Ctrl+Alt+/ rodyti / slėpti agento seansą)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Atšaukta."
+system.no_prompt_in_flight: "Nėra vykdomos užklausos."
+system.authentication_failed: "Autentifikavimas nepavyko"
+system.command_copied_retry: "Komanda nukopijuota — paleiskite ją kitame terminale, tada paspauskite Enter, kad pakartotumėte"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Langų nerasta."
+output.no_tabs: "Skirtukų nerasta."
+output.no_panes: "Skydelių nerasta."
+output.no_windows_in_list: "Langų nerasta"
+output.no_tabs_in_window: "Lange %{window_id} skirtukų nerasta"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Aktyvus skydelis: %{pane} (skirtukas: %{tab}, langas: %{window})"
+output.pane_running: "Vykdoma (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Išėjo (kodas: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Sukurtas skirtukas %{tab_id} (skydelis %{pane_id})"
+output.created_pane: "Sukurtas skydelis %{pane_id}"
+output.pane_closed: "Skydelis %{pane_id} uždarytas."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Aktyvaus skydelio nerasta. Naudokite -t, kad nurodytumėte skydelio ID."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID nenustatytas. Paleiskite Windows Terminal skydelyje."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Nežinomas apvalkalo tipas „%{shell}“. Naudokite: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Nepavyko paleisti wtcli wait-for"
+error.wtcli_wait_for_parse: "Nepavyko išanalizuoti wtcli wait-for išvesties"
+error.wtcli_wait_for_failed: "wtcli wait-for nepavyko: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "paketo šaltinis: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI nėra PATH"
+hooks.installed: "✓ įdiegta"
+hooks.marketplace_path_stale: "⚠ pasenęs prekyvietės kelias"
+hooks.installed_but_disabled: "⚠ įdiegta, bet išjungta"
+hooks.not_installed: "✗ neįdiegta"
+hooks.uninstall_skipped: "praleista (CLI nėra PATH)"
+hooks.install_attempted: "Bandyta įdiegti wt-agent-hooks (idempotentinė operacija). Vykdykite `wta hooks status`, kad patikrintumėte rezultatą. Sekimo žurnalas: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

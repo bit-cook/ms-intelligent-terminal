@@ -3,3 +3,121 @@ setup.title.first_run: "Intelligent Terminal へようこそ"
 setup.title.agent_missing: "エージェントが見つかりません"
 setup.title.agent_error: "エージェントへの接続に失敗しました"
 setup.title.switch_agent: "エージェントを切り替える"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "エージェント CLI %{name} が選択されました"
+auth.agent_selected_with_status: "エージェント CLI %{name} — "
+auth.checking_authentication: "  %{spinner} 認証を確認しています..."
+auth.waiting_for_authorization: "  %{spinner} 承認を待機しています..."
+auth.code_copied_hint: "  コードをクリップボードにコピーしました — ブラウザーに貼り付けてください。"
+auth.sign_in_prompt: "エージェントを使うにはサインインしてください:"
+auth.card_connect: "  %{name} に接続してエージェント機能を有効にする"
+auth.button_sign_in_github: "[ GitHub でサインイン ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ %{name} でサインイン ]"
+auth.hint_footer: "  Enter でサインイン、Esc で戻る"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "思考中…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Intelligent Terminal へようこそ"
+chat.plan_header: "プラン:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "何でも質問してください。/ でコマンド.."  # {Locked="/"}
+input.placeholder.connecting: "接続中..."
+input.placeholder.disconnected: "切断"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / コマンド "
+commands.help_title: " ヘルプ "
+commands.help_header: "スラッシュ コマンド — 入力欄で / を入力します。"
+commands.help_escape_hint: "  //text     リテラルの '/' を送信 (コマンド パーサーをエスケープ)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        このヘルプを閉じる"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ で移動 • Enter で選択 • Esc でキャンセル)"
+recommendations.button_run_command: "[ コマンドを実行 ]"
+recommendations.button_insert_in_terminal: "ターミナルに挿入"
+recommendations.button_open_in_new_tab: "新しいタブで開く ↵"
+recommendations.button_open_in_new_panel: "新しいパネルで開く ↵"
+recommendations.button_open_tab: "タブを開く ↵"
+recommendations.button_open_panel: "パネルを開く ↵"
+recommendations.button_execute: "実行 ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "アクセス許可が要求されました"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N で回答 · サイズを変更すると全体表示]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "未インストール — 選択すると自動でインストールします"
+agent.status.not_found: "見つかりません"
+agent.status.detected: "検出済み"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "実行中: winget install GitHub.Copilot"
+agent.install.launch_failed: "winget の起動に失敗しました: %{error}"
+agent.install.winget_exited: "winget が予期せず終了しました: %{error}"
+agent.install.winget_failed_code: "winget install に失敗しました (終了コード %{code})"
+agent.install.unsupported: "%{agent} の自動インストールはサポートされていません"
+agent.custom.auth_hint: "%{name} がインストールされ、PATH に含まれていることを確認してください。"  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "読み込み中..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ で移動 • Enter で新しいタブにセッションを起動 • Shift+enter でエージェント ペインにセッションを起動 • Esc で終了)"
+agents.status.active: "アクティブ"
+agents.status.waiting_for_input: "入力待ち"
+agents.status.error: "エラー"
+agents.status.idle: "アイドル"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. でエージェント ペインの表示/非表示 • Ctrl+Alt+/ でエージェント セッションの表示/非表示)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "キャンセルされました。"
+system.no_prompt_in_flight: "実行中のプロンプトはありません。"
+system.authentication_failed: "認証に失敗しました"
+system.command_copied_retry: "コマンドをコピーしました — 別のターミナルで実行してから Enter を押して再試行してください"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "ウィンドウが見つかりません。"
+output.no_tabs: "タブが見つかりません。"
+output.no_panes: "ペインが見つかりません。"
+output.no_windows_in_list: "ウィンドウが見つかりません"
+output.no_tabs_in_window: "ウィンドウ %{window_id} にタブが見つかりません"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "アクティブ ペイン: %{pane} (タブ: %{tab}、ウィンドウ: %{window})"
+output.pane_running: "実行中 (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "終了しました (コード: %{code}、PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "タブ %{tab_id} を作成しました (ペイン %{pane_id})"
+output.created_pane: "ペイン %{pane_id} を作成しました"
+output.pane_closed: "ペイン %{pane_id} を閉じました。"
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "アクティブなペインが見つかりません。-t でペイン ID を指定してください。"  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID が設定されていません。Windows Terminal のペイン内で実行してください。"  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "不明なシェル タイプ '%{shell}'。次のいずれかを使用してください: bash、powershell、cmd、fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "wtcli wait-for の起動に失敗しました"
+error.wtcli_wait_for_parse: "wtcli wait-for の出力の解析に失敗しました"
+error.wtcli_wait_for_failed: "wtcli wait-for に失敗しました: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "バンドル ソース: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI が PATH にありません"
+hooks.installed: "✓ インストール済み"
+hooks.marketplace_path_stale: "⚠ マーケットプレース パスが古くなっています"
+hooks.installed_but_disabled: "⚠ インストール済みですが無効化されています"
+hooks.not_installed: "✗ インストールされていません"
+hooks.uninstall_skipped: "スキップしました (CLI が PATH にありません)"
+hooks.install_attempted: "wt-agent-hooks のインストールを試行しました (冪等)。結果を確認するには `wta hooks status` を実行してください。トレース ログ: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

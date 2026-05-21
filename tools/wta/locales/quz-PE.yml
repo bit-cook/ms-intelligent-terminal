@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Allillanchu Intelligent Terminal!"
 setup.title.agent_missing: "Mana agente tarikusqachu"
 setup.title.agent_error: "Agente t'inkiynin mana allinchu"
 setup.title.switch_agent: "Agente t'ikray"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Agente CLI %{name} akllasqa"
+auth.agent_selected_with_status: "Agente CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Autentikasionta qhawarichkan..."
+auth.waiting_for_authorization: "  %{spinner} Saqiyta suyachkan..."
+auth.code_copied_hint: "  Cōdigo k'achaymanta qhillpisqa — navegador ukhupi laqyay."
+auth.sign_in_prompt: "Agentenikita llamk'achinaykipaq yaykuy:"
+auth.card_connect: "  %{name} t'inkiy agentepa imayna kasqankunata kachariy"
+auth.button_sign_in_github: "[ GitHub-wan yaykuy ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ %{name}-wan yaykuy ]"
+auth.hint_footer: "  Yaykunaykipaq Enter ñit'iy, kutinaykipaq Esc"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Yuyaymanachkan…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Allillanchu Intelligent Terminal!"
+chat.plan_header: "Plan:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Imatapas tapuy, kamachikuykunapaq / ñit'iy.."  # {Locked="/"}
+input.placeholder.connecting: "t'inkichkan..."
+input.placeholder.disconnected: "t'inkita p'akiy"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / kamachikuykuna "
+commands.help_title: " Yanapay "
+commands.help_header: "Slash kamachikuykuna — yaykuna cajapi / ñit'iy."
+commands.help_escape_hint: "  //text     '/' sanampata kachay (kamachiy parserta saqin)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Kay yanapayta wisq'ay"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ purinaykipaq • Enter akllanaykipaq • Esc saqinaykipaq)"
+recommendations.button_run_command: "[ Kamachiyta phawachiy ]"
+recommendations.button_insert_in_terminal: "Terminalpi sat'iy"
+recommendations.button_open_in_new_tab: "Musuq Pestañapi Kichay ↵"
+recommendations.button_open_in_new_panel: "Musuq Panelpi Kichay ↵"
+recommendations.button_open_tab: "Pestañata Kichay ↵"
+recommendations.button_open_panel: "Panelta Kichay ↵"
+recommendations.button_execute: "Phawachiy ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Saqiyta mañasqa"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N kutichinaykipaq · hunt'asqa cardpaq tamañota tikray]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Mana sat'isqachu — kikinmanta sat'inanpaq akllay"
+agent.status.not_found: "Mana tarikunchu"
+agent.status.detected: "Tarisqa"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Phawachichkan: winget install GitHub.Copilot"
+agent.install.launch_failed: "Mana atikunchu winget qallariyta: %{error}"
+agent.install.winget_exited: "winget mana suyasqamantachu lluqsirqun: %{error}"
+agent.install.winget_failed_code: "winget install mana atikunchu (lluqsiy cōdigo %{code})"
+agent.install.unsupported: "%{agent}-paq mana atikunchu kikinmanta sat'iyta"
+agent.custom.auth_hint: "%{name} sat'isqa kasqanta hinaspa PATH-pi kasqanta qhaway."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Kargachkan..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ purinaykipaq • Enter musuq pestañapi sesionta qallarinaykipaq • Shift+enter agente panelpi sesionta qallarinaykipaq • Esc lluqsinaykipaq)"
+agents.status.active: "Llamk'achkan"
+agents.status.waiting_for_input: "Yaykuyta suyachkan"
+agents.status.error: "Pantay"
+agents.status.idle: "Samachkan"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. agente panelta rikuchinaykipaq/pakanaykipaq • Ctrl+Alt+/ agente sesionta rikuchinaykipaq/pakanaykipaq)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Saqisqa."
+system.no_prompt_in_flight: "Mana ima promptpas phawachkanchu."
+system.authentication_failed: "Autentikasion mana atikunchu"
+system.command_copied_retry: "Kamachiy qhillpisqa — huk terminalpi phawachiy, chaymanta Enter ñit'iy musuqmanta ruwanaykipaq"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Mana ventana tarikunchu."
+output.no_tabs: "Mana pestaña tarikunchu."
+output.no_panes: "Mana panel tarikunchu."
+output.no_windows_in_list: "Mana ventana tarikunchu"
+output.no_tabs_in_window: "Mana pestaña tarikunchu %{window_id} ventanapi"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Llamk'achkaq panel: %{pane} (pestaña: %{tab}, ventana: %{window})"
+output.pane_running: "Phawachkan (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Lluqsirqun (cōdigo: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Pestaña %{tab_id} kamarisqa (panel %{pane_id})"
+output.created_pane: "Panel %{pane_id} kamarisqa"
+output.pane_closed: "Panel %{pane_id} wisq'asqa."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Mana llamk'achkaq panel tarikunchu. Panel IDta nisqaykipaq -t llamk'achiy."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID mana churasqachu. Windows Terminal panel ukhupi phawachiy."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Mana riqsisqa shell tipo '%{shell}'. Llamk'achiy: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Mana atikunchu wtcli wait-forta phawachiyta"
+error.wtcli_wait_for_parse: "Mana atikunchu wtcli wait-for lluqsiyta ñawinchayta"
+error.wtcli_wait_for_failed: "wtcli wait-for mana atikunchu: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "bundle pukyu: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI mana PATH-pichu"
+hooks.installed: "✓ sat'isqa"
+hooks.marketplace_path_stale: "⚠ marketplace ñan thañasqa"
+hooks.installed_but_disabled: "⚠ sat'isqa ichaqa wañusqa"
+hooks.not_installed: "✗ mana sat'isqachu"
+hooks.uninstall_skipped: "saqisqa (CLI mana PATH-pichu)"
+hooks.install_attempted: "wt-agent-hooks sat'iy ruwakurqa (idempotente). Lluqsiyta qhawanaykipaq `wta hooks status` phawachiy. Rastreo qillqa: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

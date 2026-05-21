@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Velkommen til Intelligent Terminal!"
 setup.title.agent_missing: "Agenten blev ikke fundet"
 setup.title.agent_error: "Forbindelsen til agenten mislykkedes"
 setup.title.switch_agent: "Skift agent"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Agent-CLI %{name} er valgt"
+auth.agent_selected_with_status: "Agent-CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Kontrollerer godkendelse..."
+auth.waiting_for_authorization: "  %{spinner} Venter på autorisation..."
+auth.code_copied_hint: "  Koden er kopieret til udklipsholderen — indsæt den i din browser."
+auth.sign_in_prompt: "Log på for at bruge din agent:"
+auth.card_connect: "  Opret forbindelse til %{name} for at aktivere agentfunktioner"
+auth.button_sign_in_github: "[ Log på med GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Log på med %{name} ]"
+auth.hint_footer: "  Tryk på Enter for at logge på, Esc for at gå tilbage"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Tænker…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Velkommen til Intelligent Terminal!"
+chat.plan_header: "Plan:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Spørg om hvad som helst, / for kommandoer.."  # {Locked="/"}
+input.placeholder.connecting: "opretter forbindelse..."
+input.placeholder.disconnected: "afbrudt"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / kommandoer "
+commands.help_title: " Hjælp "
+commands.help_header: "Skråstregskommandoer — skriv / i inputfeltet."
+commands.help_escape_hint: "  //text     Send et bogstaveligt '/' (omgår kommandofortolkeren)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Luk denne hjælp"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ for at navigere • Enter for at vælge • Esc for at annullere)"
+recommendations.button_run_command: "[ Kør kommando ]"
+recommendations.button_insert_in_terminal: "Indsæt i Terminal"
+recommendations.button_open_in_new_tab: "Åbn i ny fane ↵"
+recommendations.button_open_in_new_panel: "Åbn i ny rude ↵"
+recommendations.button_open_tab: "Åbn fane ↵"
+recommendations.button_open_panel: "Åbn rude ↵"
+recommendations.button_execute: "Udfør ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Tilladelse anmodet"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N for at svare · tilpas størrelse for fuldt kort]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Ikke installeret — vælg for at installere automatisk"
+agent.status.not_found: "Ikke fundet"
+agent.status.detected: "Registreret"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Kører: winget install GitHub.Copilot"
+agent.install.launch_failed: "Kunne ikke starte winget: %{error}"
+agent.install.winget_exited: "winget afsluttede uventet: %{error}"
+agent.install.winget_failed_code: "winget install mislykkedes (afslutningskode %{code})"
+agent.install.unsupported: "Automatisk installation understøttes ikke for %{agent}"
+agent.custom.auth_hint: "Sørg for, at %{name} er installeret og findes i din PATH."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Indlæser..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ for at navigere • Enter for at starte session i ny fane • Shift+enter for at starte session i agentruden • Esc for at afslutte)"
+agents.status.active: "Aktiv"
+agents.status.waiting_for_input: "Venter på input"
+agents.status.error: "Fejl"
+agents.status.idle: "Inaktiv"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. for at vise/skjule agentruden • Ctrl+Alt+/ for at vise/skjule agentsession)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Annulleret."
+system.no_prompt_in_flight: "Ingen prompt i gang."
+system.authentication_failed: "Godkendelse mislykkedes"
+system.command_copied_retry: "Kommandoen er kopieret — kør den i en anden terminal, og tryk derefter på Enter for at prøve igen"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Ingen vinduer fundet."
+output.no_tabs: "Ingen faner fundet."
+output.no_panes: "Ingen ruder fundet."
+output.no_windows_in_list: "Ingen vinduer fundet"
+output.no_tabs_in_window: "Ingen faner fundet i vindue %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Aktiv rude: %{pane} (fane: %{tab}, vindue: %{window})"
+output.pane_running: "Kører (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Afsluttet (kode: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Oprettede fane %{tab_id} (rude %{pane_id})"
+output.created_pane: "Oprettede rude %{pane_id}"
+output.pane_closed: "Rude %{pane_id} lukket."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Ingen aktiv rude fundet. Brug -t til at angive et rude-ID."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID er ikke angivet. Kør i en Windows Terminal-rude."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Ukendt shell-type '%{shell}'. Brug: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Kunne ikke starte wtcli wait-for"
+error.wtcli_wait_for_parse: "Kunne ikke fortolke output fra wtcli wait-for"
+error.wtcli_wait_for_failed: "wtcli wait-for mislykkedes: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "bundtkilde: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI ikke i PATH"
+hooks.installed: "✓ installeret"
+hooks.marketplace_path_stale: "⚠ marketplace-sti forældet"
+hooks.installed_but_disabled: "⚠ installeret, men deaktiveret"
+hooks.not_installed: "✗ ikke installeret"
+hooks.uninstall_skipped: "sprunget over (CLI ikke i PATH)"
+hooks.install_attempted: "wt-agent-hooks-installation forsøgt (idempotent). Kør `wta hooks status` for at inspicere resultatet. Sporingslog: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

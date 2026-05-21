@@ -3,3 +3,121 @@ setup.title.first_run: "歡迎使用 Intelligent Terminal！"
 setup.title.agent_missing: "找不到代理"
 setup.title.agent_error: "代理連線失敗"
 setup.title.switch_agent: "切換代理"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "已選取代理 CLI %{name}"
+auth.agent_selected_with_status: "代理 CLI %{name} — "
+auth.checking_authentication: "  %{spinner} 正在檢查驗證..."
+auth.waiting_for_authorization: "  %{spinner} 正在等候授權..."
+auth.code_copied_hint: "  已將代碼複製到剪貼簿 — 請貼到您的瀏覽器中。"
+auth.sign_in_prompt: "登入以使用您的代理："
+auth.card_connect: "  連線 %{name} 以啟用代理功能"
+auth.button_sign_in_github: "[ 使用 GitHub 登入 ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ 使用 %{name} 登入 ]"
+auth.hint_footer: "  按 Enter 登入，按 Esc 返回"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "正在思考…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "歡迎使用 Intelligent Terminal！"
+chat.plan_header: "計畫："
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "詢問任何問題，輸入 / 以使用命令.."  # {Locked="/"}
+input.placeholder.connecting: "正在連線..."
+input.placeholder.disconnected: "已中斷連線"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / 命令 "
+commands.help_title: " 說明 "
+commands.help_header: "斜線命令 — 在輸入框中輸入 /。"
+commands.help_escape_hint: "  //text     傳送字面值 '/' (跳脫命令剖析器)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        關閉此說明"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ 移動 • Enter 選取 • Esc 取消)"
+recommendations.button_run_command: "[ 執行命令 ]"
+recommendations.button_insert_in_terminal: "插入終端機"
+recommendations.button_open_in_new_tab: "在新索引標籤中開啟 ↵"
+recommendations.button_open_in_new_panel: "在新面板中開啟 ↵"
+recommendations.button_open_tab: "開啟索引標籤 ↵"
+recommendations.button_open_panel: "開啟面板 ↵"
+recommendations.button_execute: "執行 ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "已要求權限"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N 回應 · 調整大小以顯示完整卡片]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "未安裝 — 選取即可自動安裝"
+agent.status.not_found: "找不到"
+agent.status.detected: "已偵測到"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "正在執行：winget install GitHub.Copilot"
+agent.install.launch_failed: "無法啟動 winget：%{error}"
+agent.install.winget_exited: "winget 意外結束：%{error}"
+agent.install.winget_failed_code: "winget 安裝失敗 (結束代碼 %{code})"
+agent.install.unsupported: "%{agent} 不支援自動安裝"
+agent.custom.auth_hint: "請確定已安裝 %{name} 且位於 PATH 中。"  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "正在載入..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ 移動 • Enter 在新索引標籤中啟動工作階段 • Shift+enter 在代理窗格中啟動工作階段 • Esc 結束)"
+agents.status.active: "使用中"
+agents.status.waiting_for_input: "正在等候輸入"
+agents.status.error: "錯誤"
+agents.status.idle: "閒置"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. 顯示/隱藏代理窗格 • Ctrl+Alt+/ 顯示/隱藏代理工作階段)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "已取消。"
+system.no_prompt_in_flight: "沒有進行中的提示。"
+system.authentication_failed: "驗證失敗"
+system.command_copied_retry: "已複製命令 — 請在另一個終端機中執行，然後按 Enter 重試"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "找不到視窗。"
+output.no_tabs: "找不到索引標籤。"
+output.no_panes: "找不到窗格。"
+output.no_windows_in_list: "找不到視窗"
+output.no_tabs_in_window: "在視窗 %{window_id} 中找不到索引標籤"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "使用中的窗格：%{pane} (索引標籤：%{tab}，視窗：%{window})"
+output.pane_running: "執行中 (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "已結束 (代碼：%{code}，PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "已建立索引標籤 %{tab_id} (窗格 %{pane_id})"
+output.created_pane: "已建立窗格 %{pane_id}"
+output.pane_closed: "已關閉窗格 %{pane_id}。"
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "找不到使用中的窗格。請使用 -t 指定窗格識別碼。"  # {Locked="-t"}
+error.wt_com_clsid_not_set: "未設定 WT_COM_CLSID。請在 Windows Terminal 窗格中執行。"  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "未知的殼層類型 '%{shell}'。請使用：bash、powershell、cmd、fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "無法產生 wtcli wait-for"
+error.wtcli_wait_for_parse: "無法剖析 wtcli wait-for 的輸出"
+error.wtcli_wait_for_failed: "wtcli wait-for 失敗：%{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "套件組合來源：%{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI 未在 PATH 中"
+hooks.installed: "✓ 已安裝"
+hooks.marketplace_path_stale: "⚠ Marketplace 路徑已過時"
+hooks.installed_but_disabled: "⚠ 已安裝但停用"
+hooks.not_installed: "✗ 未安裝"
+hooks.uninstall_skipped: "已略過 (CLI 未在 PATH 中)"
+hooks.install_attempted: "已嘗試安裝 wt-agent-hooks (等冪)。請執行 `wta hooks status` 檢查結果。追蹤記錄：%LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

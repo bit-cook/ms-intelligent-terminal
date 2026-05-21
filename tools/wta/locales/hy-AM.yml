@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Բարի գալուստ Intelligent Terminal!"
 setup.title.agent_missing: "Գործակալը չի գտնվել"
 setup.title.agent_error: "Գործակալին միանալը ձախողվել է"
 setup.title.switch_agent: "Փոխել գործակալը"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Ընտրված է գործակալի CLI %{name}"
+auth.agent_selected_with_status: "Գործակալի CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Ստուգվում է նույնականացումը..."
+auth.waiting_for_authorization: "  %{spinner} Սպասում է լիազորման..."
+auth.code_copied_hint: "  Կոդը պատճենվեց սեղմատախտակ — տեղադրեք այն ձեր դիտարկիչում։"
+auth.sign_in_prompt: "Մուտք գործեք՝ ձեր գործակալն օգտագործելու համար."
+auth.card_connect: "  Միացրեք %{name}-ը՝ գործակալի առանձնահատկությունները միացնելու համար"
+auth.button_sign_in_github: "[ Մուտք գործել GitHub-ով ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Մուտք գործել %{name}-ով ]"
+auth.hint_footer: "  Մուտքի համար սեղմեք Enter, Esc՝ վերադառնալու համար"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Մտածում է…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Բարի գալուստ Intelligent Terminal!"
+chat.plan_header: "Պլան."
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Հարցրեք ինչ-որ բան, / հրամանների համար.."  # {Locked="/"}
+input.placeholder.connecting: "միանում է..."
+input.placeholder.disconnected: "անջատված"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / հրամաններ "
+commands.help_title: " Օգնություն "
+commands.help_header: "Շեղ-գծով հրամաններ — մուտքագրեք / մուտքագրման դաշտում։"
+commands.help_escape_hint: "  //text     Ուղարկել տառացի '/' (շրջանցում է հրամանների վերլուծիչը)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Փակել այս օգնությունը"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ նավարկելու համար • Enter՝ ընտրելու համար • Esc՝ չեղարկելու համար)"
+recommendations.button_run_command: "[ Կատարել հրամանը ]"
+recommendations.button_insert_in_terminal: "Տեղադրել Հեռասարքում"
+recommendations.button_open_in_new_tab: "Բացել նոր ներդիրում ↵"
+recommendations.button_open_in_new_panel: "Բացել նոր վահանակում ↵"
+recommendations.button_open_tab: "Բացել ներդիր ↵"
+recommendations.button_open_panel: "Բացել վահանակ ↵"
+recommendations.button_execute: "Կատարել ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Թույլտվությունը պահանջվում է"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N պատասխանելու համար · չափափոխեք ամբողջական քարտի համար]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Տեղադրված չէ — ընտրեք ինքնաշխատ տեղադրման համար"
+agent.status.not_found: "Չի գտնվել"
+agent.status.detected: "Հայտնաբերված է"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Կատարվում է. winget install GitHub.Copilot"
+agent.install.launch_failed: "winget-ի գործարկումը ձախողվեց. %{error}"
+agent.install.winget_exited: "winget-ն անսպասելիորեն դադարեցվեց. %{error}"
+agent.install.winget_failed_code: "winget install-ը ձախողվեց (ելքի կոդ %{code})"
+agent.install.unsupported: "Ինքնաշխատ տեղադրումը չի աջակցվում %{agent}-ի համար"
+agent.custom.auth_hint: "Համոզվեք, որ %{name}-ը տեղադրված է և գտնվում է ձեր PATH-ում։"  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Բեռնվում է..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ նավարկելու համար • Enter՝ նոր ներդիրում նիստ սկսելու համար • Shift+enter՝ գործակալի վահանակում նիստ սկսելու համար • Esc՝ դուրս գալու համար)"
+agents.status.active: "Ակտիվ"
+agents.status.waiting_for_input: "Սպասում է մուտքագրման"
+agents.status.error: "Սխալ"
+agents.status.idle: "Պարապ"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+.՝ գործակալի վահանակը ցույց տալու/թաքցնելու համար • Ctrl+Alt+/՝ գործակալի նիստը ցույց տալու/թաքցնելու համար)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Չեղարկված է։"
+system.no_prompt_in_flight: "Ընթացիկ հարցում չկա։"
+system.authentication_failed: "Նույնականացումը ձախողվեց"
+system.command_copied_retry: "Հրամանը պատճենվեց — կատարեք այն մեկ այլ հեռասարքում, ապա սեղմեք Enter՝ կրկին փորձելու համար"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Պատուհաններ չեն գտնվել։"
+output.no_tabs: "Ներդիրներ չեն գտնվել։"
+output.no_panes: "Վահանակներ չեն գտնվել։"
+output.no_windows_in_list: "Պատուհաններ չեն գտնվել"
+output.no_tabs_in_window: "Ներդիրներ չեն գտնվել %{window_id} պատուհանում"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Ակտիվ վահանակ. %{pane} (ներդիր. %{tab}, պատուհան. %{window})"
+output.pane_running: "Կատարվում է (PID. %{pid})"  # {Locked="PID"}
+output.pane_exited: "Դադարեցված է (կոդ. %{code}, PID. %{pid})"  # {Locked="PID"}
+output.created_tab: "Ստեղծվեց %{tab_id} ներդիր (վահանակ %{pane_id})"
+output.created_pane: "Ստեղծվեց %{pane_id} վահանակ"
+output.pane_closed: "%{pane_id} վահանակը փակվեց։"
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Ակտիվ վահանակ չի գտնվել։ Օգտագործեք -t՝ վահանակի ID-ն նշելու համար։"  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID-ը սահմանված չէ։ Գործարկեք Windows Terminal-ի վահանակի ներսում։"  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Անհայտ թաղանթի տեսակ '%{shell}'։ Օգտագործեք. bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Չհաջողվեց գործարկել wtcli wait-for-ը"
+error.wtcli_wait_for_parse: "Չհաջողվեց վերլուծել wtcli wait-for-ի ելքը"
+error.wtcli_wait_for_failed: "wtcli wait-for-ը ձախողվեց. %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "փաթեթի աղբյուր. %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI-ն չկա PATH-ում"
+hooks.installed: "✓ տեղադրված է"
+hooks.marketplace_path_stale: "⚠ խանութի ուղին հնացած է"
+hooks.installed_but_disabled: "⚠ տեղադրված է, բայց անջատված է"
+hooks.not_installed: "✗ տեղադրված չէ"
+hooks.uninstall_skipped: "բաց թողնված է (CLI-ն չկա PATH-ում)"
+hooks.install_attempted: "wt-agent-hooks-ի տեղադրում փորձված է (անկախ իրավիճակից)։ Գործարկեք `wta hooks status`՝ արդյունքը ստուգելու համար։ Հետագծի մատյան. %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

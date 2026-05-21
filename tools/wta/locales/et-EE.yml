@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Tere tulemast Intelligent Terminali!"
 setup.title.agent_missing: "Agenti ei leitud"
 setup.title.agent_error: "Agendiga ühenduse loomine nurjus"
 setup.title.switch_agent: "Vaheta agenti"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Agendi CLI %{name} on valitud"
+auth.agent_selected_with_status: "Agendi CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Autentimise kontrollimine..."
+auth.waiting_for_authorization: "  %{spinner} Autoriseerimise ootel..."
+auth.code_copied_hint: "  Kood kopeeriti lõikelauale — kleebi see oma brauserisse."
+auth.sign_in_prompt: "Logi agendi kasutamiseks sisse:"
+auth.card_connect: "  Ühenda %{name}, et agendi funktsioonid lubada"
+auth.button_sign_in_github: "[ Logi sisse GitHubiga ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Logi sisse %{name} kaudu ]"
+auth.hint_footer: "  Sisselogimiseks vajuta Enter, tagasi minekuks Esc"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Mõtleb…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Tere tulemast Intelligent Terminali!"
+chat.plan_header: "Plaan:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Küsi mida iganes, käskude jaoks /.."  # {Locked="/"}
+input.placeholder.connecting: "ühendamine..."
+input.placeholder.disconnected: "ühendus katkestatud"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / käsud "
+commands.help_title: " Spikker "
+commands.help_header: "Kaldkriipsu käsud — sisesta sisendkasti /."
+commands.help_escape_hint: "  //text     Saada literaalne '/' (paotab käsuparserit)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Sulge see spikker"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ navigeerimiseks • Enter valimiseks • Esc tühistamiseks)"
+recommendations.button_run_command: "[ Käivita käsk ]"
+recommendations.button_insert_in_terminal: "Lisa terminali"
+recommendations.button_open_in_new_tab: "Ava uuel vahekaardil ↵"
+recommendations.button_open_in_new_panel: "Ava uues paneelis ↵"
+recommendations.button_open_tab: "Ava vahekaart ↵"
+recommendations.button_open_panel: "Ava paneel ↵"
+recommendations.button_execute: "Käivita ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Luba soovitud"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N vastamiseks · muuda suurust täiskaardi jaoks]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Pole installitud — vali automaatseks installimiseks"
+agent.status.not_found: "Ei leitud"
+agent.status.detected: "Tuvastatud"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Käitamine: winget install GitHub.Copilot"
+agent.install.launch_failed: "Wingeti käivitamine nurjus: %{error}"
+agent.install.winget_exited: "winget lõpetas ootamatult: %{error}"
+agent.install.winget_failed_code: "winget install nurjus (väljumiskood %{code})"
+agent.install.unsupported: "Automaatne installimine ei ole agendi %{agent} jaoks toetatud"
+agent.custom.auth_hint: "Veendu, et %{name} on installitud ja teie PATH-il."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Laadimine..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ navigeerimiseks • Enter seansi käivitamiseks uuel vahekaardil • Shift+enter seansi käivitamiseks agendipaanil • Esc väljumiseks)"
+agents.status.active: "Aktiivne"
+agents.status.waiting_for_input: "Sisendi ootel"
+agents.status.error: "Tõrge"
+agents.status.idle: "Ootel"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. agendipaani näitamiseks/peitmiseks • Ctrl+Alt+/ agendiseansi näitamiseks/peitmiseks)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Tühistatud."
+system.no_prompt_in_flight: "Ühtegi viipa pole pooleli."
+system.authentication_failed: "Autentimine nurjus"
+system.command_copied_retry: "Käsk kopeeriti — käivita see teises terminalis ja seejärel vajuta Enter, et uuesti proovida"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Aknaid ei leitud."
+output.no_tabs: "Vahekaarte ei leitud."
+output.no_panes: "Paane ei leitud."
+output.no_windows_in_list: "Aknaid ei leitud"
+output.no_tabs_in_window: "Aknast %{window_id} ei leitud vahekaarte"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Aktiivne paan: %{pane} (vahekaart: %{tab}, aken: %{window})"
+output.pane_running: "Töötab (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Lõpetatud (kood: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Loodi vahekaart %{tab_id} (paan %{pane_id})"
+output.created_pane: "Loodi paan %{pane_id}"
+output.pane_closed: "Paan %{pane_id} suleti."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Aktiivset paani ei leitud. Paani ID määramiseks kasuta -t."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID pole määratud. Käita Windows Terminali paani sees."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Tundmatu kestatüüp '%{shell}'. Kasuta: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "wtcli wait-for tekitamine nurjus"
+error.wtcli_wait_for_parse: "wtcli wait-for väljundi parsimine nurjus"
+error.wtcli_wait_for_failed: "wtcli wait-for nurjus: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "kimbu allikas: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI pole PATH-il"
+hooks.installed: "✓ installitud"
+hooks.marketplace_path_stale: "⚠ kaubamaja tee on aegunud"
+hooks.installed_but_disabled: "⚠ installitud, aga keelatud"
+hooks.not_installed: "✗ pole installitud"
+hooks.uninstall_skipped: "vahele jäetud (CLI pole PATH-il)"
+hooks.install_attempted: "wt-agent-hooks installimist prooviti (idempotentne). Tulemuse vaatamiseks käivita `wta hooks status`. Jälituslogi: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

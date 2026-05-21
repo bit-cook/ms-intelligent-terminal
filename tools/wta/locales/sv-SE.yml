@@ -3,3 +3,121 @@ setup.title.first_run: "Välkommen till Intelligent Terminal!"
 setup.title.agent_missing: "Agenten hittades inte"
 setup.title.agent_error: "Anslutningen till agenten misslyckades"
 setup.title.switch_agent: "Byt agent"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Agent-CLI %{name} är vald"
+auth.agent_selected_with_status: "Agent-CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Kontrollerar autentisering..."
+auth.waiting_for_authorization: "  %{spinner} Väntar på auktorisering..."
+auth.code_copied_hint: "  Koden kopierades till Urklipp — klistra in den i webbläsaren."
+auth.sign_in_prompt: "Logga in för att använda din agent:"
+auth.card_connect: "  Anslut %{name} för att aktivera agentfunktioner"
+auth.button_sign_in_github: "[ Logga in med GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Logga in med %{name} ]"
+auth.hint_footer: "  Tryck på Enter för att logga in, Esc för att gå tillbaka"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Tänker…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Välkommen till Intelligent Terminal!"
+chat.plan_header: "Plan:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Fråga vad som helst, / för kommandon.."  # {Locked="/"}
+input.placeholder.connecting: "ansluter..."
+input.placeholder.disconnected: "frånkopplad"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / kommandon "
+commands.help_title: " Hjälp "
+commands.help_header: "Snedstreckskommandon — skriv / i inmatningsrutan."
+commands.help_escape_hint: "  //text     Skicka ett bokstavligt '/' (kringgår kommandotolken)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Stäng den här hjälpen"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ för att navigera • Enter för att välja • Esc för att avbryta)"
+recommendations.button_run_command: "[ Kör kommando ]"
+recommendations.button_insert_in_terminal: "Infoga i terminal"
+recommendations.button_open_in_new_tab: "Öppna på ny flik ↵"
+recommendations.button_open_in_new_panel: "Öppna i ny panel ↵"
+recommendations.button_open_tab: "Öppna flik ↵"
+recommendations.button_open_panel: "Öppna panel ↵"
+recommendations.button_execute: "Kör ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Behörighet begärs"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N för att svara · ändra storlek för fullständigt kort]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Inte installerad — välj för att installera automatiskt"
+agent.status.not_found: "Hittades inte"
+agent.status.detected: "Identifierad"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Kör: winget install GitHub.Copilot"
+agent.install.launch_failed: "Det gick inte att starta winget: %{error}"
+agent.install.winget_exited: "winget avslutades oväntat: %{error}"
+agent.install.winget_failed_code: "winget install misslyckades (slutkod %{code})"
+agent.install.unsupported: "Automatisk installation stöds inte för %{agent}"
+agent.custom.auth_hint: "Kontrollera att %{name} är installerad och finns i PATH."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Läser in..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ för att navigera • Enter för att starta session på ny flik • Shift+enter för att starta session i agentpanelen • Esc för att avsluta)"
+agents.status.active: "Aktiv"
+agents.status.waiting_for_input: "Väntar på indata"
+agents.status.error: "Fel"
+agents.status.idle: "Inaktiv"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. för att visa/dölja agentpanelen • Ctrl+Alt+/ för att visa/dölja agentsessionen)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Avbruten."
+system.no_prompt_in_flight: "Ingen prompt pågår."
+system.authentication_failed: "Autentisering misslyckades"
+system.command_copied_retry: "Kommandot kopierades — kör det i en annan terminal och tryck sedan på Enter för att försöka igen"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Inga fönster hittades."
+output.no_tabs: "Inga flikar hittades."
+output.no_panes: "Inga paneler hittades."
+output.no_windows_in_list: "Inga fönster hittades"
+output.no_tabs_in_window: "Inga flikar hittades i fönstret %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Aktiv panel: %{pane} (flik: %{tab}, fönster: %{window})"
+output.pane_running: "Körs (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Avslutad (kod: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Skapade flik %{tab_id} (panel %{pane_id})"
+output.created_pane: "Skapade panel %{pane_id}"
+output.pane_closed: "Panel %{pane_id} stängd."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Ingen aktiv panel hittades. Använd -t för att ange ett panel-ID."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID är inte angiven. Kör i en panel i Windows Terminal."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Okänd skaltyp '%{shell}'. Använd: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Det gick inte att starta wtcli wait-for"
+error.wtcli_wait_for_parse: "Det gick inte att parsa utdata från wtcli wait-for"
+error.wtcli_wait_for_failed: "wtcli wait-for misslyckades: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "paketkälla: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI finns inte i PATH"
+hooks.installed: "✓ installerad"
+hooks.marketplace_path_stale: "⚠ marketplace-sökväg är inaktuell"
+hooks.installed_but_disabled: "⚠ installerad men inaktiverad"
+hooks.not_installed: "✗ inte installerad"
+hooks.uninstall_skipped: "hoppades över (CLI finns inte i PATH)"
+hooks.install_attempted: "wt-agent-hooks-installation försökt (idempotent). Kör `wta hooks status` för att granska resultatet. Spårningslogg: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

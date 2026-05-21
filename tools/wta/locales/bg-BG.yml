@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Добре дошли в Intelligent Terminal!"
 setup.title.agent_missing: "Агентът не е намерен"
 setup.title.agent_error: "Връзката с агента е неуспешна"
 setup.title.switch_agent: "Смяна на агента"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Избран е CLI агент %{name}"
+auth.agent_selected_with_status: "CLI агент %{name} — "
+auth.checking_authentication: "  %{spinner} Проверка на удостоверяването..."
+auth.waiting_for_authorization: "  %{spinner} Изчакване на оторизация..."
+auth.code_copied_hint: "  Кодът е копиран в клипборда — поставете го в браузъра."
+auth.sign_in_prompt: "Влезте, за да използвате агента:"
+auth.card_connect: "  Свържете %{name}, за да активирате функциите на агента"
+auth.button_sign_in_github: "[ Влизане с GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Влизане с %{name} ]"
+auth.hint_footer: "  Натиснете Enter, за да влезете, Esc за връщане назад"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Мисли…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Добре дошли в Intelligent Terminal!"
+chat.plan_header: "План:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Попитайте каквото и да е, / за команди.."  # {Locked="/"}
+input.placeholder.connecting: "свързване..."
+input.placeholder.disconnected: "няма връзка"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / команди "
+commands.help_title: " Помощ "
+commands.help_header: "Команди с наклонена черта — въведете / в полето за въвеждане."
+commands.help_escape_hint: "  //text     Изпраща литерален '/' (избягва анализатора на команди)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Затваря тази помощ"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ за навигация • Enter за избор • Esc за отказ)"
+recommendations.button_run_command: "[ Изпълнение на команда ]"
+recommendations.button_insert_in_terminal: "Вмъкване в терминала"
+recommendations.button_open_in_new_tab: "Отваряне в нов раздел ↵"
+recommendations.button_open_in_new_panel: "Отваряне в нов панел ↵"
+recommendations.button_open_tab: "Отваряне на раздел ↵"
+recommendations.button_open_panel: "Отваряне на панел ↵"
+recommendations.button_execute: "Изпълнение ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Заявено е разрешение"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N за отговор · преоразмерете за пълна карта]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Не е инсталиран — изберете за автоматично инсталиране"
+agent.status.not_found: "Не е намерен"
+agent.status.detected: "Открит"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Изпълнява се: winget install GitHub.Copilot"
+agent.install.launch_failed: "Неуспешно стартиране на winget: %{error}"
+agent.install.winget_exited: "winget приключи неочаквано: %{error}"
+agent.install.winget_failed_code: "winget install е неуспешно (изходен код %{code})"
+agent.install.unsupported: "Автоматичното инсталиране не се поддържа за %{agent}"
+agent.custom.auth_hint: "Уверете се, че %{name} е инсталиран и е в PATH."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Зареждане..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ за навигация • Enter за стартиране на сесия в нов раздел • Shift+enter за стартиране на сесия в панела на агента • Esc за изход)"
+agents.status.active: "Активен"
+agents.status.waiting_for_input: "Изчаква въвеждане"
+agents.status.error: "Грешка"
+agents.status.idle: "Неактивен"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. за показване/скриване на панела на агента • Ctrl+Alt+/ за показване/скриване на сесията на агента)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Отменено."
+system.no_prompt_in_flight: "Няма заявка в процес."
+system.authentication_failed: "Удостоверяването е неуспешно"
+system.command_copied_retry: "Командата е копирана — изпълнете я в друг терминал, след което натиснете Enter за повторен опит"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Не са намерени прозорци."
+output.no_tabs: "Не са намерени раздели."
+output.no_panes: "Не са намерени панели."
+output.no_windows_in_list: "Не са намерени прозорци"
+output.no_tabs_in_window: "Не са намерени раздели в прозорец %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Активен панел: %{pane} (раздел: %{tab}, прозорец: %{window})"
+output.pane_running: "Изпълнява се (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Завършен (код: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Създаден е раздел %{tab_id} (панел %{pane_id})"
+output.created_pane: "Създаден е панел %{pane_id}"
+output.pane_closed: "Панел %{pane_id} е затворен."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Не е намерен активен панел. Използвайте -t, за да укажете ИД на панел."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID не е зададен. Изпълнете вътре в панел на Windows Terminal."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Неизвестен тип обвивка '%{shell}'. Използвайте: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Неуспешно стартиране на wtcli wait-for"
+error.wtcli_wait_for_parse: "Неуспешно анализиране на изхода от wtcli wait-for"
+error.wtcli_wait_for_failed: "wtcli wait-for е неуспешно: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "източник на пакет: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI не е в PATH"
+hooks.installed: "✓ инсталирано"
+hooks.marketplace_path_stale: "⚠ пътят в Marketplace е остарял"
+hooks.installed_but_disabled: "⚠ инсталирано, но е забранено"
+hooks.not_installed: "✗ не е инсталирано"
+hooks.uninstall_skipped: "пропуснато (CLI не е в PATH)"
+hooks.install_attempted: "опитано е инсталиране на wt-agent-hooks (идемпотентно). Изпълнете `wta hooks status`, за да проверите резултата. Журнал за проследяване: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

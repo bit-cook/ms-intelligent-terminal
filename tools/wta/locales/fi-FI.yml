@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Tervetuloa Intelligent Terminaliin!"
 setup.title.agent_missing: "Agenttia ei löytynyt"
 setup.title.agent_error: "Yhteys agenttiin epäonnistui"
 setup.title.switch_agent: "Vaihda agentti"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Agentin CLI %{name} on valittu"
+auth.agent_selected_with_status: "Agentin CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Tarkistetaan todennusta..."
+auth.waiting_for_authorization: "  %{spinner} Odotetaan valtuutusta..."
+auth.code_copied_hint: "  Koodi kopioitu leikepöydälle — liitä se selaimeesi."
+auth.sign_in_prompt: "Kirjaudu sisään käyttääksesi agenttiasi:"
+auth.card_connect: "  Yhdistä %{name} ottaaksesi agenttiominaisuudet käyttöön"
+auth.button_sign_in_github: "[ Kirjaudu sisään GitHub-tilillä ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Kirjaudu sisään: %{name} ]"
+auth.hint_footer: "  Paina Enter kirjautuaksesi sisään, Esc palataksesi"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Ajatellaan…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Tervetuloa Intelligent Terminaliin!"
+chat.plan_header: "Suunnitelma:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Kysy mitä tahansa, / komentoja varten.."  # {Locked="/"}
+input.placeholder.connecting: "yhdistetään..."
+input.placeholder.disconnected: "yhteys katkaistu"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / komennot "
+commands.help_title: " Ohje "
+commands.help_header: "Vinoviivakomennot — kirjoita / syötekenttään."
+commands.help_escape_hint: "  //teksti   Lähetä kirjaimellinen '/' (ohittaa komentojäsentimen)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Sulje tämä ohje"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ siirtyminen • Enter valinta • Esc peruuta)"
+recommendations.button_run_command: "[ Suorita komento ]"
+recommendations.button_insert_in_terminal: "Lisää päätteeseen"
+recommendations.button_open_in_new_tab: "Avaa uudessa välilehdessä ↵"
+recommendations.button_open_in_new_panel: "Avaa uudessa paneelissa ↵"
+recommendations.button_open_tab: "Avaa välilehti ↵"
+recommendations.button_open_panel: "Avaa paneeli ↵"
+recommendations.button_execute: "Suorita ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Käyttöoikeutta pyydetty"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N vastataksesi · muuta kokoa nähdäksesi koko kortin]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Ei asennettu — valitse asentaaksesi automaattisesti"
+agent.status.not_found: "Ei löytynyt"
+agent.status.detected: "Havaittu"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Suoritetaan: winget install GitHub.Copilot"
+agent.install.launch_failed: "Wingetin käynnistys epäonnistui: %{error}"
+agent.install.winget_exited: "winget päättyi odottamatta: %{error}"
+agent.install.winget_failed_code: "winget-asennus epäonnistui (poistumiskoodi %{code})"
+agent.install.unsupported: "Automaattinen asennus ei ole tuettu agentille %{agent}"
+agent.custom.auth_hint: "Varmista, että %{name} on asennettu ja sisältyy PATH-muuttujaan."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Ladataan..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ siirtyminen • Enter käynnistää istunnon uudessa välilehdessä • Shift+enter käynnistää istunnon agenttipaneelissa • Esc poistuminen)"
+agents.status.active: "Aktiivinen"
+agents.status.waiting_for_input: "Odottaa syötettä"
+agents.status.error: "Virhe"
+agents.status.idle: "Vapaa"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. näyttää/piilottaa agenttipaneelin • Ctrl+Alt+/ näyttää/piilottaa agenttiistunnon)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Peruutettu."
+system.no_prompt_in_flight: "Ei meneillään olevaa kehotetta."
+system.authentication_failed: "Todennus epäonnistui"
+system.command_copied_retry: "Komento kopioitu — suorita se toisessa päätteessä ja paina sitten Enter yrittääksesi uudelleen"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Ikkunoita ei löytynyt."
+output.no_tabs: "Välilehtiä ei löytynyt."
+output.no_panes: "Paneeleita ei löytynyt."
+output.no_windows_in_list: "Ikkunoita ei löytynyt"
+output.no_tabs_in_window: "Välilehtiä ei löytynyt ikkunasta %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Aktiivinen paneeli: %{pane} (välilehti: %{tab}, ikkuna: %{window})"
+output.pane_running: "Käynnissä (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Päättynyt (koodi: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Luotiin välilehti %{tab_id} (paneeli %{pane_id})"
+output.created_pane: "Luotiin paneeli %{pane_id}"
+output.pane_closed: "Paneeli %{pane_id} suljettu."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Aktiivista paneelia ei löytynyt. Käytä -t määrittääksesi paneelin tunnuksen."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID ei ole asetettu. Suorita Windows Terminal -paneelin sisällä."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Tuntematon kuoren tyyppi '%{shell}'. Käytä: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "wtcli wait-for -prosessin käynnistys epäonnistui"
+error.wtcli_wait_for_parse: "wtcli wait-for -tulosteen jäsennys epäonnistui"
+error.wtcli_wait_for_failed: "wtcli wait-for epäonnistui: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "paketin lähde: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI ei ole PATH-muuttujassa"
+hooks.installed: "✓ asennettu"
+hooks.marketplace_path_stale: "⚠ marketplace-polku vanhentunut"
+hooks.installed_but_disabled: "⚠ asennettu mutta poistettu käytöstä"
+hooks.not_installed: "✗ ei asennettu"
+hooks.uninstall_skipped: "ohitettu (CLI ei ole PATH-muuttujassa)"
+hooks.install_attempted: "wt-agent-hooks asennusta yritettiin (idempotenttinen). Suorita `wta hooks status` tarkastaaksesi tuloksen. Jäljityslokitiedosto: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

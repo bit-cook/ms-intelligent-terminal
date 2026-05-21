@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Mirë se vini në Intelligent Terminal!"
 setup.title.agent_missing: "Agjenti nuk u gjet"
 setup.title.agent_error: "Lidhja me agjentin dështoi"
 setup.title.switch_agent: "Ndrysho agjentin"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "CLI-ja e agjentit %{name} është zgjedhur"
+auth.agent_selected_with_status: "CLI-ja e agjentit %{name} — "
+auth.checking_authentication: "  %{spinner} Po kontrollohet vërtetimi..."
+auth.waiting_for_authorization: "  %{spinner} Po pritet për autorizim..."
+auth.code_copied_hint: "  Kodi u kopjua në clipboard — ngjiteni në shfletuesin tuaj."
+auth.sign_in_prompt: "Identifikohuni për të përdorur agjentin tuaj:"
+auth.card_connect: "  Lidhni %{name} për të aktivizuar veçoritë e agjentit"
+auth.button_sign_in_github: "[ Identifikohu me GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Identifikohu me %{name} ]"
+auth.hint_footer: "  Shtypni Enter për t'u identifikuar, Esc për t'u kthyer"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Po mendoj…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Mirë se vini në Intelligent Terminal!"
+chat.plan_header: "Plani:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Pyetni çfarëdo, / për komanda.."  # {Locked="/"}
+input.placeholder.connecting: "po lidhet..."
+input.placeholder.disconnected: "shkëput"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / komanda "
+commands.help_title: " Ndihmë "
+commands.help_header: "Komandat me vijëzim — shkruani / në kutinë e hyrjes."
+commands.help_escape_hint: "  //text     Dërgoni një '/' literal (i bën escape analizuesit të komandave)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Mbyll këtë ndihmë"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ për të lëvizur • Enter për të zgjedhur • Esc për të anuluar)"
+recommendations.button_run_command: "[ Ekzekuto komandën ]"
+recommendations.button_insert_in_terminal: "Fut në Terminal"
+recommendations.button_open_in_new_tab: "Hap në skedë të re ↵"
+recommendations.button_open_in_new_panel: "Hap në panel të ri ↵"
+recommendations.button_open_tab: "Hap skedën ↵"
+recommendations.button_open_panel: "Hap panelin ↵"
+recommendations.button_execute: "Ekzekuto ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "U kërkua leje"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N për t'u përgjigjur · ripërmasoni për kartën e plotë]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "I painstaluar — zgjidhni për ta instaluar automatikisht"
+agent.status.not_found: "Nuk u gjet"
+agent.status.detected: "U zbulua"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Po ekzekutohet: winget install GitHub.Copilot"
+agent.install.launch_failed: "Hapja e winget dështoi: %{error}"
+agent.install.winget_exited: "winget doli papritur: %{error}"
+agent.install.winget_failed_code: "winget install dështoi (kodi i daljes %{code})"
+agent.install.unsupported: "Instalimi automatik nuk mbështetet për %{agent}"
+agent.custom.auth_hint: "Sigurohuni që %{name} është instaluar dhe ndodhet në PATH-in tuaj."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Po ngarkohet..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ për të lëvizur • Enter për të nisur sesionin në skedë të re • Shift+enter për të nisur sesionin në panelin e agjentit • Esc për të dalë)"
+agents.status.active: "Aktiv"
+agents.status.waiting_for_input: "Në pritje të hyrjes"
+agents.status.error: "Gabim"
+agents.status.idle: "I pavepruar"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. për të shfaqur/fshehur panelin e agjentit • Ctrl+Alt+/ për të shfaqur/fshehur sesionin e agjentit)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "U anulua."
+system.no_prompt_in_flight: "Asnjë kërkesë në ekzekutim."
+system.authentication_failed: "Vërtetimi dështoi"
+system.command_copied_retry: "Komanda u kopjua — ekzekutojeni në një terminal tjetër, pastaj shtypni Enter për ta riprovuar"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Nuk u gjetën dritare."
+output.no_tabs: "Nuk u gjetën skeda."
+output.no_panes: "Nuk u gjetën panele."
+output.no_windows_in_list: "Nuk u gjetën dritare"
+output.no_tabs_in_window: "Nuk u gjetën skeda në dritaren %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Paneli aktiv: %{pane} (skeda: %{tab}, dritarja: %{window})"
+output.pane_running: "Po ekzekutohet (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Doli (kodi: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "U krijua skeda %{tab_id} (paneli %{pane_id})"
+output.created_pane: "U krijua paneli %{pane_id}"
+output.pane_closed: "Paneli %{pane_id} u mbyll."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Nuk u gjet asnjë panel aktiv. Përdorni -t për të specifikuar një ID paneli."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID nuk është caktuar. Ekzekutojeni brenda një paneli të Windows Terminal."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Lloj i panjohur shell-i '%{shell}'. Përdorni: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Hapja e wtcli wait-for dështoi"
+error.wtcli_wait_for_parse: "Analizimi i daljes së wtcli wait-for dështoi"
+error.wtcli_wait_for_failed: "wtcli wait-for dështoi: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "burimi i paketës: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI nuk ndodhet në PATH"
+hooks.installed: "✓ i instaluar"
+hooks.marketplace_path_stale: "⚠ shtegu i marketplace është i vjetëruar"
+hooks.installed_but_disabled: "⚠ i instaluar por i çaktivizuar"
+hooks.not_installed: "✗ i painstaluar"
+hooks.uninstall_skipped: "u kapërcye (CLI nuk ndodhet në PATH)"
+hooks.install_attempted: "instalimi i wt-agent-hooks u tentua (idempotent). Ekzekutoni `wta hooks status` për të inspektuar rezultatin. Trace log: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

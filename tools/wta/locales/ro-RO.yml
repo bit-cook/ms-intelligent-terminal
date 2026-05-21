@@ -3,3 +3,121 @@ setup.title.first_run: "Bun venit la Intelligent Terminal!"
 setup.title.agent_missing: "Agentul nu a fost găsit"
 setup.title.agent_error: "Conectarea la agent a eșuat"
 setup.title.switch_agent: "Schimbă agentul"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Agentul CLI %{name} este selectat"
+auth.agent_selected_with_status: "Agent CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Se verifică autentificarea..."
+auth.waiting_for_authorization: "  %{spinner} Se așteaptă autorizarea..."
+auth.code_copied_hint: "  Codul a fost copiat în clipboard — lipiți-l în browser."
+auth.sign_in_prompt: "Conectați-vă pentru a utiliza agentul:"
+auth.card_connect: "  Conectați %{name} pentru a activa caracteristicile agentului"
+auth.button_sign_in_github: "[ Conectare cu GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Conectare cu %{name} ]"
+auth.hint_footer: "  Apăsați Enter pentru a vă conecta, Esc pentru a reveni"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Se gândește…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Bun venit la Intelligent Terminal!"
+chat.plan_header: "Plan:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Întrebați orice, / pentru comenzi.."  # {Locked="/"}
+input.placeholder.connecting: "se conectează..."
+input.placeholder.disconnected: "deconectat"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / comenzi "
+commands.help_title: " Ajutor "
+commands.help_header: "Comenzi cu bară oblică — tastați / în caseta de introducere."
+commands.help_escape_hint: "  //text     Trimite un caracter '/' literal (evită analizorul de comenzi)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Închide acest ajutor"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ pentru navigare • Enter pentru selectare • Esc pentru anulare)"
+recommendations.button_run_command: "[ Executare comandă ]"
+recommendations.button_insert_in_terminal: "Inserare în Terminal"
+recommendations.button_open_in_new_tab: "Deschide în filă nouă ↵"
+recommendations.button_open_in_new_panel: "Deschide în panou nou ↵"
+recommendations.button_open_tab: "Deschide fila ↵"
+recommendations.button_open_panel: "Deschide panoul ↵"
+recommendations.button_execute: "Executare ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Permisiune solicitată"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N pentru a răspunde · redimensionați pentru cardul complet]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Neinstalat — selectați pentru instalare automată"
+agent.status.not_found: "Nu a fost găsit"
+agent.status.detected: "Detectat"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Se execută: winget install GitHub.Copilot"
+agent.install.launch_failed: "Lansarea winget a eșuat: %{error}"
+agent.install.winget_exited: "winget s-a închis în mod neașteptat: %{error}"
+agent.install.winget_failed_code: "winget install a eșuat (cod de ieșire %{code})"
+agent.install.unsupported: "Instalarea automată nu este acceptată pentru %{agent}"
+agent.custom.auth_hint: "Asigurați-vă că %{name} este instalat și se află în PATH."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Se încarcă..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ pentru navigare • Enter pentru a lansa sesiunea într-o filă nouă • Shift+enter pentru a lansa sesiunea în panoul agentului • Esc pentru a ieși)"
+agents.status.active: "Activ"
+agents.status.waiting_for_input: "Se așteaptă intrarea"
+agents.status.error: "Eroare"
+agents.status.idle: "Inactiv"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. pentru a afișa/ascunde panoul agentului • Ctrl+Alt+/ pentru a afișa/ascunde sesiunea agentului)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Anulat."
+system.no_prompt_in_flight: "Niciun prompt în curs."
+system.authentication_failed: "Autentificarea a eșuat"
+system.command_copied_retry: "Comanda a fost copiată — executați-o în alt terminal, apoi apăsați Enter pentru a reîncerca"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Nu au fost găsite ferestre."
+output.no_tabs: "Nu au fost găsite file."
+output.no_panes: "Nu au fost găsite panouri."
+output.no_windows_in_list: "Nu au fost găsite ferestre"
+output.no_tabs_in_window: "Nu au fost găsite file în fereastra %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Panou activ: %{pane} (filă: %{tab}, fereastră: %{window})"
+output.pane_running: "În execuție (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Închis (cod: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "S-a creat fila %{tab_id} (panou %{pane_id})"
+output.created_pane: "S-a creat panoul %{pane_id}"
+output.pane_closed: "Panoul %{pane_id} a fost închis."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Nu a fost găsit niciun panou activ. Utilizați -t pentru a specifica un ID de panou."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID nu este setat. Executați într-un panou Windows Terminal."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Tip de shell necunoscut '%{shell}'. Utilizați: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Generarea wtcli wait-for a eșuat"
+error.wtcli_wait_for_parse: "Analizarea ieșirii wtcli wait-for a eșuat"
+error.wtcli_wait_for_failed: "wtcli wait-for a eșuat: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "sursă pachet: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI nu se află în PATH"
+hooks.installed: "✓ instalat"
+hooks.marketplace_path_stale: "⚠ cale marketplace învechită"
+hooks.installed_but_disabled: "⚠ instalat, dar dezactivat"
+hooks.not_installed: "✗ neinstalat"
+hooks.uninstall_skipped: "omis (CLI nu se află în PATH)"
+hooks.install_attempted: "instalarea wt-agent-hooks a fost încercată (idempotent). Executați `wta hooks status` pentru a inspecta rezultatul. Jurnal de urmărire: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

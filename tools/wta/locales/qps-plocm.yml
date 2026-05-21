@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "[¡¡ Ŵẽĺçømẽ ŧø Îñŧẽĺĺįğẽñŧ Ţẽŕmįñåĺ! ¡¡]"
 setup.title.agent_missing: "[¡¡ Åğẽñŧ ñøŧ ƒøůñđ ¡¡]"
 setup.title.agent_error: "[¡¡ Åğẽñŧ çøññẽçŧįøñ ƒåįĺẽđ ¡¡]"
 setup.title.switch_agent: "[¡¡ Ŝŵįŧçĥ åğẽñŧ ¡¡]"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "[¡¡ Åğẽñŧ CLI %{name} įŝ ŝẽĺẽçŧẽđ ¡¡]"
+auth.agent_selected_with_status: "[¡¡ Åğẽñŧ CLI %{name} — ¡¡]"
+auth.checking_authentication: "[¡¡   %{spinner} Çĥẽçķįñğ åůŧĥẽñŧįçåŧįøñ... ¡¡]"
+auth.waiting_for_authorization: "[¡¡   %{spinner} Ŵåįŧįñğ ƒøŕ åůŧĥøŕįžåŧįøñ... ¡¡]"
+auth.code_copied_hint: "[¡¡   Çøđẽ çøþįẽđ ŧø çĺįþƀøåŕđ — þåŝŧẽ įŧ įñ ÿøůŕ ƀŕøŵŝẽŕ. ¡¡]"
+auth.sign_in_prompt: "[¡¡ Ŝįğñ įñ ŧø ůŝẽ ÿøůŕ åğẽñŧ: ¡¡]"
+auth.card_connect: "[¡¡   Çøññẽçŧ %{name} ŧø ẽñåƀĺẽ åğẽñŧ ƒẽåŧůŕẽŝ ¡¡]"
+auth.button_sign_in_github: "[¡¡ [ Ŝįğñ įñ ŵįŧĥ GitHub ] ¡¡]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[¡¡ [ Ŝįğñ įñ ŵįŧĥ %{name} ] ¡¡]"
+auth.hint_footer: "[¡¡   Þŕẽŝŝ Enter ŧø ŝįğñ įñ, Esc ŧø ğø ƀåçķ ¡¡]"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "[¡¡ Ţĥįñķįñğ… ¡¡]"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "[¡¡ Ŵẽĺçømẽ ŧø Intelligent Terminal! ¡¡]"
+chat.plan_header: "[¡¡ Þĺåñ: ¡¡]"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "[¡¡ Åŝķ åñÿŧĥįñğ, / ƒøŕ çømmåñđŝ.. ¡¡]"  # {Locked="/"}
+input.placeholder.connecting: "[¡¡ çøññẽçŧįñğ... ¡¡]"
+input.placeholder.disconnected: "[¡¡ đįŝçøññẽçŧ ¡¡]"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: "[¡¡  / çømmåñđŝ  ¡¡]"
+commands.help_title: "[¡¡  Ĥẽĺþ  ¡¡]"
+commands.help_header: "[¡¡ Ŝĺåŝĥ çømmåñđŝ — ŧÿþẽ / įñ ŧĥẽ įñþůŧ ƀøx. ¡¡]"
+commands.help_escape_hint: "[¡¡   //text     Ŝẽñđ å ĺįŧẽŕåĺ '/' (ẽŝçåþẽŝ ŧĥẽ çømmåñđ þåŕŝẽŕ) ¡¡]"  # {Locked="//text","/"}
+commands.help_close_hint: "[¡¡   Esc        Çĺøŝẽ ŧĥįŝ ĥẽĺþ ¡¡]"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "[¡¡ (↑ ↓ ŧø ñåvįğåŧẽ • Enter ŧø ŝẽĺẽçŧ • Esc ŧø çåñçẽĺ) ¡¡]"
+recommendations.button_run_command: "[¡¡ [ Ŕůñ çømmåñđ ] ¡¡]"
+recommendations.button_insert_in_terminal: "[¡¡ Îñŝẽŕŧ įñ Ţẽŕmįñåĺ ¡¡]"
+recommendations.button_open_in_new_tab: "[¡¡ Øþẽñ įñ Ñẽŵ Ţåƀ ↵ ¡¡]"
+recommendations.button_open_in_new_panel: "[¡¡ Øþẽñ įñ Ñẽŵ Þåñẽĺ ↵ ¡¡]"
+recommendations.button_open_tab: "[¡¡ Øþẽñ Ţåƀ ↵ ¡¡]"
+recommendations.button_open_panel: "[¡¡ Øþẽñ Þåñẽĺ ↵ ¡¡]"
+recommendations.button_execute: "[¡¡ Ẽxẽçůŧẽ ↵ ¡¡]"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "[¡¡ Þẽŕmįŝŝįøñ ŕẽqůẽŝŧẽđ ¡¡]"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[¡¡ [Y/N ŧø åñŝŵẽŕ · ŕẽŝįžẽ ƒøŕ ƒůĺĺ çåŕđ] ¡¡]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "[¡¡ Ñøŧ įñŝŧåĺĺẽđ — ŝẽĺẽçŧ ŧø įñŝŧåĺĺ åůŧømåŧįçåĺĺÿ ¡¡]"
+agent.status.not_found: "[¡¡ Ñøŧ ƒøůñđ ¡¡]"
+agent.status.detected: "[¡¡ Đẽŧẽçŧẽđ ¡¡]"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "[¡¡ Ŕůññįñğ: winget install GitHub.Copilot ¡¡]"
+agent.install.launch_failed: "[¡¡ Ƒåįĺẽđ ŧø ĺåůñçĥ winget: %{error} ¡¡]"
+agent.install.winget_exited: "[¡¡ winget ẽxįŧẽđ ůñẽxþẽçŧẽđĺÿ: %{error} ¡¡]"
+agent.install.winget_failed_code: "[¡¡ winget įñŝŧåĺĺ ƒåįĺẽđ (ẽxįŧ çøđẽ %{code}) ¡¡]"
+agent.install.unsupported: "[¡¡ Åůŧømåŧįç įñŝŧåĺĺ ñøŧ ŝůþþøŕŧẽđ ƒøŕ %{agent} ¡¡]"
+agent.custom.auth_hint: "[¡¡ Måķẽ ŝůŕẽ %{name} įŝ įñŝŧåĺĺẽđ åñđ øñ ÿøůŕ PATH. ¡¡]"  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "[¡¡ Ĺøåđįñğ... ¡¡]"
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "[¡¡ (↑ ↓ ŧø ñåvįğåŧẽ • Enter ŧø ĺåůñçĥ ŝẽŝŝįøñ įñ ñẽŵ ŧåƀ • Shift+enter ŧø ĺåůñçĥ ŝẽŝŝįøñ įñ åğẽñŧ þåñẽ • Esc ŧø ẽxįŧ) ¡¡]"
+agents.status.active: "[¡¡ Åçŧįvẽ ¡¡]"
+agents.status.waiting_for_input: "[¡¡ Ŵåįŧįñğ ƒøŕ įñþůŧ ¡¡]"
+agents.status.error: "[¡¡ Ẽŕŕøŕ ¡¡]"
+agents.status.idle: "[¡¡ Îđĺẽ ¡¡]"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "[¡¡   (Ctrl+Shift+. ŧø ŝĥøŵ/ĥįđẽ åğẽñŧ þåñẽ • Ctrl+Alt+/ ŧø ŝĥøŵ/ĥįđẽ åğẽñŧ ŝẽŝŝįøñ) ¡¡]"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "[¡¡ Çåñçẽĺĺẽđ. ¡¡]"
+system.no_prompt_in_flight: "[¡¡ Ñø þŕømþŧ įñ ƒĺįğĥŧ. ¡¡]"
+system.authentication_failed: "[¡¡ Åůŧĥẽñŧįçåŧįøñ ƒåįĺẽđ ¡¡]"
+system.command_copied_retry: "[¡¡ Çømmåñđ çøþįẽđ — ŕůñ įŧ įñ åñøŧĥẽŕ ŧẽŕmįñåĺ, ŧĥẽñ þŕẽŝŝ Enter ŧø ŕẽŧŕÿ ¡¡]"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "[¡¡ Ñø ŵįñđøŵŝ ƒøůñđ. ¡¡]"
+output.no_tabs: "[¡¡ Ñø ŧåƀŝ ƒøůñđ. ¡¡]"
+output.no_panes: "[¡¡ Ñø þåñẽŝ ƒøůñđ. ¡¡]"
+output.no_windows_in_list: "[¡¡ Ñø ŵįñđøŵŝ ƒøůñđ ¡¡]"
+output.no_tabs_in_window: "[¡¡ Ñø ŧåƀŝ ƒøůñđ įñ ŵįñđøŵ %{window_id} ¡¡]"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "[¡¡ Åçŧįvẽ þåñẽ: %{pane} (ŧåƀ: %{tab}, ŵįñđøŵ: %{window}) ¡¡]"
+output.pane_running: "[¡¡ Ŕůññįñğ (PID: %{pid}) ¡¡]"  # {Locked="PID"}
+output.pane_exited: "[¡¡ Ẽxįŧẽđ (çøđẽ: %{code}, PID: %{pid}) ¡¡]"  # {Locked="PID"}
+output.created_tab: "[¡¡ Çŕẽåŧẽđ ŧåƀ %{tab_id} (þåñẽ %{pane_id}) ¡¡]"
+output.created_pane: "[¡¡ Çŕẽåŧẽđ þåñẽ %{pane_id} ¡¡]"
+output.pane_closed: "[¡¡ Þåñẽ %{pane_id} çĺøŝẽđ. ¡¡]"
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "[¡¡ Ñø åçŧįvẽ þåñẽ ƒøůñđ. Ůŝẽ -t ŧø ŝþẽçįƒÿ å þåñẽ ÎĐ. ¡¡]"  # {Locked="-t"}
+error.wt_com_clsid_not_set: "[¡¡ WT_COM_CLSID ñøŧ ŝẽŧ. Ŕůñ įñŝįđẽ å Windows Terminal þåñẽ. ¡¡]"  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "[¡¡ Ůñķñøŵñ ŝĥẽĺĺ ŧÿþẽ '%{shell}'. Ůŝẽ: bash, powershell, cmd, fish ¡¡]"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "[¡¡ Ƒåįĺẽđ ŧø ŝþåŵñ wtcli wait-for ¡¡]"
+error.wtcli_wait_for_parse: "[¡¡ Ƒåįĺẽđ ŧø þåŕŝẽ wtcli wait-for øůŧþůŧ ¡¡]"
+error.wtcli_wait_for_failed: "[¡¡ wtcli wait-for ƒåįĺẽđ: %{stderr} ¡¡]"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "[¡¡ ƀůñđĺẽ ŝøůŕçẽ: %{source}%{path_suffix} ¡¡]"
+hooks.cli_not_on_path: "[¡¡ ✗ CLI ñøŧ øñ PATH ¡¡]"
+hooks.installed: "[¡¡ ✓ įñŝŧåĺĺẽđ ¡¡]"
+hooks.marketplace_path_stale: "[¡¡ ⚠ måŕķẽŧþĺåçẽ þåŧĥ ŝŧåĺẽ ¡¡]"
+hooks.installed_but_disabled: "[¡¡ ⚠ įñŝŧåĺĺẽđ ƀůŧ đįŝåƀĺẽđ ¡¡]"
+hooks.not_installed: "[¡¡ ✗ ñøŧ įñŝŧåĺĺẽđ ¡¡]"
+hooks.uninstall_skipped: "[¡¡ ŝķįþþẽđ (CLI ñøŧ øñ PATH) ¡¡]"
+hooks.install_attempted: "[¡¡ wt-agent-hooks įñŝŧåĺĺ åŧŧẽmþŧẽđ (įđẽmþøŧẽñŧ). Ŕůñ `wta hooks status` ŧø įñŝþẽçŧ ŧĥẽ ŕẽŝůĺŧ. Ţŕåçẽ ĺøğ: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log ¡¡]"

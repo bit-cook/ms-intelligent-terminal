@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "ຍິນດີຕ້ອນຮັບສູ່ Intelligent Terminal!"
 setup.title.agent_missing: "ບໍ່ພົບ agent"
 setup.title.agent_error: "ການເຊື່ອມຕໍ່ agent ລົ້ມເຫລວ"
 setup.title.switch_agent: "ປ່ຽນ agent"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "ໄດ້ເລືອກ CLI ຂອງເອເຈນ %{name} ແລ້ວ"
+auth.agent_selected_with_status: "CLI ຂອງເອເຈນ %{name} — "
+auth.checking_authentication: "  %{spinner} ກຳລັງກວດສອບການພິສູດຢືນຢັນ..."
+auth.waiting_for_authorization: "  %{spinner} ກຳລັງລໍຖ້າການອະນຸຍາດ..."
+auth.code_copied_hint: "  ສຳເນົາລະຫັດໄປຍັງຄລິບບອດແລ້ວ — ວາງລົງໃນບຣາວເຊີຂອງທ່ານ."
+auth.sign_in_prompt: "ເຂົ້າສູ່ລະບົບເພື່ອໃຊ້ເອເຈນຂອງທ່ານ:"
+auth.card_connect: "  ເຊື່ອມຕໍ່ %{name} ເພື່ອເປີດໃຊ້ຄຸນສົມບັດຂອງເອເຈນ"
+auth.button_sign_in_github: "[ ເຂົ້າສູ່ລະບົບດ້ວຍ GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ ເຂົ້າສູ່ລະບົບດ້ວຍ %{name} ]"
+auth.hint_footer: "  ກົດ Enter ເພື່ອເຂົ້າສູ່ລະບົບ, Esc ເພື່ອກັບຄືນ"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "ກຳລັງຄິດ…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "ຍິນດີຕ້ອນຮັບສູ່ Intelligent Terminal!"
+chat.plan_header: "ແຜນ:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "ຖາມຫຍັງກໍ່ໄດ້, / ສຳລັບຄຳສັ່ງ.."  # {Locked="/"}
+input.placeholder.connecting: "ກຳລັງເຊື່ອມຕໍ່..."
+input.placeholder.disconnected: "ຕັດການເຊື່ອມຕໍ່"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / ຄຳສັ່ງ "
+commands.help_title: " ຊ່ວຍເຫຼືອ "
+commands.help_header: "ຄຳສັ່ງສະແລັດ — ພິມ / ໃນກ່ອງປ້ອນຂໍ້ມູນ."
+commands.help_escape_hint: "  //text     ສົ່ງຕົວອັກສອນ '/' ໂດຍກົງ (ຫຼີກລ່ຽງຕົວວິເຄາະຄຳສັ່ງ)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        ປິດການຊ່ວຍເຫຼືອນີ້"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ ເພື່ອນຳທາງ • Enter ເພື່ອເລືອກ • Esc ເພື່ອຍົກເລີກ)"
+recommendations.button_run_command: "[ ດຳເນີນຄຳສັ່ງ ]"
+recommendations.button_insert_in_terminal: "ແຊກໃນເທີມິນອນ"
+recommendations.button_open_in_new_tab: "ເປີດໃນແທັບໃໝ່ ↵"
+recommendations.button_open_in_new_panel: "ເປີດໃນແຜງໃໝ່ ↵"
+recommendations.button_open_tab: "ເປີດແທັບ ↵"
+recommendations.button_open_panel: "ເປີດແຜງ ↵"
+recommendations.button_execute: "ດຳເນີນການ ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "ຮ້ອງຂໍສິດ"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N ເພື່ອຕອບ · ປ່ຽນຂະໜາດສຳລັບກາດເຕັມ]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "ບໍ່ໄດ້ຕິດຕັ້ງ — ເລືອກເພື່ອຕິດຕັ້ງອັດຕະໂນມັດ"
+agent.status.not_found: "ບໍ່ພົບ"
+agent.status.detected: "ກວດພົບ"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "ກຳລັງດຳເນີນການ: winget install GitHub.Copilot"
+agent.install.launch_failed: "ບໍ່ສາມາດເປີດໃຊ້ winget: %{error}"
+agent.install.winget_exited: "winget ອອກໂດຍບໍ່ຄາດຄິດ: %{error}"
+agent.install.winget_failed_code: "winget install ລົ້ມເຫລວ (ລະຫັດອອກ %{code})"
+agent.install.unsupported: "ບໍ່ຮອງຮັບການຕິດຕັ້ງອັດຕະໂນມັດສຳລັບ %{agent}"
+agent.custom.auth_hint: "ກວດໃຫ້ແນ່ໃຈວ່າ %{name} ໄດ້ຕິດຕັ້ງ ແລະຢູ່ໃນ PATH ຂອງທ່ານ."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "ກຳລັງໂຫລດ..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ ເພື່ອນຳທາງ • Enter ເພື່ອເປີດເຊດຊັນໃນແທັບໃໝ່ • Shift+enter ເພື່ອເປີດເຊດຊັນໃນແຜງເອເຈນ • Esc ເພື່ອອອກ)"
+agents.status.active: "ເຄື່ອນໄຫວ"
+agents.status.waiting_for_input: "ກຳລັງລໍຖ້າການປ້ອນຂໍ້ມູນ"
+agents.status.error: "ຜິດພາດ"
+agents.status.idle: "ວ່າງ"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. ເພື່ອສະແດງ/ເຊື່ອງແຜງເອເຈນ • Ctrl+Alt+/ ເພື່ອສະແດງ/ເຊື່ອງເຊດຊັນເອເຈນ)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "ຍົກເລີກແລ້ວ."
+system.no_prompt_in_flight: "ບໍ່ມີຄຳສັ່ງທີ່ກຳລັງດຳເນີນການ."
+system.authentication_failed: "ການພິສູດຢືນຢັນລົ້ມເຫລວ"
+system.command_copied_retry: "ສຳເນົາຄຳສັ່ງແລ້ວ — ດຳເນີນການໃນເທີມິນອນອື່ນ, ຈາກນັ້ນກົດ Enter ເພື່ອລອງໃໝ່"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "ບໍ່ພົບໜ້າຕ່າງ."
+output.no_tabs: "ບໍ່ພົບແທັບ."
+output.no_panes: "ບໍ່ພົບແຜງ."
+output.no_windows_in_list: "ບໍ່ພົບໜ້າຕ່າງ"
+output.no_tabs_in_window: "ບໍ່ພົບແທັບໃນໜ້າຕ່າງ %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "ແຜງເຄື່ອນໄຫວ: %{pane} (ແທັບ: %{tab}, ໜ້າຕ່າງ: %{window})"
+output.pane_running: "ກຳລັງດຳເນີນການ (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "ອອກແລ້ວ (ລະຫັດ: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "ສ້າງແທັບ %{tab_id} ແລ້ວ (ແຜງ %{pane_id})"
+output.created_pane: "ສ້າງແຜງ %{pane_id} ແລ້ວ"
+output.pane_closed: "ປິດແຜງ %{pane_id} ແລ້ວ."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "ບໍ່ພົບແຜງເຄື່ອນໄຫວ. ໃຊ້ -t ເພື່ອລະບຸ ID ຂອງແຜງ."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "ບໍ່ໄດ້ຕັ້ງ WT_COM_CLSID. ດຳເນີນການພາຍໃນແຜງ Windows Terminal."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "ບໍ່ຮູ້ຈັກປະເພດເຊລ '%{shell}'. ໃຊ້: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "ບໍ່ສາມາດເປີດໃຊ້ wtcli wait-for"
+error.wtcli_wait_for_parse: "ບໍ່ສາມາດວິເຄາະຜົນຮັບຂອງ wtcli wait-for"
+error.wtcli_wait_for_failed: "wtcli wait-for ລົ້ມເຫລວ: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "ແຫຼ່ງບັນດໍ: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI ບໍ່ຢູ່ໃນ PATH"
+hooks.installed: "✓ ຕິດຕັ້ງແລ້ວ"
+hooks.marketplace_path_stale: "⚠ ເສັ້ນທາງມາເກັດເພລດເກົ່າ"
+hooks.installed_but_disabled: "⚠ ຕິດຕັ້ງແລ້ວ ແຕ່ປິດໃຊ້ງານ"
+hooks.not_installed: "✗ ບໍ່ໄດ້ຕິດຕັ້ງ"
+hooks.uninstall_skipped: "ຂ້າມ (CLI ບໍ່ຢູ່ໃນ PATH)"
+hooks.install_attempted: "ໄດ້ພະຍາຍາມຕິດຕັ້ງ wt-agent-hooks (idempotent). ດຳເນີນການ `wta hooks status` ເພື່ອກວດສອບຜົນ. ບັນທຶກການຕິດຕາມ: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

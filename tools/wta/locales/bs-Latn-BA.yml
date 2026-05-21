@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Dobrodošli u Intelligent Terminal!"
 setup.title.agent_missing: "Agent nije pronađen"
 setup.title.agent_error: "Povezivanje s agentom nije uspjelo"
 setup.title.switch_agent: "Promijeni agenta"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Agent CLI %{name} je odabran"
+auth.agent_selected_with_status: "Agent CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Provjera autentifikacije..."
+auth.waiting_for_authorization: "  %{spinner} Čekanje autorizacije..."
+auth.code_copied_hint: "  Kôd je kopiran u međuspremnik — zalijepite ga u pregledniku."
+auth.sign_in_prompt: "Prijavite se da biste koristili svog agenta:"
+auth.card_connect: "  Povežite %{name} da biste omogućili funkcije agenta"
+auth.button_sign_in_github: "[ Prijava putem GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Prijava putem %{name} ]"
+auth.hint_footer: "  Pritisnite Enter za prijavu, Esc za povratak"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Razmišljanje…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Dobrodošli u Intelligent Terminal!"
+chat.plan_header: "Plan:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Pitajte bilo šta, / za komande.."  # {Locked="/"}
+input.placeholder.connecting: "povezivanje..."
+input.placeholder.disconnected: "prekinuta veza"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / komande "
+commands.help_title: " Pomoć "
+commands.help_header: "Slash komande — upišite / u polje za unos."
+commands.help_escape_hint: "  //text     Šalje literalno '/' (preskače parser komandi)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Zatvori ovu pomoć"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ za navigaciju • Enter za odabir • Esc za otkazivanje)"
+recommendations.button_run_command: "[ Pokreni komandu ]"
+recommendations.button_insert_in_terminal: "Umetni u terminal"
+recommendations.button_open_in_new_tab: "Otvori u novoj kartici ↵"
+recommendations.button_open_in_new_panel: "Otvori u novom oknu ↵"
+recommendations.button_open_tab: "Otvori karticu ↵"
+recommendations.button_open_panel: "Otvori okno ↵"
+recommendations.button_execute: "Izvrši ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Zatražena je dozvola"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N za odgovor · promijenite veličinu za punu karticu]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Nije instaliran — odaberite za automatsku instalaciju"
+agent.status.not_found: "Nije pronađeno"
+agent.status.detected: "Otkriveno"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Pokretanje: winget install GitHub.Copilot"
+agent.install.launch_failed: "Pokretanje winget nije uspjelo: %{error}"
+agent.install.winget_exited: "winget je neočekivano završio: %{error}"
+agent.install.winget_failed_code: "winget instalacija nije uspjela (izlazni kôd %{code})"
+agent.install.unsupported: "Automatska instalacija nije podržana za %{agent}"
+agent.custom.auth_hint: "Provjerite je li %{name} instaliran i dostupan na vašoj PATH varijabli."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Učitavanje..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ za navigaciju • Enter za pokretanje sesije u novoj kartici • Shift+enter za pokretanje sesije u oknu agenta • Esc za izlaz)"
+agents.status.active: "Aktivno"
+agents.status.waiting_for_input: "Čeka unos"
+agents.status.error: "Greška"
+agents.status.idle: "Neaktivno"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. za prikaz/sakrivanje okna agenta • Ctrl+Alt+/ za prikaz/sakrivanje sesije agenta)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Otkazano."
+system.no_prompt_in_flight: "Nema upita u obradi."
+system.authentication_failed: "Autentifikacija nije uspjela"
+system.command_copied_retry: "Komanda je kopirana — pokrenite je u drugom terminalu, a zatim pritisnite Enter za ponovni pokušaj"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Nije pronađen nijedan prozor."
+output.no_tabs: "Nije pronađena nijedna kartica."
+output.no_panes: "Nije pronađeno nijedno okno."
+output.no_windows_in_list: "Nije pronađen nijedan prozor"
+output.no_tabs_in_window: "Nije pronađena nijedna kartica u prozoru %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Aktivno okno: %{pane} (kartica: %{tab}, prozor: %{window})"
+output.pane_running: "Pokrenuto (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Završeno (kôd: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Kreirana kartica %{tab_id} (okno %{pane_id})"
+output.created_pane: "Kreirano okno %{pane_id}"
+output.pane_closed: "Okno %{pane_id} je zatvoreno."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Nije pronađeno aktivno okno. Koristite -t za navođenje ID okna."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID nije postavljen. Pokrenite unutar okna aplikacije Windows Terminal."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Nepoznat tip ljuske '%{shell}'. Koristite: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Pokretanje wtcli wait-for nije uspjelo"
+error.wtcli_wait_for_parse: "Raščlanjivanje izlaza wtcli wait-for nije uspjelo"
+error.wtcli_wait_for_failed: "wtcli wait-for nije uspio: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "izvor paketa: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI nije na PATH"
+hooks.installed: "✓ instalirano"
+hooks.marketplace_path_stale: "⚠ marketplace putanja je zastarjela"
+hooks.installed_but_disabled: "⚠ instalirano ali onemogućeno"
+hooks.not_installed: "✗ nije instalirano"
+hooks.uninstall_skipped: "preskočeno (CLI nije na PATH)"
+hooks.install_attempted: "wt-agent-hooks instalacija je pokušana (idempotentno). Pokrenite `wta hooks status` za pregled rezultata. Trace zapis: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

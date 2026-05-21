@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Üdvözli az Intelligent Terminal!"
 setup.title.agent_missing: "Az ügynök nem található"
 setup.title.agent_error: "Az ügynökhöz való kapcsolódás sikertelen"
 setup.title.switch_agent: "Ügynök váltása"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "A(z) %{name} ügynök CLI van kiválasztva"
+auth.agent_selected_with_status: "%{name} ügynök CLI — "
+auth.checking_authentication: "  %{spinner} Hitelesítés ellenőrzése..."
+auth.waiting_for_authorization: "  %{spinner} Várakozás az engedélyezésre..."
+auth.code_copied_hint: "  A kód a vágólapra másolva — illessze be a böngészőbe."
+auth.sign_in_prompt: "Jelentkezzen be az ügynök használatához:"
+auth.card_connect: "  Csatlakoztassa a(z) %{name} ügynököt az ügynöki funkciók engedélyezéséhez"
+auth.button_sign_in_github: "[ Bejelentkezés GitHub-bal ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Bejelentkezés ezzel: %{name} ]"
+auth.hint_footer: "  Nyomja le az Enter billentyűt a bejelentkezéshez, az Esc billentyűt a visszalépéshez"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Gondolkodás…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Üdvözli az Intelligent Terminal!"
+chat.plan_header: "Terv:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Kérdezzen bármit, / a parancsokhoz.."  # {Locked="/"}
+input.placeholder.connecting: "kapcsolódás..."
+input.placeholder.disconnected: "leválasztva"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / parancsok "
+commands.help_title: " Súgó "
+commands.help_header: "Perjeles parancsok — írjon / jelet a beviteli mezőbe."
+commands.help_escape_hint: "  //text     Szó szerinti '/' küldése (kihagyja a parancsértelmezőt)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Súgó bezárása"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ navigáció • Enter kiválasztás • Esc mégse)"
+recommendations.button_run_command: "[ Parancs futtatása ]"
+recommendations.button_insert_in_terminal: "Beszúrás a terminálba"
+recommendations.button_open_in_new_tab: "Megnyitás új lapon ↵"
+recommendations.button_open_in_new_panel: "Megnyitás új panelen ↵"
+recommendations.button_open_tab: "Lap megnyitása ↵"
+recommendations.button_open_panel: "Panel megnyitása ↵"
+recommendations.button_execute: "Végrehajtás ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Engedély kérése"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N a válaszhoz · átméretezés a teljes kártyához]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Nincs telepítve — válassza ki az automatikus telepítéshez"
+agent.status.not_found: "Nem található"
+agent.status.detected: "Észlelve"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Futtatás: winget install GitHub.Copilot"
+agent.install.launch_failed: "A winget indítása sikertelen: %{error}"
+agent.install.winget_exited: "A winget váratlanul kilépett: %{error}"
+agent.install.winget_failed_code: "A winget install sikertelen (kilépési kód: %{code})"
+agent.install.unsupported: "Az automatikus telepítés nem támogatott a következőhöz: %{agent}"
+agent.custom.auth_hint: "Győződjön meg róla, hogy a(z) %{name} telepítve van és szerepel a PATH változóban."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Betöltés..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ navigáció • Enter munkamenet indítása új lapon • Shift+enter munkamenet indítása az ügynökpanelen • Esc kilépés)"
+agents.status.active: "Aktív"
+agents.status.waiting_for_input: "Bemenetre vár"
+agents.status.error: "Hiba"
+agents.status.idle: "Tétlen"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. az ügynökpanel megjelenítéséhez/elrejtéséhez • Ctrl+Alt+/ az ügynöki munkamenet megjelenítéséhez/elrejtéséhez)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Megszakítva."
+system.no_prompt_in_flight: "Nincs folyamatban lévő kérés."
+system.authentication_failed: "A hitelesítés sikertelen"
+system.command_copied_retry: "Parancs másolva — futtassa egy másik terminálban, majd nyomja le az Enter billentyűt az újrapróbálkozáshoz"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Nem található ablak."
+output.no_tabs: "Nem található lap."
+output.no_panes: "Nem található panel."
+output.no_windows_in_list: "Nem található ablak"
+output.no_tabs_in_window: "Nem található lap a(z) %{window_id} ablakban"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Aktív panel: %{pane} (lap: %{tab}, ablak: %{window})"
+output.pane_running: "Fut (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Kilépett (kód: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Lap létrehozva: %{tab_id} (panel: %{pane_id})"
+output.created_pane: "Panel létrehozva: %{pane_id}"
+output.pane_closed: "%{pane_id} panel bezárva."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Nem található aktív panel. Adjon meg egy panelazonosítót a -t kapcsolóval."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "A WT_COM_CLSID nincs beállítva. Futtassa egy Windows Terminal panelen belül."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Ismeretlen shell típus: '%{shell}'. Használja a következők egyikét: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "A wtcli wait-for indítása sikertelen"
+error.wtcli_wait_for_parse: "A wtcli wait-for kimenetének elemzése sikertelen"
+error.wtcli_wait_for_failed: "A wtcli wait-for sikertelen: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "csomagforrás: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ A CLI nincs a PATH változóban"
+hooks.installed: "✓ telepítve"
+hooks.marketplace_path_stale: "⚠ az áruház elérési útja elavult"
+hooks.installed_but_disabled: "⚠ telepítve, de letiltva"
+hooks.not_installed: "✗ nincs telepítve"
+hooks.uninstall_skipped: "kihagyva (a CLI nincs a PATH változóban)"
+hooks.install_attempted: "A wt-agent-hooks telepítése megkísérelve (idempotens). A `wta hooks status` paranccsal ellenőrizheti az eredményt. Nyomkövetési napló: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

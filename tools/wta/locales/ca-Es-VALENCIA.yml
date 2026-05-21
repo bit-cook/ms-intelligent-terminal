@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Vos donem la benvinguda a l'Intelligent Terminal!"
 setup.title.agent_missing: "No s'ha trobat l'agent"
 setup.title.agent_error: "No s'ha pogut connectar amb l'agent"
 setup.title.switch_agent: "Canvia d'agent"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "S'ha seleccionat la CLI de l'agent %{name}"
+auth.agent_selected_with_status: "CLI de l'agent %{name} — "
+auth.checking_authentication: "  %{spinner} S'està comprovant l'autenticació..."
+auth.waiting_for_authorization: "  %{spinner} S'està esperant l'autorització..."
+auth.code_copied_hint: "  S'ha copiat el codi al porta-retalls; apegueu-lo en el navegador."
+auth.sign_in_prompt: "Inicieu la sessió per a utilitzar el vostre agent:"
+auth.card_connect: "  Connecteu %{name} per a habilitar les funcions d'agent"
+auth.button_sign_in_github: "[ Inicia la sessió amb GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Inicia la sessió amb %{name} ]"
+auth.hint_footer: "  Premeu Enter per a iniciar la sessió, Esc per a tornar arrere"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "S'està pensant…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Vos donem la benvinguda a l'Intelligent Terminal!"
+chat.plan_header: "Pla:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Pregunteu qualsevol cosa, / per a vore les ordes.."  # {Locked="/"}
+input.placeholder.connecting: "s'està connectant..."
+input.placeholder.disconnected: "desconnecta"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / ordes "
+commands.help_title: " Ajuda "
+commands.help_header: "Ordes amb barra: escriviu / en el quadro d'entrada."
+commands.help_escape_hint: "  //text     Envia un caràcter '/' literal (omet l'analitzador d'ordes)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Tanca esta ajuda"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ per a navegar • Enter per a seleccionar • Esc per a cancel·lar)"
+recommendations.button_run_command: "[ Executa l'orde ]"
+recommendations.button_insert_in_terminal: "Inserix en el terminal"
+recommendations.button_open_in_new_tab: "Obri en una pestanya nova ↵"
+recommendations.button_open_in_new_panel: "Obri en un panell nou ↵"
+recommendations.button_open_tab: "Obri pestanya ↵"
+recommendations.button_open_panel: "Obri panell ↵"
+recommendations.button_execute: "Executa ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "S'ha sol·licitat permís"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N per a respondre · canvieu la grandària per a vore la fitxa completa]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "No instal·lat — seleccioneu-lo per a instal·lar-lo automàticament"
+agent.status.not_found: "No s'ha trobat"
+agent.status.detected: "Detectat"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "S'està executant: winget install GitHub.Copilot"
+agent.install.launch_failed: "No s'ha pogut iniciar el winget: %{error}"
+agent.install.winget_exited: "El winget ha eixit inesperadament: %{error}"
+agent.install.winget_failed_code: "Ha fallat la instal·lació del winget (codi d'eixida %{code})"
+agent.install.unsupported: "La instal·lació automàtica no és compatible amb %{agent}"
+agent.custom.auth_hint: "Assegureu-vos que %{name} està instal·lat i en el vostre PATH."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "S'està carregant..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ per a navegar • Enter per a iniciar la sessió en una pestanya nova • Shift+enter per a iniciar la sessió en el panell de l'agent • Esc per a eixir)"
+agents.status.active: "Actiu"
+agents.status.waiting_for_input: "S'està esperant l'entrada"
+agents.status.error: "Error"
+agents.status.idle: "Inactiu"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Maj+. per a mostrar/ocultar el panell de l'agent • Ctrl+Alt+/ per a mostrar/ocultar la sessió de l'agent)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Cancel·lat."
+system.no_prompt_in_flight: "No hi ha cap sol·licitud en curs."
+system.authentication_failed: "Ha fallat l'autenticació"
+system.command_copied_retry: "S'ha copiat l'orde; executeu-la en un altre terminal i, després, premeu Enter per a tornar a intentar-ho"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "No s'ha trobat cap finestra."
+output.no_tabs: "No s'ha trobat cap pestanya."
+output.no_panes: "No s'ha trobat cap panell."
+output.no_windows_in_list: "No s'ha trobat cap finestra"
+output.no_tabs_in_window: "No s'ha trobat cap pestanya en la finestra %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Panell actiu: %{pane} (pestanya: %{tab}, finestra: %{window})"
+output.pane_running: "En execució (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Ha eixit (codi: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "S'ha creat la pestanya %{tab_id} (panell %{pane_id})"
+output.created_pane: "S'ha creat el panell %{pane_id}"
+output.pane_closed: "S'ha tancat el panell %{pane_id}."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "No s'ha trobat cap panell actiu. Utilitzeu -t per a especificar un identificador de panell."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID no està establit. Executeu-ho dins d'un panell de Windows Terminal."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Tipus d'intèrpret d'ordes desconegut «%{shell}». Utilitzeu: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "No s'ha pogut iniciar wtcli wait-for"
+error.wtcli_wait_for_parse: "No s'ha pogut analitzar l'eixida de wtcli wait-for"
+error.wtcli_wait_for_failed: "Ha fallat wtcli wait-for: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "origen del paquet: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ La CLI no està en el PATH"
+hooks.installed: "✓ instal·lat"
+hooks.marketplace_path_stale: "⚠ el camí del Marketplace és obsolet"
+hooks.installed_but_disabled: "⚠ instal·lat però inhabilitat"
+hooks.not_installed: "✗ no instal·lat"
+hooks.uninstall_skipped: "s'ha omés (la CLI no està en el PATH)"
+hooks.install_attempted: "S'ha intentat la instal·lació de wt-agent-hooks (idempotent). Executeu `wta hooks status` per a inspeccionar el resultat. Registre de traça: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

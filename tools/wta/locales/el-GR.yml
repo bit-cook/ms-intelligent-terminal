@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Καλως ήρθατε στο Intelligent Terminal!"
 setup.title.agent_missing: "Δεν βρέθηκε ο πράκτορας"
 setup.title.agent_error: "Η σύνδεση με τον πράκτορα απέτυχε"
 setup.title.switch_agent: "Αλλαγή πράκτορα"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Έχει επιλεγεί το CLI πράκτορα %{name}"
+auth.agent_selected_with_status: "CLI πράκτορα %{name} — "
+auth.checking_authentication: "  %{spinner} Έλεγχος ταυτότητας..."
+auth.waiting_for_authorization: "  %{spinner} Αναμονή για εξουσιοδότηση..."
+auth.code_copied_hint: "  Ο κωδικός αντιγράφηκε στο πρόχειρο — επικολλήστε τον στο πρόγραμμα περιήγησης."
+auth.sign_in_prompt: "Συνδεθείτε για να χρησιμοποιήσετε τον πράκτορά σας:"
+auth.card_connect: "  Συνδέστε το %{name} για να ενεργοποιήσετε τις δυνατότητες πράκτορα"
+auth.button_sign_in_github: "[ Σύνδεση με GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Σύνδεση με %{name} ]"
+auth.hint_footer: "  Πατήστε Enter για σύνδεση, Esc για επιστροφή"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Σκέφτεται…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Καλως ήρθατε στο Intelligent Terminal!"
+chat.plan_header: "Σχέδιο:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Ρωτήστε οτιδήποτε, / για εντολές.."  # {Locked="/"}
+input.placeholder.connecting: "σύνδεση..."
+input.placeholder.disconnected: "αποσύνδεση"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / εντολές "
+commands.help_title: " Βοήθεια "
+commands.help_header: "Εντολές καθέτου — πληκτρολογήστε / στο πλαίσιο εισόδου."
+commands.help_escape_hint: "  //κείμενο  Στέλνει κυριολεκτικά '/' (διαφεύγει από τον αναλυτή εντολών)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Κλείσιμο αυτής της βοήθειας"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ για περιήγηση • Enter για επιλογή • Esc για ακύρωση)"
+recommendations.button_run_command: "[ Εκτέλεση εντολής ]"
+recommendations.button_insert_in_terminal: "Εισαγωγή στο τερματικό"
+recommendations.button_open_in_new_tab: "Άνοιγμα σε νέα καρτέλα ↵"
+recommendations.button_open_in_new_panel: "Άνοιγμα σε νέο παράθυρο ↵"
+recommendations.button_open_tab: "Άνοιγμα καρτέλας ↵"
+recommendations.button_open_panel: "Άνοιγμα παραθύρου ↵"
+recommendations.button_execute: "Εκτέλεση ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Ζητείται άδεια"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N για απάντηση · αλλάξτε μέγεθος για πλήρη κάρτα]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Δεν είναι εγκατεστημένο — επιλέξτε για αυτόματη εγκατάσταση"
+agent.status.not_found: "Δεν βρέθηκε"
+agent.status.detected: "Εντοπίστηκε"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Εκτελείται: winget install GitHub.Copilot"
+agent.install.launch_failed: "Αποτυχία εκκίνησης του winget: %{error}"
+agent.install.winget_exited: "Το winget τερμάτισε απρόσμενα: %{error}"
+agent.install.winget_failed_code: "Η εγκατάσταση μέσω winget απέτυχε (κωδικός εξόδου %{code})"
+agent.install.unsupported: "Η αυτόματη εγκατάσταση δεν υποστηρίζεται για %{agent}"
+agent.custom.auth_hint: "Βεβαιωθείτε ότι το %{name} είναι εγκατεστημένο και στο PATH σας."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Φόρτωση..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ για περιήγηση • Enter για εκκίνηση συνεδρίας σε νέα καρτέλα • Shift+enter για εκκίνηση συνεδρίας στο παράθυρο πράκτορα • Esc για έξοδο)"
+agents.status.active: "Ενεργό"
+agents.status.waiting_for_input: "Αναμονή εισόδου"
+agents.status.error: "Σφάλμα"
+agents.status.idle: "Αδρανές"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. για εμφάνιση/απόκρυψη παραθύρου πράκτορα • Ctrl+Alt+/ για εμφάνιση/απόκρυψη συνεδρίας πράκτορα)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Ακυρώθηκε."
+system.no_prompt_in_flight: "Δεν υπάρχει αίτημα σε εξέλιξη."
+system.authentication_failed: "Αποτυχία ελέγχου ταυτότητας"
+system.command_copied_retry: "Η εντολή αντιγράφηκε — εκτελέστε την σε άλλο τερματικό και πατήστε Enter για επανάληψη"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Δεν βρέθηκαν παράθυρα."
+output.no_tabs: "Δεν βρέθηκαν καρτέλες."
+output.no_panes: "Δεν βρέθηκαν τμήματα παραθύρου."
+output.no_windows_in_list: "Δεν βρέθηκαν παράθυρα"
+output.no_tabs_in_window: "Δεν βρέθηκαν καρτέλες στο παράθυρο %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Ενεργό τμήμα παραθύρου: %{pane} (καρτέλα: %{tab}, παράθυρο: %{window})"
+output.pane_running: "Εκτελείται (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Τερμάτισε (κωδικός: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Δημιουργήθηκε η καρτέλα %{tab_id} (τμήμα %{pane_id})"
+output.created_pane: "Δημιουργήθηκε το τμήμα παραθύρου %{pane_id}"
+output.pane_closed: "Το τμήμα παραθύρου %{pane_id} έκλεισε."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Δεν βρέθηκε ενεργό τμήμα παραθύρου. Χρησιμοποιήστε -t για να ορίσετε ένα αναγνωριστικό τμήματος."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "Το WT_COM_CLSID δεν έχει οριστεί. Εκτελέστε μέσα σε ένα τμήμα παραθύρου του Windows Terminal."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Άγνωστος τύπος κελύφους '%{shell}'. Χρησιμοποιήστε: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Αποτυχία εκκίνησης του wtcli wait-for"
+error.wtcli_wait_for_parse: "Αποτυχία ανάλυσης της εξόδου wtcli wait-for"
+error.wtcli_wait_for_failed: "Το wtcli wait-for απέτυχε: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "πηγή πακέτου: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ Το CLI δεν είναι στο PATH"
+hooks.installed: "✓ εγκατεστημένο"
+hooks.marketplace_path_stale: "⚠ παλαιά διαδρομή marketplace"
+hooks.installed_but_disabled: "⚠ εγκατεστημένο αλλά απενεργοποιημένο"
+hooks.not_installed: "✗ δεν είναι εγκατεστημένο"
+hooks.uninstall_skipped: "παραλείφθηκε (το CLI δεν είναι στο PATH)"
+hooks.install_attempted: "Έγινε προσπάθεια εγκατάστασης wt-agent-hooks (idempotent). Εκτελέστε `wta hooks status` για να ελέγξετε το αποτέλεσμα. Αρχείο καταγραφής: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

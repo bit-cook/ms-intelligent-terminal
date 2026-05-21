@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Maligayang pagdating sa Intelligent Terminal!"
 setup.title.agent_missing: "Hindi nahanap ang agent"
 setup.title.agent_error: "Nabigo ang koneksyon sa agent"
 setup.title.switch_agent: "Palitan ang agent"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Napili ang Agent CLI %{name}"
+auth.agent_selected_with_status: "Agent CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Sinusuri ang pagpapatotoo..."
+auth.waiting_for_authorization: "  %{spinner} Naghihintay ng awtorisasyon..."
+auth.code_copied_hint: "  Nakopya ang code sa clipboard — i-paste ito sa iyong browser."
+auth.sign_in_prompt: "Mag-sign in upang magamit ang iyong agent:"
+auth.card_connect: "  Ikonekta ang %{name} upang paganahin ang mga feature ng agent"
+auth.button_sign_in_github: "[ Mag-sign in gamit ang GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Mag-sign in gamit ang %{name} ]"
+auth.hint_footer: "  Pindutin ang Enter upang mag-sign in, Esc upang bumalik"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Nag-iisip…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Maligayang pagdating sa Intelligent Terminal!"
+chat.plan_header: "Plano:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Magtanong ng kahit ano, / para sa mga command.."  # {Locked="/"}
+input.placeholder.connecting: "kumokonekta..."
+input.placeholder.disconnected: "nadiskonekta"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / mga command "
+commands.help_title: " Tulong "
+commands.help_header: "Mga slash command — mag-type ng / sa input box."
+commands.help_escape_hint: "  //text     Magpadala ng literal na '/' (ini-escape ang command parser)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Isara ang tulong na ito"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ upang mag-navigate • Enter upang pumili • Esc upang kanselahin)"
+recommendations.button_run_command: "[ Patakbuhin ang command ]"
+recommendations.button_insert_in_terminal: "Ipasok sa Terminal"
+recommendations.button_open_in_new_tab: "Buksan sa Bagong Tab ↵"
+recommendations.button_open_in_new_panel: "Buksan sa Bagong Panel ↵"
+recommendations.button_open_tab: "Buksan ang Tab ↵"
+recommendations.button_open_panel: "Buksan ang Panel ↵"
+recommendations.button_execute: "Isagawa ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Humihingi ng pahintulot"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N upang sagutin · i-resize para sa buong card]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Hindi naka-install — piliin upang i-install nang awtomatiko"
+agent.status.not_found: "Hindi nahanap"
+agent.status.detected: "Natukoy"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Pinapatakbo: winget install GitHub.Copilot"
+agent.install.launch_failed: "Nabigong ilunsad ang winget: %{error}"
+agent.install.winget_exited: "Hindi inaasahang lumabas ang winget: %{error}"
+agent.install.winget_failed_code: "Nabigo ang winget install (exit code %{code})"
+agent.install.unsupported: "Hindi sinusuportahan ang awtomatikong pag-install para sa %{agent}"
+agent.custom.auth_hint: "Siguraduhing naka-install ang %{name} at nasa iyong PATH."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Naglo-load..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ upang mag-navigate • Enter upang ilunsad ang session sa bagong tab • Shift+enter upang ilunsad ang session sa agent pane • Esc upang lumabas)"
+agents.status.active: "Aktibo"
+agents.status.waiting_for_input: "Naghihintay ng input"
+agents.status.error: "Error"
+agents.status.idle: "Idle"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. upang ipakita/itago ang agent pane • Ctrl+Alt+/ upang ipakita/itago ang agent session)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Kinansela."
+system.no_prompt_in_flight: "Walang prompt na isinasagawa."
+system.authentication_failed: "Nabigo ang pagpapatotoo"
+system.command_copied_retry: "Nakopya ang command — patakbuhin ito sa ibang terminal, pagkatapos ay pindutin ang Enter upang subukan muli"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Walang nahanap na window."
+output.no_tabs: "Walang nahanap na tab."
+output.no_panes: "Walang nahanap na pane."
+output.no_windows_in_list: "Walang nahanap na window"
+output.no_tabs_in_window: "Walang nahanap na tab sa window %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Aktibong pane: %{pane} (tab: %{tab}, window: %{window})"
+output.pane_running: "Tumatakbo (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Lumabas (code: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Nagawa ang tab %{tab_id} (pane %{pane_id})"
+output.created_pane: "Nagawa ang pane %{pane_id}"
+output.pane_closed: "Sarado na ang pane %{pane_id}."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Walang nahanap na aktibong pane. Gamitin ang -t upang tukuyin ang isang pane ID."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "Hindi nakatakda ang WT_COM_CLSID. Patakbuhin sa loob ng Windows Terminal pane."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Hindi kilalang uri ng shell '%{shell}'. Gamitin: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Nabigong i-spawn ang wtcli wait-for"
+error.wtcli_wait_for_parse: "Nabigong i-parse ang output ng wtcli wait-for"
+error.wtcli_wait_for_failed: "Nabigo ang wtcli wait-for: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "pinagmulan ng bundle: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ Wala ang CLI sa PATH"
+hooks.installed: "✓ naka-install"
+hooks.marketplace_path_stale: "⚠ luma na ang path sa marketplace"
+hooks.installed_but_disabled: "⚠ naka-install ngunit hindi pinagana"
+hooks.not_installed: "✗ hindi naka-install"
+hooks.uninstall_skipped: "nilaktawan (wala ang CLI sa PATH)"
+hooks.install_attempted: "Sinubukang i-install ang wt-agent-hooks (idempotent). Patakbuhin ang `wta hooks status` upang suriin ang resulta. Trace log: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

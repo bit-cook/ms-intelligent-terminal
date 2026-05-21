@@ -3,3 +3,121 @@ setup.title.first_run: "Fàilte gu Intelligent Terminal!"
 setup.title.agent_missing: "Cha deach an neach-gníomha a lorg"
 setup.title.agent_error: "Dh’fhàillig ceangal an neach-ghníomha"
 setup.title.switch_agent: "Atharraich neach-gníomha"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Chaidh CLI an neach-ghníomha %{name} a thaghadh"
+auth.agent_selected_with_status: "CLI an neach-ghníomha %{name} — "
+auth.checking_authentication: "  %{spinner} A’ dearbhadh an dearbh-aithne..."
+auth.waiting_for_authorization: "  %{spinner} A’ feitheamh ri ùghdarrachadh..."
+auth.code_copied_hint: "  Chaidh an còd a lethbhreacadh dhan stòr-bhòrd — cuir a-steach e sa bhrabhsair agad."
+auth.sign_in_prompt: "Clàraich a-steach gus an neach-gníomha agad a chleachdadh:"
+auth.card_connect: "  Ceangail %{name} gus feartan an neach-ghníomha a chur an comas"
+auth.button_sign_in_github: "[ Clàraich a-steach le GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Clàraich a-steach le %{name} ]"
+auth.hint_footer: "  Brùth Enter gus clàradh a-steach, Esc gus tilleadh"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "A’ smaoineachadh…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Fàilte gu Intelligent Terminal!"
+chat.plan_header: "Plana:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Faighnich rud sam bith, / airson òrduighean.."  # {Locked="/"}
+input.placeholder.connecting: "a’ ceangal..."
+input.placeholder.disconnected: "dì-cheangail"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / òrduighean "
+commands.help_title: " Cobhair "
+commands.help_header: "Òrduighean slais — taip / sa bhogsa cuir-a-steach."
+commands.help_escape_hint: "  //text     Cuir '/' litireil (bidh seo a’ teicheadh an parsair àithne)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Dùin a’ chobhair seo"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ gus seòladh • Enter gus taghadh • Esc gus sgur dheth)"
+recommendations.button_run_command: "[ Ruith àithne ]"
+recommendations.button_insert_in_terminal: "Cuir a-steach san Tèirmineal"
+recommendations.button_open_in_new_tab: "Fosgail ann an Taba Ùr ↵"
+recommendations.button_open_in_new_panel: "Fosgail ann am Panail Ùr ↵"
+recommendations.button_open_tab: "Fosgail Taba ↵"
+recommendations.button_open_panel: "Fosgail Panail ↵"
+recommendations.button_execute: "Cuir an gnìomh ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Cead air iarraidh"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N gus freagairt · ath-mheudaich airson làn-chairt]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Gun stàladh — tagh gus a stàladh gu fèin-obrachail"
+agent.status.not_found: "Cha deach a lorg"
+agent.status.detected: "Air a lorg"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "A’ ruith: winget install GitHub.Copilot"
+agent.install.launch_failed: "Dh’fhàillig le winget a chur air bhog: %{error}"
+agent.install.winget_exited: "Sguir winget gun dùil: %{error}"
+agent.install.winget_failed_code: "Dh’fhàillig stàladh winget (còd fàgail %{code})"
+agent.install.unsupported: "Cha tèid stàladh fèin-obrachail a chur an taic do %{agent}"
+agent.custom.auth_hint: "Dèan cinnteach gu bheil %{name} stàlaichte agus air an PATH agad."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "A’ luchdadh..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ gus seòladh • Enter gus seisean a chur air bhog ann an taba ùr • Shift+enter gus seisean a chur air bhog sa phana neach-ghníomha • Esc gus fàgail)"
+agents.status.active: "Gnìomhach"
+agents.status.waiting_for_input: "A’ feitheamh ri cuir-a-steach"
+agents.status.error: "Mearachd"
+agents.status.idle: "Na thàmh"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. gus pana an neach-ghníomha a shealltainn/fhalach • Ctrl+Alt+/ gus seisean an neach-ghníomha a shealltainn/fhalach)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Air a sgur dheth."
+system.no_prompt_in_flight: "Chan eil brodadh sam bith a’ ruith."
+system.authentication_failed: "Dh’fhàillig an dearbh-aithne"
+system.command_copied_retry: "Chaidh an àithne a lethbhreacadh — ruith i ann an tèirmineal eile, an uair sin brùth Enter gus feuchainn ris a-rithist"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Cha deach uinneagan a lorg."
+output.no_tabs: "Cha deach tabaichean a lorg."
+output.no_panes: "Cha deach panailean a lorg."
+output.no_windows_in_list: "Cha deach uinneagan a lorg"
+output.no_tabs_in_window: "Cha deach tabaichean a lorg san uinneag %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Pana gnìomhach: %{pane} (taba: %{tab}, uinneag: %{window})"
+output.pane_running: "A’ ruith (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Air fàgail (còd: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Chaidh taba %{tab_id} a chruthachadh (pana %{pane_id})"
+output.created_pane: "Chaidh pana %{pane_id} a chruthachadh"
+output.pane_closed: "Tha pana %{pane_id} dùinte."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Cha deach pana gnìomhach a lorg. Cleachd -t gus ID pana a shònrachadh."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "Chan eil WT_COM_CLSID air a shuidheachadh. Ruith taobh a-staigh pana Windows Terminal."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Seòrsa slige neo-aithnichte '%{shell}'. Cleachd: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Dh’fhàillig le sìolachadh wtcli wait-for"
+error.wtcli_wait_for_parse: "Dh’fhàillig le parsadh às-chur wtcli wait-for"
+error.wtcli_wait_for_failed: "Dh’fhàillig wtcli wait-for: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "tùs a’ bhuidhinn: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ Chan eil CLI air PATH"
+hooks.installed: "✓ stàlaichte"
+hooks.marketplace_path_stale: "⚠ slighe a’ mhargaidh stagnach"
+hooks.installed_but_disabled: "⚠ stàlaichte ach à comas"
+hooks.not_installed: "✗ gun stàladh"
+hooks.uninstall_skipped: "air a leigeil seachad (CLI gun a bhith air PATH)"
+hooks.install_attempted: "Chaidh feuchainn ri wt-agent-hooks a stàladh (idempotent). Ruith `wta hooks status` gus an toradh a sgrùdadh. Loga lorgaidh: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

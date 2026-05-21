@@ -3,3 +3,121 @@ setup.title.first_run: "Laipni lūdzam Intelligent Terminal!"
 setup.title.agent_missing: "Aģents nav atrasts"
 setup.title.agent_error: "Neizdevās izveidot savienojumu ar aģentu"
 setup.title.switch_agent: "Mainīt aģentu"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Aģenta CLI %{name} ir atlasīts"
+auth.agent_selected_with_status: "Aģenta CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Notiek autentifikācijas pārbaude..."
+auth.waiting_for_authorization: "  %{spinner} Gaida autorizāciju..."
+auth.code_copied_hint: "  Kods kopēts starpliktuvē — ielīmējiet to pārlūkprogrammā."
+auth.sign_in_prompt: "Pierakstieties, lai izmantotu aģentu:"
+auth.card_connect: "  Izveidojiet savienojumu ar %{name}, lai iespējotu aģenta līdzekļus"
+auth.button_sign_in_github: "[ Pierakstīties ar GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Pierakstīties ar %{name} ]"
+auth.hint_footer: "  Nospiediet Enter, lai pierakstītos, Esc, lai atgrieztos"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Domā…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Laipni lūdzam Intelligent Terminal!"
+chat.plan_header: "Plāns:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Jautājiet jebko, / komandām.."  # {Locked="/"}
+input.placeholder.connecting: "savienojas..."
+input.placeholder.disconnected: "atvienots"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / komandas "
+commands.help_title: " Palīdzība "
+commands.help_header: "Slīpsvītras komandas — ievades laukā ierakstiet /."
+commands.help_escape_hint: "  //text     Nosūtīt burtisku '/' (atkāpjas no komandu parsētāja)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Aizvērt šo palīdzību"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ navigācijai • Enter, lai atlasītu • Esc, lai atceltu)"
+recommendations.button_run_command: "[ Izpildīt komandu ]"
+recommendations.button_insert_in_terminal: "Ievietot terminālī"
+recommendations.button_open_in_new_tab: "Atvērt jaunā cilnē ↵"
+recommendations.button_open_in_new_panel: "Atvērt jaunā panelī ↵"
+recommendations.button_open_tab: "Atvērt cilni ↵"
+recommendations.button_open_panel: "Atvērt paneli ↵"
+recommendations.button_execute: "Izpildīt ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Pieprasīta atļauja"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N, lai atbildētu · mainiet izmēru pilnai kartei]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Nav instalēts — atlasiet, lai instalētu automātiski"
+agent.status.not_found: "Nav atrasts"
+agent.status.detected: "Atklāts"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Darbojas: winget install GitHub.Copilot"
+agent.install.launch_failed: "Neizdevās palaist winget: %{error}"
+agent.install.winget_exited: "winget negaidīti pārtrauca darbu: %{error}"
+agent.install.winget_failed_code: "winget install neizdevās (izejas kods %{code})"
+agent.install.unsupported: "Automātiska instalēšana netiek atbalstīta priekš %{agent}"
+agent.custom.auth_hint: "Pārliecinieties, ka %{name} ir instalēts un atrodas jūsu PATH."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Notiek ielāde..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ navigācijai • Enter, lai palaistu sesiju jaunā cilnē • Shift+enter, lai palaistu sesiju aģenta panelī • Esc, lai izietu)"
+agents.status.active: "Aktīvs"
+agents.status.waiting_for_input: "Gaida ievadi"
+agents.status.error: "Kļūda"
+agents.status.idle: "Dīkstāvē"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. lai rādītu/slēptu aģenta paneli • Ctrl+Alt+/ lai rādītu/slēptu aģenta sesiju)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Atcelts."
+system.no_prompt_in_flight: "Nav neviena aktīva uzaicinājuma."
+system.authentication_failed: "Autentifikācija neizdevās"
+system.command_copied_retry: "Komanda kopēta — izpildiet to citā terminālī, pēc tam nospiediet Enter, lai mēģinātu vēlreiz"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Logi nav atrasti."
+output.no_tabs: "Cilnes nav atrastas."
+output.no_panes: "Paneļi nav atrasti."
+output.no_windows_in_list: "Logi nav atrasti"
+output.no_tabs_in_window: "Cilnes nav atrastas logā %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Aktīvais panelis: %{pane} (cilne: %{tab}, logs: %{window})"
+output.pane_running: "Darbojas (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Pārtraukts (kods: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Izveidota cilne %{tab_id} (panelis %{pane_id})"
+output.created_pane: "Izveidots panelis %{pane_id}"
+output.pane_closed: "Panelis %{pane_id} aizvērts."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Nav atrasts neviens aktīvs panelis. Izmantojiet -t, lai norādītu paneļa ID."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID nav iestatīts. Palaidiet Windows Terminal panelī."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Nezināms čaulas tips '%{shell}'. Izmantojiet: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Neizdevās palaist wtcli wait-for"
+error.wtcli_wait_for_parse: "Neizdevās parsēt wtcli wait-for izvadi"
+error.wtcli_wait_for_failed: "wtcli wait-for neizdevās: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "komplekta avots: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI nav PATH"
+hooks.installed: "✓ instalēts"
+hooks.marketplace_path_stale: "⚠ tirdzniecības vietas ceļš novecojis"
+hooks.installed_but_disabled: "⚠ instalēts, bet atspējots"
+hooks.not_installed: "✗ nav instalēts"
+hooks.uninstall_skipped: "izlaists (CLI nav PATH)"
+hooks.install_attempted: "wt-agent-hooks instalēšana mēģināta (idempotenta). Palaidiet `wta hooks status`, lai pārbaudītu rezultātu. Izsekošanas žurnāls: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

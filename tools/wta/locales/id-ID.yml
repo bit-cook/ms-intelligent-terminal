@@ -3,3 +3,121 @@ setup.title.first_run: "Selamat datang di Intelligent Terminal!"
 setup.title.agent_missing: "Agen tidak ditemukan"
 setup.title.agent_error: "Koneksi agen gagal"
 setup.title.switch_agent: "Ganti agen"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "CLI agen %{name} dipilih"
+auth.agent_selected_with_status: "CLI agen %{name} — "
+auth.checking_authentication: "  %{spinner} Memeriksa autentikasi..."
+auth.waiting_for_authorization: "  %{spinner} Menunggu otorisasi..."
+auth.code_copied_hint: "  Kode disalin ke papan klip — tempel di peramban Anda."
+auth.sign_in_prompt: "Masuk untuk menggunakan agen Anda:"
+auth.card_connect: "  Hubungkan %{name} untuk mengaktifkan fitur agen"
+auth.button_sign_in_github: "[ Masuk dengan GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Masuk dengan %{name} ]"
+auth.hint_footer: "  Tekan Enter untuk masuk, Esc untuk kembali"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Sedang berpikir…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Selamat datang di Intelligent Terminal!"
+chat.plan_header: "Rencana:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Tanyakan apa saja, / untuk perintah.."  # {Locked="/"}
+input.placeholder.connecting: "menghubungkan..."
+input.placeholder.disconnected: "terputus"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / perintah "
+commands.help_title: " Bantuan "
+commands.help_header: "Perintah garis miring — ketik / di kotak input."
+commands.help_escape_hint: "  //text     Kirim '/' literal (meng-escape parser perintah)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Tutup bantuan ini"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ untuk navigasi • Enter untuk memilih • Esc untuk membatalkan)"
+recommendations.button_run_command: "[ Jalankan perintah ]"
+recommendations.button_insert_in_terminal: "Sisipkan di Terminal"
+recommendations.button_open_in_new_tab: "Buka di Tab Baru ↵"
+recommendations.button_open_in_new_panel: "Buka di Panel Baru ↵"
+recommendations.button_open_tab: "Buka Tab ↵"
+recommendations.button_open_panel: "Buka Panel ↵"
+recommendations.button_execute: "Jalankan ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Izin diminta"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N untuk menjawab · ubah ukuran untuk kartu penuh]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Belum dipasang — pilih untuk memasang otomatis"
+agent.status.not_found: "Tidak ditemukan"
+agent.status.detected: "Terdeteksi"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Menjalankan: winget install GitHub.Copilot"
+agent.install.launch_failed: "Gagal meluncurkan winget: %{error}"
+agent.install.winget_exited: "winget keluar secara tak terduga: %{error}"
+agent.install.winget_failed_code: "Pemasangan winget gagal (kode keluar %{code})"
+agent.install.unsupported: "Pemasangan otomatis tidak didukung untuk %{agent}"
+agent.custom.auth_hint: "Pastikan %{name} terpasang dan ada di PATH Anda."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Memuat..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ untuk navigasi • Enter untuk meluncurkan sesi di tab baru • Shift+enter untuk meluncurkan sesi di panel agen • Esc untuk keluar)"
+agents.status.active: "Aktif"
+agents.status.waiting_for_input: "Menunggu input"
+agents.status.error: "Galat"
+agents.status.idle: "Diam"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. untuk menampilkan/menyembunyikan panel agen • Ctrl+Alt+/ untuk menampilkan/menyembunyikan sesi agen)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Dibatalkan."
+system.no_prompt_in_flight: "Tidak ada prompt yang sedang berjalan."
+system.authentication_failed: "Autentikasi gagal"
+system.command_copied_retry: "Perintah disalin — jalankan di terminal lain, lalu tekan Enter untuk mencoba lagi"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Tidak ada jendela ditemukan."
+output.no_tabs: "Tidak ada tab ditemukan."
+output.no_panes: "Tidak ada panel ditemukan."
+output.no_windows_in_list: "Tidak ada jendela ditemukan"
+output.no_tabs_in_window: "Tidak ada tab ditemukan di jendela %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Panel aktif: %{pane} (tab: %{tab}, jendela: %{window})"
+output.pane_running: "Berjalan (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Keluar (kode: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Tab %{tab_id} dibuat (panel %{pane_id})"
+output.created_pane: "Panel %{pane_id} dibuat"
+output.pane_closed: "Panel %{pane_id} ditutup."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Tidak ada panel aktif ditemukan. Gunakan -t untuk menentukan ID panel."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID tidak diatur. Jalankan di dalam panel Windows Terminal."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Tipe shell tidak dikenal '%{shell}'. Gunakan: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Gagal menjalankan wtcli wait-for"
+error.wtcli_wait_for_parse: "Gagal mengurai keluaran wtcli wait-for"
+error.wtcli_wait_for_failed: "wtcli wait-for gagal: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "sumber bundel: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI tidak ada di PATH"
+hooks.installed: "✓ terpasang"
+hooks.marketplace_path_stale: "⚠ jalur marketplace usang"
+hooks.installed_but_disabled: "⚠ terpasang tetapi dinonaktifkan"
+hooks.not_installed: "✗ tidak terpasang"
+hooks.uninstall_skipped: "dilewati (CLI tidak ada di PATH)"
+hooks.install_attempted: "Pemasangan wt-agent-hooks dicoba (idempoten). Jalankan `wta hooks status` untuk memeriksa hasilnya. Log jejak: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

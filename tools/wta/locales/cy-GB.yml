@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Croeso i Intelligent Terminal!"
 setup.title.agent_missing: "Ni chanfuwyd yr asiant"
 setup.title.agent_error: "Methwyd â chysylltu â'r asiant"
 setup.title.switch_agent: "Newid asiant"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Mae asiant CLI %{name} wedi'i ddewis"
+auth.agent_selected_with_status: "Asiant CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Yn gwirio dilysiad..."
+auth.waiting_for_authorization: "  %{spinner} Yn aros am awdurdodiad..."
+auth.code_copied_hint: "  Cod wedi'i gopïo i'r clipfwrdd — gludwch ef yn eich porwr."
+auth.sign_in_prompt: "Mewngofnodwch i ddefnyddio'ch asiant:"
+auth.card_connect: "  Cysylltwch %{name} i alluogi nodweddion yr asiant"
+auth.button_sign_in_github: "[ Mewngofnodi gyda GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Mewngofnodi gyda %{name} ]"
+auth.hint_footer: "  Pwyswch Enter i fewngofnodi, Esc i fynd yn ôl"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Yn meddwl…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Croeso i Intelligent Terminal!"
+chat.plan_header: "Cynllun:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Gofynnwch unrhyw beth, / am orchmynion.."  # {Locked="/"}
+input.placeholder.connecting: "yn cysylltu..."
+input.placeholder.disconnected: "datgysylltwyd"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / gorchmynion "
+commands.help_title: " Cymorth "
+commands.help_header: "Gorchmynion slaes — teipiwch / yn y blwch mewnbwn."
+commands.help_escape_hint: "  //text     Anfon '/' llythrennol (osgoi'r dosrannydd gorchmynion)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Cau'r cymorth hwn"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ i lywio • Enter i ddewis • Esc i ganslo)"
+recommendations.button_run_command: "[ Rhedeg y gorchymyn ]"
+recommendations.button_insert_in_terminal: "Mewnosod yn y Derfynell"
+recommendations.button_open_in_new_tab: "Agor mewn Tab Newydd ↵"
+recommendations.button_open_in_new_panel: "Agor mewn Panel Newydd ↵"
+recommendations.button_open_tab: "Agor Tab ↵"
+recommendations.button_open_panel: "Agor Panel ↵"
+recommendations.button_execute: "Gweithredu ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Gofynnwyd am ganiatâd"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N i ateb · newidiwch faint i weld y cerdyn llawn]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Heb ei osod — dewiswch i'w osod yn awtomatig"
+agent.status.not_found: "Heb ei ganfod"
+agent.status.detected: "Canfuwyd"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Yn rhedeg: winget install GitHub.Copilot"
+agent.install.launch_failed: "Methwyd â lansio winget: %{error}"
+agent.install.winget_exited: "Daeth winget i ben yn annisgwyl: %{error}"
+agent.install.winget_failed_code: "Methodd y gosodiad winget (cod ymadael %{code})"
+agent.install.unsupported: "Nid yw gosod awtomatig yn cael ei gefnogi ar gyfer %{agent}"
+agent.custom.auth_hint: "Gwnewch yn siŵr bod %{name} wedi'i osod ac ar eich PATH."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Yn llwytho..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ i lywio • Enter i lansio sesiwn mewn tab newydd • Shift+enter i lansio sesiwn ym mhaen yr asiant • Esc i ymadael)"
+agents.status.active: "Gweithredol"
+agents.status.waiting_for_input: "Yn aros am fewnbwn"
+agents.status.error: "Gwall"
+agents.status.idle: "Segur"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. i ddangos/cuddio paen yr asiant • Ctrl+Alt+/ i ddangos/cuddio sesiwn yr asiant)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Wedi'i ganslo."
+system.no_prompt_in_flight: "Nid oes anogaeth ar y gweill."
+system.authentication_failed: "Methodd y dilysiad"
+system.command_copied_retry: "Gorchymyn wedi'i gopïo — rhedwch ef mewn terfynell arall, yna pwyswch Enter i ailgynnig"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Ni chanfuwyd unrhyw ffenestri."
+output.no_tabs: "Ni chanfuwyd unrhyw dabiau."
+output.no_panes: "Ni chanfuwyd unrhyw baenau."
+output.no_windows_in_list: "Ni chanfuwyd unrhyw ffenestri"
+output.no_tabs_in_window: "Ni chanfuwyd unrhyw dabiau yn y ffenestr %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Paen gweithredol: %{pane} (tab: %{tab}, ffenestr: %{window})"
+output.pane_running: "Yn rhedeg (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Wedi ymadael (cod: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Crëwyd tab %{tab_id} (paen %{pane_id})"
+output.created_pane: "Crëwyd paen %{pane_id}"
+output.pane_closed: "Caewyd paen %{pane_id}."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Ni chanfuwyd paen gweithredol. Defnyddiwch -t i nodi ID paen."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "Nid yw WT_COM_CLSID wedi'i osod. Rhedwch o fewn paen Windows Terminal."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Math cragen anhysbys '%{shell}'. Defnyddiwch: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Methwyd â chreu wtcli wait-for"
+error.wtcli_wait_for_parse: "Methwyd â dosrannu allbwn wtcli wait-for"
+error.wtcli_wait_for_failed: "Methodd wtcli wait-for: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "ffynhonnell bwndel: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ Nid yw'r CLI ar PATH"
+hooks.installed: "✓ wedi'i osod"
+hooks.marketplace_path_stale: "⚠ llwybr marchnad yn hen"
+hooks.installed_but_disabled: "⚠ wedi'i osod ond wedi'i analluogi"
+hooks.not_installed: "✗ heb ei osod"
+hooks.uninstall_skipped: "wedi'i hepgor (nid yw'r CLI ar PATH)"
+hooks.install_attempted: "Ceisiwyd gosod wt-agent-hooks (idempotent). Rhedwch `wta hooks status` i arolygu'r canlyniad. Log olrhain: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

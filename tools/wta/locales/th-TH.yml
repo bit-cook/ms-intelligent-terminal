@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "ยินดีต้อนรับสู่ Intelligent Terminal!"
 setup.title.agent_missing: "ไม่พบเอเจนต์"
 setup.title.agent_error: "การเชื่อมต่อเอเจนต์ล้มเหลว"
 setup.title.switch_agent: "สลับเอเจนต์"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "เลือกเอเจนต์ CLI %{name} แล้ว"
+auth.agent_selected_with_status: "เอเจนต์ CLI %{name} — "
+auth.checking_authentication: "  %{spinner} กำลังตรวจสอบการรับรองความถูกต้อง..."
+auth.waiting_for_authorization: "  %{spinner} กำลังรอการอนุญาต..."
+auth.code_copied_hint: "  คัดลอกรหัสไปยังคลิปบอร์ดแล้ว — วางในเบราว์เซอร์ของคุณ"
+auth.sign_in_prompt: "ลงชื่อเข้าใช้เพื่อใช้เอเจนต์ของคุณ:"
+auth.card_connect: "  เชื่อมต่อ %{name} เพื่อเปิดใช้งานคุณสมบัติเอเจนต์"
+auth.button_sign_in_github: "[ ลงชื่อเข้าใช้ด้วย GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ ลงชื่อเข้าใช้ด้วย %{name} ]"
+auth.hint_footer: "  กด Enter เพื่อลงชื่อเข้าใช้ Esc เพื่อย้อนกลับ"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "กำลังคิด…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "ยินดีต้อนรับสู่ Intelligent Terminal!"
+chat.plan_header: "แผน:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "ถามอะไรก็ได้ / สำหรับคำสั่ง.."  # {Locked="/"}
+input.placeholder.connecting: "กำลังเชื่อมต่อ..."
+input.placeholder.disconnected: "ตัดการเชื่อมต่อ"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / คำสั่ง "
+commands.help_title: " วิธีใช้ "
+commands.help_header: "คำสั่งสแลช — พิมพ์ / ในกล่องป้อนข้อมูล"
+commands.help_escape_hint: "  //text     ส่ง '/' ตามตัวอักษร (หลีกตัวแยกวิเคราะห์คำสั่ง)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        ปิดวิธีใช้นี้"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ เพื่อนำทาง • Enter เพื่อเลือก • Esc เพื่อยกเลิก)"
+recommendations.button_run_command: "[ เรียกใช้คำสั่ง ]"
+recommendations.button_insert_in_terminal: "แทรกในเทอร์มินัล"
+recommendations.button_open_in_new_tab: "เปิดในแท็บใหม่ ↵"
+recommendations.button_open_in_new_panel: "เปิดในแผงใหม่ ↵"
+recommendations.button_open_tab: "เปิดแท็บ ↵"
+recommendations.button_open_panel: "เปิดแผง ↵"
+recommendations.button_execute: "ดำเนินการ ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "ขอสิทธิ์"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N เพื่อตอบ · ปรับขนาดสำหรับการ์ดเต็ม]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "ยังไม่ได้ติดตั้ง — เลือกเพื่อติดตั้งโดยอัตโนมัติ"
+agent.status.not_found: "ไม่พบ"
+agent.status.detected: "ตรวจพบ"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "กำลังเรียกใช้: winget install GitHub.Copilot"
+agent.install.launch_failed: "ไม่สามารถเปิดใช้ winget: %{error}"
+agent.install.winget_exited: "winget ปิดอย่างไม่คาดคิด: %{error}"
+agent.install.winget_failed_code: "การติดตั้ง winget ล้มเหลว (รหัสออก %{code})"
+agent.install.unsupported: "ไม่รองรับการติดตั้งอัตโนมัติสำหรับ %{agent}"
+agent.custom.auth_hint: "ตรวจสอบว่าติดตั้ง %{name} แล้วและอยู่บน PATH ของคุณ"  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "กำลังโหลด..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ เพื่อนำทาง • Enter เพื่อเปิดเซสชันในแท็บใหม่ • Shift+enter เพื่อเปิดเซสชันในแผงเอเจนต์ • Esc เพื่อออก)"
+agents.status.active: "ใช้งานอยู่"
+agents.status.waiting_for_input: "กำลังรอป้อนข้อมูล"
+agents.status.error: "ข้อผิดพลาด"
+agents.status.idle: "ว่าง"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. เพื่อแสดง/ซ่อนแผงเอเจนต์ • Ctrl+Alt+/ เพื่อแสดง/ซ่อนเซสชันเอเจนต์)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "ยกเลิกแล้ว"
+system.no_prompt_in_flight: "ไม่มีพรอมต์ที่กำลังดำเนินการ"
+system.authentication_failed: "การรับรองความถูกต้องล้มเหลว"
+system.command_copied_retry: "คัดลอกคำสั่งแล้ว — เรียกใช้ในเทอร์มินัลอื่น แล้วกด Enter เพื่อลองอีกครั้ง"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "ไม่พบหน้าต่าง"
+output.no_tabs: "ไม่พบแท็บ"
+output.no_panes: "ไม่พบแผง"
+output.no_windows_in_list: "ไม่พบหน้าต่าง"
+output.no_tabs_in_window: "ไม่พบแท็บในหน้าต่าง %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "แผงที่ใช้งานอยู่: %{pane} (แท็บ: %{tab}, หน้าต่าง: %{window})"
+output.pane_running: "กำลังทำงาน (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "ออกแล้ว (รหัส: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "สร้างแท็บ %{tab_id} (แผง %{pane_id})"
+output.created_pane: "สร้างแผง %{pane_id}"
+output.pane_closed: "ปิดแผง %{pane_id} แล้ว"
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "ไม่พบแผงที่ใช้งานอยู่ ใช้ -t เพื่อระบุ ID ของแผง"  # {Locked="-t"}
+error.wt_com_clsid_not_set: "ไม่ได้ตั้งค่า WT_COM_CLSID เรียกใช้ภายในแผงของ Windows Terminal"  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "ประเภทเชลล์ที่ไม่รู้จัก '%{shell}' ใช้: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "ไม่สามารถสร้างกระบวนการ wtcli wait-for"
+error.wtcli_wait_for_parse: "ไม่สามารถแยกวิเคราะห์เอาต์พุตของ wtcli wait-for"
+error.wtcli_wait_for_failed: "wtcli wait-for ล้มเหลว: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "แหล่งบันเดิล: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI ไม่อยู่บน PATH"
+hooks.installed: "✓ ติดตั้งแล้ว"
+hooks.marketplace_path_stale: "⚠ เส้นทางมาร์เก็ตเพลสล้าสมัย"
+hooks.installed_but_disabled: "⚠ ติดตั้งแล้วแต่ปิดใช้งาน"
+hooks.not_installed: "✗ ยังไม่ได้ติดตั้ง"
+hooks.uninstall_skipped: "ข้าม (CLI ไม่อยู่บน PATH)"
+hooks.install_attempted: "พยายามติดตั้ง wt-agent-hooks แล้ว (idempotent) เรียกใช้ `wta hooks status` เพื่อตรวจสอบผลลัพธ์ บันทึกการติดตาม: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

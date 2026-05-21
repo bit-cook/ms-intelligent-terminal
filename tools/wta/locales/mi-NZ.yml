@@ -3,3 +3,121 @@ setup.title.first_run: "Nāu mai ki Intelligent Terminal!"
 setup.title.agent_missing: "Kāore i kitea te agent"
 setup.title.agent_error: "I rahua te hononga agent"
 setup.title.switch_agent: "Huri agent"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Kua tīpakohia te agent CLI %{name}"
+auth.agent_selected_with_status: "Agent CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Te tirotiro i te motuhēhēnga..."
+auth.waiting_for_authorization: "  %{spinner} Te tatari mō te whakamana..."
+auth.code_copied_hint: "  Kua tāruatia te waehere ki te papatopenga — whakapiri ki tō pūtirotiro."
+auth.sign_in_prompt: "Takiuru ki te whakamahi i tō agent:"
+auth.card_connect: "  Hono atu i a %{name} kia āhei ai ngā āhuatanga agent"
+auth.button_sign_in_github: "[ Takiuru ki GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Takiuru ki %{name} ]"
+auth.hint_footer: "  Pēhia Enter kia takiuru, Esc kia hoki"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Te whakaaroaro…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Nāu mai ki Intelligent Terminal!"
+chat.plan_header: "Mahere:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Pātaia tētahi mea, / mō ngā whakahau.."  # {Locked="/"}
+input.placeholder.connecting: "te hono..."
+input.placeholder.disconnected: "kua momotu"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / whakahau "
+commands.help_title: " Āwhina "
+commands.help_header: "Whakahau hauwhā — pato / ki te pouaka tāuru."
+commands.help_escape_hint: "  //text     Tukua he '/' mauritau (mawhiti te kaiwetewete whakahau)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Kati i tēnei āwhina"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ ki te whakatere • Enter ki te tīpako • Esc ki te whakakore)"
+recommendations.button_run_command: "[ Whakahaere whakahau ]"
+recommendations.button_insert_in_terminal: "Whakauru ki te Iho"
+recommendations.button_open_in_new_tab: "Whakatuwhera ki te Ripa Hōu ↵"
+recommendations.button_open_in_new_panel: "Whakatuwhera ki te Paewhiri Hōu ↵"
+recommendations.button_open_tab: "Whakatuwhera Ripa ↵"
+recommendations.button_open_panel: "Whakatuwhera Paewhiri ↵"
+recommendations.button_execute: "Whakahaere ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Kua tonoa he whakaaetanga"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N hei whakautu · whakarahi kia kite i te kāri katoa]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Kāore i tāuta — tīpakohia kia tāutahia aunoatia"
+agent.status.not_found: "Kāore i kitea"
+agent.status.detected: "Kua kitea"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Te whakahaere: winget install GitHub.Copilot"
+agent.install.launch_failed: "I rahua te whakarewa i te winget: %{error}"
+agent.install.winget_exited: "I puta ohorere te winget: %{error}"
+agent.install.winget_failed_code: "I rahua te tāuta winget (waehere putanga %{code})"
+agent.install.unsupported: "Kāore te tāuta aunoa e tautokona mō %{agent}"
+agent.custom.auth_hint: "Kia mōhio kua tāutahia %{name} ā kei runga i tō PATH."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Te uta..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ ki te whakatere • Enter ki te whakarewa wātū ki te ripa hōu • Shift+enter ki te whakarewa wātū ki te paewhiri agent • Esc ki te puta)"
+agents.status.active: "Hohe"
+agents.status.waiting_for_input: "Te tatari tāuru"
+agents.status.error: "Hapa"
+agents.status.idle: "Mangere"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. ki te whakaatu/huna i te paewhiri agent • Ctrl+Alt+/ ki te whakaatu/huna i te wātū agent)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Kua whakakorea."
+system.no_prompt_in_flight: "Kāore he tono e haere ana."
+system.authentication_failed: "I rahua te motuhēhēnga"
+system.command_copied_retry: "Kua tāruatia te whakahau — whakahaerea ki tētahi atu iho, ka pēhia Enter kia ngana anō"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Kāore he matapihi i kitea."
+output.no_tabs: "Kāore he ripa i kitea."
+output.no_panes: "Kāore he paewhiri i kitea."
+output.no_windows_in_list: "Kāore he matapihi i kitea"
+output.no_tabs_in_window: "Kāore he ripa i kitea i te matapihi %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Paewhiri hohe: %{pane} (ripa: %{tab}, matapihi: %{window})"
+output.pane_running: "Te whakahaere (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Kua puta (waehere: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Kua hangaia te ripa %{tab_id} (paewhiri %{pane_id})"
+output.created_pane: "Kua hangaia te paewhiri %{pane_id}"
+output.pane_closed: "Kua katia te paewhiri %{pane_id}."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Kāore he paewhiri hohe i kitea. Whakamahia -t hei tautuhi i te ID paewhiri."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "Kāore i tautuhia te WT_COM_CLSID. Whakahaerea i roto i tētahi paewhiri o Windows Terminal."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Momo anga tē mōhiotia '%{shell}'. Whakamahia: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "I rahua te whakarewa i te wtcli wait-for"
+error.wtcli_wait_for_parse: "I rahua te wetewete i te putanga wtcli wait-for"
+error.wtcli_wait_for_failed: "I rahua te wtcli wait-for: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "puna paihere: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ Kāore te CLI kei runga i te PATH"
+hooks.installed: "✓ kua tāutahia"
+hooks.marketplace_path_stale: "⚠ kua tawhito te ara mākete"
+hooks.installed_but_disabled: "⚠ kua tāutahia engari kua monokia"
+hooks.not_installed: "✗ kāore i tāutahia"
+hooks.uninstall_skipped: "kua mawhiti (kāore te CLI kei runga i te PATH)"
+hooks.install_attempted: "Kua whakamātauhia te tāuta wt-agent-hooks (idempotent). Whakahaerea `wta hooks status` hei tirotiro i te hua. Rangitaki ara: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

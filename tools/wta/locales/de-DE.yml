@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "Willkommen bei Intelligent Terminal!"
 setup.title.agent_missing: "Agent nicht gefunden"
 setup.title.agent_error: "Verbindung zum Agenten fehlgeschlagen"
 setup.title.switch_agent: "Agent wechseln"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Agent-CLI %{name} ist ausgewählt"
+auth.agent_selected_with_status: "Agent-CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Authentifizierung wird überprüft..."
+auth.waiting_for_authorization: "  %{spinner} Warte auf Autorisierung..."
+auth.code_copied_hint: "  Code in die Zwischenablage kopiert — fügen Sie ihn in Ihrem Browser ein."
+auth.sign_in_prompt: "Melden Sie sich an, um Ihren Agenten zu verwenden:"
+auth.card_connect: "  Verbinden Sie %{name}, um Agent-Funktionen zu aktivieren"
+auth.button_sign_in_github: "[ Mit GitHub anmelden ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Mit %{name} anmelden ]"
+auth.hint_footer: "  Drücken Sie Enter zum Anmelden, Esc zum Zurückgehen"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Denke nach…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Willkommen bei Intelligent Terminal!"
+chat.plan_header: "Plan:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Fragen Sie etwas, / für Befehle.."  # {Locked="/"}
+input.placeholder.connecting: "verbinde..."
+input.placeholder.disconnected: "getrennt"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / Befehle "
+commands.help_title: " Hilfe "
+commands.help_header: "Schrägstrich-Befehle — geben Sie / in das Eingabefeld ein."
+commands.help_escape_hint: "  //text     Ein wörtliches '/' senden (umgeht den Befehls-Parser)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Diese Hilfe schließen"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ zum Navigieren • Enter zum Auswählen • Esc zum Abbrechen)"
+recommendations.button_run_command: "[ Befehl ausführen ]"
+recommendations.button_insert_in_terminal: "Im Terminal einfügen"
+recommendations.button_open_in_new_tab: "In neuem Tab öffnen ↵"
+recommendations.button_open_in_new_panel: "In neuem Bereich öffnen ↵"
+recommendations.button_open_tab: "Tab öffnen ↵"
+recommendations.button_open_panel: "Bereich öffnen ↵"
+recommendations.button_execute: "Ausführen ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Berechtigung angefordert"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N zum Antworten · Größe ändern für vollständige Karte]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Nicht installiert — auswählen, um automatisch zu installieren"
+agent.status.not_found: "Nicht gefunden"
+agent.status.detected: "Erkannt"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Wird ausgeführt: winget install GitHub.Copilot"
+agent.install.launch_failed: "winget konnte nicht gestartet werden: %{error}"
+agent.install.winget_exited: "winget wurde unerwartet beendet: %{error}"
+agent.install.winget_failed_code: "winget install fehlgeschlagen (Exit-Code %{code})"
+agent.install.unsupported: "Automatische Installation für %{agent} nicht unterstützt"
+agent.custom.auth_hint: "Stellen Sie sicher, dass %{name} installiert ist und sich in Ihrem PATH befindet."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Wird geladen..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ zum Navigieren • Enter zum Starten einer Sitzung in einem neuen Tab • Shift+enter zum Starten einer Sitzung im Agent-Bereich • Esc zum Beenden)"
+agents.status.active: "Aktiv"
+agents.status.waiting_for_input: "Wartet auf Eingabe"
+agents.status.error: "Fehler"
+agents.status.idle: "Inaktiv"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. zum Ein-/Ausblenden des Agent-Bereichs • Ctrl+Alt+/ zum Ein-/Ausblenden der Agent-Sitzung)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Abgebrochen."
+system.no_prompt_in_flight: "Keine Anfrage in Bearbeitung."
+system.authentication_failed: "Authentifizierung fehlgeschlagen"
+system.command_copied_retry: "Befehl kopiert — führen Sie ihn in einem anderen Terminal aus und drücken Sie dann Enter, um es erneut zu versuchen"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Keine Fenster gefunden."
+output.no_tabs: "Keine Tabs gefunden."
+output.no_panes: "Keine Bereiche gefunden."
+output.no_windows_in_list: "Keine Fenster gefunden"
+output.no_tabs_in_window: "Keine Tabs in Fenster %{window_id} gefunden"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Aktiver Bereich: %{pane} (Tab: %{tab}, Fenster: %{window})"
+output.pane_running: "Läuft (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Beendet (Code: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Tab %{tab_id} erstellt (Bereich %{pane_id})"
+output.created_pane: "Bereich %{pane_id} erstellt"
+output.pane_closed: "Bereich %{pane_id} geschlossen."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Kein aktiver Bereich gefunden. Verwenden Sie -t, um eine Bereichs-ID anzugeben."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID nicht gesetzt. Führen Sie den Befehl in einem Windows Terminal-Bereich aus."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Unbekannter Shell-Typ '%{shell}'. Verwenden Sie: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "wtcli wait-for konnte nicht gestartet werden"
+error.wtcli_wait_for_parse: "Ausgabe von wtcli wait-for konnte nicht verarbeitet werden"
+error.wtcli_wait_for_failed: "wtcli wait-for fehlgeschlagen: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "Bundle-Quelle: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI nicht im PATH"
+hooks.installed: "✓ installiert"
+hooks.marketplace_path_stale: "⚠ Marketplace-Pfad veraltet"
+hooks.installed_but_disabled: "⚠ installiert, aber deaktiviert"
+hooks.not_installed: "✗ nicht installiert"
+hooks.uninstall_skipped: "übersprungen (CLI nicht im PATH)"
+hooks.install_attempted: "wt-agent-hooks-Installation versucht (idempotent). Führen Sie `wta hooks status` aus, um das Ergebnis zu überprüfen. Trace-Protokoll: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

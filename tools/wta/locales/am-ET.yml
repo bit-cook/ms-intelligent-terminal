@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "እንኳን ወደ Intelligent Terminal በደህና መጡ!"
 setup.title.agent_missing: "ኤጅንት አልተገኘም"
 setup.title.agent_error: "ኤጅንት ግንኙነት አልተሳካም"
 setup.title.switch_agent: "ኤጅንትን ቀይር"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "የኤጅንት CLI %{name} ተመርጧል"
+auth.agent_selected_with_status: "የኤጅንት CLI %{name} — "
+auth.checking_authentication: "  %{spinner} ማረጋገጫን በመፈተሽ ላይ..."
+auth.waiting_for_authorization: "  %{spinner} ፈቃድን በመጠባበቅ ላይ..."
+auth.code_copied_hint: "  ኮድ ወደ ቅንጥብ ሰሌዳ ተቀድቷል — በአሳሽዎ ውስጥ ይለጥፉት።"
+auth.sign_in_prompt: "ኤጅንትዎን ለመጠቀም ይግቡ፦"
+auth.card_connect: "  የኤጅንት ባህሪያትን ለማንቃት %{name}ን ያገናኙ"
+auth.button_sign_in_github: "[ በGitHub ይግቡ ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ በ%{name} ይግቡ ]"
+auth.hint_footer: "  ለመግባት Enter ይጫኑ፣ ለመመለስ Esc"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "በማሰብ ላይ…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "እንኳን ወደ Intelligent Terminal በደህና መጡ!"
+chat.plan_header: "ዕቅድ፦"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "ማንኛውንም ይጠይቁ፣ ለትዕዛዞች / ይጻፉ.."  # {Locked="/"}
+input.placeholder.connecting: "በመገናኘት ላይ..."
+input.placeholder.disconnected: "ግንኙነት ተቋርጧል"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / ትዕዛዞች "
+commands.help_title: " እገዛ "
+commands.help_header: "የስላሽ ትዕዛዞች — በግቤት ሳጥን ውስጥ / ይጻፉ።"
+commands.help_escape_hint: "  //text     ቀጥተኛ '/' ይላኩ (የትዕዛዝ ተንታኙን ያስወግዳል)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        ይህን እገዛ ዝጋ"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ ለማሰስ • Enter ለመምረጥ • Esc ለመሰረዝ)"
+recommendations.button_run_command: "[ ትዕዛዝ አስፈጽም ]"
+recommendations.button_insert_in_terminal: "በተርሚናል ውስጥ አስገባ"
+recommendations.button_open_in_new_tab: "በአዲስ ትር ክፈት ↵"
+recommendations.button_open_in_new_panel: "በአዲስ ፓነል ክፈት ↵"
+recommendations.button_open_tab: "ትር ክፈት ↵"
+recommendations.button_open_panel: "ፓነል ክፈት ↵"
+recommendations.button_execute: "አስፈጽም ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "ፈቃድ ተጠይቋል"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[ለመመለስ Y/N · ለሙሉ ካርድ መጠን ይቀይሩ]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "አልተጫነም — በራስ-ሰር ለመጫን ይምረጡ"
+agent.status.not_found: "አልተገኘም"
+agent.status.detected: "ተገኝቷል"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "በማስፈጸም ላይ፦ winget install GitHub.Copilot"
+agent.install.launch_failed: "winget ማስጀመር አልተሳካም፦ %{error}"
+agent.install.winget_exited: "winget ባልተጠበቀ ሁኔታ ወጥቷል፦ %{error}"
+agent.install.winget_failed_code: "winget install አልተሳካም (የመውጫ ኮድ %{code})"
+agent.install.unsupported: "ለ%{agent} ራስ-ሰር ጭነት አይደገፍም"
+agent.custom.auth_hint: "%{name} መጫኑን እና በPATH ላይ መሆኑን ያረጋግጡ።"  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "በመጫን ላይ..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ ለማሰስ • Enter በአዲስ ትር ክፍለ ጊዜ ለማስጀመር • Shift+enter በኤጅንት ፓነል ክፍለ ጊዜ ለማስጀመር • Esc ለመውጣት)"
+agents.status.active: "ንቁ"
+agents.status.waiting_for_input: "ግቤት በመጠባበቅ ላይ"
+agents.status.error: "ስህተት"
+agents.status.idle: "ስራ ፈት"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (የኤጅንት ፓነል ለማሳየት/ለመደበቅ Ctrl+Shift+. • የኤጅንት ክፍለ ጊዜ ለማሳየት/ለመደበቅ Ctrl+Alt+/)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "ተሰርዟል።"
+system.no_prompt_in_flight: "በሂደት ላይ ያለ ጥያቄ የለም።"
+system.authentication_failed: "ማረጋገጫ አልተሳካም"
+system.command_copied_retry: "ትዕዛዙ ተቀድቷል — በሌላ ተርሚናል ውስጥ ያስፈጽሙት፣ ከዚያ እንደገና ለመሞከር Enter ይጫኑ"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "ምንም መስኮት አልተገኘም።"
+output.no_tabs: "ምንም ትር አልተገኘም።"
+output.no_panes: "ምንም ፓነል አልተገኘም።"
+output.no_windows_in_list: "ምንም መስኮት አልተገኘም"
+output.no_tabs_in_window: "በመስኮት %{window_id} ውስጥ ምንም ትር አልተገኘም"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "ንቁ ፓነል፦ %{pane} (ትር፦ %{tab}, መስኮት፦ %{window})"
+output.pane_running: "በማስኬድ ላይ (PID፦ %{pid})"  # {Locked="PID"}
+output.pane_exited: "ወጥቷል (ኮድ፦ %{code}, PID፦ %{pid})"  # {Locked="PID"}
+output.created_tab: "ትር %{tab_id} ተፈጥሯል (ፓነል %{pane_id})"
+output.created_pane: "ፓነል %{pane_id} ተፈጥሯል"
+output.pane_closed: "ፓነል %{pane_id} ተዘግቷል።"
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "ምንም ንቁ ፓነል አልተገኘም። የፓነል መለያ ለመግለጽ -t ይጠቀሙ።"  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID አልተዋቀረም። በWindows Terminal ፓነል ውስጥ ያሂዱ።"  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "ያልታወቀ የሼል አይነት '%{shell}'። ይጠቀሙ፦ bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "wtcli wait-for ማስጀመር አልተሳካም"
+error.wtcli_wait_for_parse: "የwtcli wait-for ውጤትን መተንተን አልተሳካም"
+error.wtcli_wait_for_failed: "wtcli wait-for አልተሳካም፦ %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "የጥቅል ምንጭ፦ %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI በPATH ላይ የለም"
+hooks.installed: "✓ ተጭኗል"
+hooks.marketplace_path_stale: "⚠ የገበያ ቦታ መንገድ ጊዜው ያለፈበት"
+hooks.installed_but_disabled: "⚠ ተጭኗል ግን ተሰናክሏል"
+hooks.not_installed: "✗ አልተጫነም"
+hooks.uninstall_skipped: "ተዘሏል (CLI በPATH ላይ የለም)"
+hooks.install_attempted: "wt-agent-hooks ጭነት ተሞክሯል (ኢደምፖተንት)። ውጤቱን ለመመርመር `wta hooks status` ያሂዱ። የመከታተያ ምዝግብ ማስታወሻ፦ %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

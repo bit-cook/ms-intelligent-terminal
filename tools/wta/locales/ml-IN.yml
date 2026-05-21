@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "ഇന്റലിജന്റ് ടെർമിനലിലേക്ക് സ്വാഗതം!"
 setup.title.agent_missing: "ഏജന്റ് കണ്ടെത്തിയില്ല"
 setup.title.agent_error: "ഏജന്റ് കണക്ഷൻ പരാജയപ്പെട്ടു"
 setup.title.switch_agent: "ഏജന്റ് മാറ്റുക"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "ഏജന്റ് CLI %{name} തിരഞ്ഞെടുത്തു"
+auth.agent_selected_with_status: "ഏജന്റ് CLI %{name} — "
+auth.checking_authentication: "  %{spinner} പ്രാമാണീകരണം പരിശോധിക്കുന്നു..."
+auth.waiting_for_authorization: "  %{spinner} അംഗീകാരത്തിനായി കാത്തിരിക്കുന്നു..."
+auth.code_copied_hint: "  കോഡ് ക്ലിപ്പ്ബോർഡിലേക്ക് പകർത്തി — നിങ്ങളുടെ ബ്രൗസറിൽ ഒട്ടിക്കുക."
+auth.sign_in_prompt: "നിങ്ങളുടെ ഏജന്റ് ഉപയോഗിക്കാൻ സൈൻ ഇൻ ചെയ്യുക:"
+auth.card_connect: "  ഏജന്റ് സവിശേഷതകൾ പ്രവർത്തനക്ഷമമാക്കാൻ %{name} കണക്റ്റ് ചെയ്യുക"
+auth.button_sign_in_github: "[ GitHub ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്യുക ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ %{name} ഉപയോഗിച്ച് സൈൻ ഇൻ ചെയ്യുക ]"
+auth.hint_footer: "  സൈൻ ഇൻ ചെയ്യാൻ Enter അമർത്തുക, പിന്നോട്ട് പോകാൻ Esc"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "ചിന്തിക്കുന്നു…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "ഇന്റലിജന്റ് ടെർമിനലിലേക്ക് സ്വാഗതം!"
+chat.plan_header: "പ്ലാൻ:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "എന്തും ചോദിക്കുക, കമാൻഡുകൾക്കായി /.."  # {Locked="/"}
+input.placeholder.connecting: "കണക്റ്റ് ചെയ്യുന്നു..."
+input.placeholder.disconnected: "ഡിസ്‌കണക്റ്റ് ചെയ്തു"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / കമാൻഡുകൾ "
+commands.help_title: " സഹായം "
+commands.help_header: "സ്ലാഷ് കമാൻഡുകൾ — ഇൻപുട്ട് ബോക്സിൽ / ടൈപ്പ് ചെയ്യുക."
+commands.help_escape_hint: "  //text     ഒരു ലിറ്ററൽ '/' അയക്കുക (കമാൻഡ് പാർസർ ഒഴിവാക്കുന്നു)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        ഈ സഹായം അടയ്ക്കുക"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(നാവിഗേറ്റ് ചെയ്യാൻ ↑ ↓ • തിരഞ്ഞെടുക്കാൻ Enter • റദ്ദാക്കാൻ Esc)"
+recommendations.button_run_command: "[ കമാൻഡ് പ്രവർത്തിപ്പിക്കുക ]"
+recommendations.button_insert_in_terminal: "ടെർമിനലിൽ ചേർക്കുക"
+recommendations.button_open_in_new_tab: "പുതിയ ടാബിൽ തുറക്കുക ↵"
+recommendations.button_open_in_new_panel: "പുതിയ പാനലിൽ തുറക്കുക ↵"
+recommendations.button_open_tab: "ടാബ് തുറക്കുക ↵"
+recommendations.button_open_panel: "പാനൽ തുറക്കുക ↵"
+recommendations.button_execute: "എക്സിക്യൂട്ട് ചെയ്യുക ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "അനുമതി അഭ്യർത്ഥിച്ചു"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[ഉത്തരം നൽകാൻ Y/N · പൂർണ്ണ കാർഡിനായി വലുപ്പം മാറ്റുക]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "ഇൻസ്റ്റാൾ ചെയ്തിട്ടില്ല — സ്വയമേവ ഇൻസ്റ്റാൾ ചെയ്യാൻ തിരഞ്ഞെടുക്കുക"
+agent.status.not_found: "കണ്ടെത്തിയില്ല"
+agent.status.detected: "കണ്ടെത്തി"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "പ്രവർത്തിക്കുന്നു: winget install GitHub.Copilot"
+agent.install.launch_failed: "winget ലോഞ്ച് ചെയ്യുന്നതിൽ പരാജയപ്പെട്ടു: %{error}"
+agent.install.winget_exited: "winget അപ്രതീക്ഷിതമായി പുറത്തുകടന്നു: %{error}"
+agent.install.winget_failed_code: "winget install പരാജയപ്പെട്ടു (എക്സിറ്റ് കോഡ് %{code})"
+agent.install.unsupported: "%{agent} നായി സ്വയമേവയുള്ള ഇൻസ്റ്റാൾ പിന്തുണയ്ക്കുന്നില്ല"
+agent.custom.auth_hint: "%{name} ഇൻസ്റ്റാൾ ചെയ്തിട്ടുണ്ടെന്നും നിങ്ങളുടെ PATH-ൽ ഉണ്ടെന്നും ഉറപ്പാക്കുക."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "ലോഡ് ചെയ്യുന്നു..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(നാവിഗേറ്റ് ചെയ്യാൻ ↑ ↓ • പുതിയ ടാബിൽ സെഷൻ ലോഞ്ച് ചെയ്യാൻ Enter • ഏജന്റ് പാളിയിൽ സെഷൻ ലോഞ്ച് ചെയ്യാൻ Shift+enter • പുറത്തുകടക്കാൻ Esc)"
+agents.status.active: "സജീവം"
+agents.status.waiting_for_input: "ഇൻപുട്ടിനായി കാത്തിരിക്കുന്നു"
+agents.status.error: "പിശക്"
+agents.status.idle: "നിഷ്ക്രിയം"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (ഏജന്റ് പാളി കാണിക്കാൻ/മറയ്ക്കാൻ Ctrl+Shift+. • ഏജന്റ് സെഷൻ കാണിക്കാൻ/മറയ്ക്കാൻ Ctrl+Alt+/)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "റദ്ദാക്കി."
+system.no_prompt_in_flight: "ഫ്ലൈറ്റിൽ പ്രോംപ്റ്റ് ഇല്ല."
+system.authentication_failed: "പ്രാമാണീകരണം പരാജയപ്പെട്ടു"
+system.command_copied_retry: "കമാൻഡ് പകർത്തി — മറ്റൊരു ടെർമിനലിൽ പ്രവർത്തിപ്പിക്കുക, പിന്നെ വീണ്ടും ശ്രമിക്കാൻ Enter അമർത്തുക"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "വിൻഡോകൾ കണ്ടെത്തിയില്ല."
+output.no_tabs: "ടാബുകൾ കണ്ടെത്തിയില്ല."
+output.no_panes: "പാളികൾ കണ്ടെത്തിയില്ല."
+output.no_windows_in_list: "വിൻഡോകൾ കണ്ടെത്തിയില്ല"
+output.no_tabs_in_window: "%{window_id} വിൻഡോയിൽ ടാബുകൾ കണ്ടെത്തിയില്ല"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "സജീവ പാളി: %{pane} (ടാബ്: %{tab}, വിൻഡോ: %{window})"
+output.pane_running: "പ്രവർത്തിക്കുന്നു (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "പുറത്തുകടന്നു (കോഡ്: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "ടാബ് %{tab_id} സൃഷ്ടിച്ചു (പാളി %{pane_id})"
+output.created_pane: "പാളി %{pane_id} സൃഷ്ടിച്ചു"
+output.pane_closed: "പാളി %{pane_id} അടച്ചു."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "സജീവ പാളിയൊന്നും കണ്ടെത്തിയില്ല. പാളി ID വ്യക്തമാക്കാൻ -t ഉപയോഗിക്കുക."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID സജ്ജമാക്കിയിട്ടില്ല. ഒരു Windows Terminal പാളിക്കുള്ളിൽ പ്രവർത്തിപ്പിക്കുക."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "അജ്ഞാത ഷെൽ തരം '%{shell}'. ഉപയോഗിക്കുക: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "wtcli wait-for സ്പോൺ ചെയ്യുന്നതിൽ പരാജയപ്പെട്ടു"
+error.wtcli_wait_for_parse: "wtcli wait-for ഔട്ട്പുട്ട് പാർസ് ചെയ്യുന്നതിൽ പരാജയപ്പെട്ടു"
+error.wtcli_wait_for_failed: "wtcli wait-for പരാജയപ്പെട്ടു: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "ബണ്ടിൽ ഉറവിടം: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI PATH-ൽ ഇല്ല"
+hooks.installed: "✓ ഇൻസ്റ്റാൾ ചെയ്തു"
+hooks.marketplace_path_stale: "⚠ മാർക്കറ്റ്പ്ലേസ് പാത്ത് പഴയത്"
+hooks.installed_but_disabled: "⚠ ഇൻസ്റ്റാൾ ചെയ്തു പക്ഷേ പ്രവർത്തനരഹിതം"
+hooks.not_installed: "✗ ഇൻസ്റ്റാൾ ചെയ്തിട്ടില്ല"
+hooks.uninstall_skipped: "ഒഴിവാക്കി (CLI PATH-ൽ ഇല്ല)"
+hooks.install_attempted: "wt-agent-hooks ഇൻസ്റ്റാൾ ശ്രമിച്ചു (ഐഡംപൊട്ടന്റ്). ഫലം പരിശോധിക്കാൻ `wta hooks status` പ്രവർത്തിപ്പിക്കുക. ട്രെയ്സ് ലോഗ്: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "इंटेलिजेंट टर्मिनल में आपका स्वागत है!"
 setup.title.agent_missing: "एजेंट नहीं मिला"
 setup.title.agent_error: "एजेंट कनेक्शन विफल हुआ"
 setup.title.switch_agent: "एजेंट बदलें"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "एजेंट CLI %{name} चयनित है"
+auth.agent_selected_with_status: "एजेंट CLI %{name} — "
+auth.checking_authentication: "  %{spinner} प्रमाणीकरण जाँचा जा रहा है..."
+auth.waiting_for_authorization: "  %{spinner} प्राधिकरण की प्रतीक्षा की जा रही है..."
+auth.code_copied_hint: "  कोड क्लिपबोर्ड पर कॉपी हो गया — इसे अपने ब्राउज़र में पेस्ट करें।"
+auth.sign_in_prompt: "अपने एजेंट का उपयोग करने के लिए साइन इन करें:"
+auth.card_connect: "  एजेंट सुविधाएँ सक्षम करने के लिए %{name} कनेक्ट करें"
+auth.button_sign_in_github: "[ GitHub से साइन इन करें ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ %{name} से साइन इन करें ]"
+auth.hint_footer: "  साइन इन करने के लिए Enter दबाएँ, वापस जाने के लिए Esc दबाएँ"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "सोचा जा रहा है…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "इंटेलिजेंट टर्मिनल में आपका स्वागत है!"
+chat.plan_header: "योजना:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "कुछ भी पूछें, कमांड के लिए / का उपयोग करें.."  # {Locked="/"}
+input.placeholder.connecting: "कनेक्ट हो रहा है..."
+input.placeholder.disconnected: "डिस्कनेक्ट"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / कमांड "
+commands.help_title: " सहायता "
+commands.help_header: "स्लैश कमांड — इनपुट बॉक्स में / टाइप करें।"
+commands.help_escape_hint: "  //text     एक शाब्दिक '/' भेजें (कमांड पार्सर से एस्केप करता है)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        यह सहायता बंद करें"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(नेविगेट करने के लिए ↑ ↓ • चुनने के लिए Enter • रद्द करने के लिए Esc)"
+recommendations.button_run_command: "[ कमांड चलाएँ ]"
+recommendations.button_insert_in_terminal: "टर्मिनल में डालें"
+recommendations.button_open_in_new_tab: "नए टैब में खोलें ↵"
+recommendations.button_open_in_new_panel: "नए पैनल में खोलें ↵"
+recommendations.button_open_tab: "टैब खोलें ↵"
+recommendations.button_open_panel: "पैनल खोलें ↵"
+recommendations.button_execute: "निष्पादित करें ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "अनुमति का अनुरोध किया गया"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[उत्तर देने के लिए Y/N · पूर्ण कार्ड के लिए आकार बदलें]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "इंस्टॉल नहीं है — स्वचालित रूप से इंस्टॉल करने के लिए चुनें"
+agent.status.not_found: "नहीं मिला"
+agent.status.detected: "पहचाना गया"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "चल रहा है: winget install GitHub.Copilot"
+agent.install.launch_failed: "winget लॉन्च करने में विफल: %{error}"
+agent.install.winget_exited: "winget अप्रत्याशित रूप से बाहर हुआ: %{error}"
+agent.install.winget_failed_code: "winget install विफल हुआ (एग्ज़िट कोड %{code})"
+agent.install.unsupported: "%{agent} के लिए स्वचालित इंस्टॉल समर्थित नहीं है"
+agent.custom.auth_hint: "सुनिश्चित करें कि %{name} इंस्टॉल है और आपके PATH में है।"  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "लोड हो रहा है..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(नेविगेट करने के लिए ↑ ↓ • नए टैब में सत्र शुरू करने के लिए Enter • एजेंट पैन में सत्र शुरू करने के लिए Shift+enter • बाहर निकलने के लिए Esc)"
+agents.status.active: "सक्रिय"
+agents.status.waiting_for_input: "इनपुट की प्रतीक्षा में"
+agents.status.error: "त्रुटि"
+agents.status.idle: "निष्क्रिय"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (एजेंट पैन दिखाने/छिपाने के लिए Ctrl+Shift+. • एजेंट सत्र दिखाने/छिपाने के लिए Ctrl+Alt+/)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "रद्द किया गया।"
+system.no_prompt_in_flight: "कोई प्रॉम्प्ट चल नहीं रहा है।"
+system.authentication_failed: "प्रमाणीकरण विफल हुआ"
+system.command_copied_retry: "कमांड कॉपी हो गया — इसे दूसरे टर्मिनल में चलाएँ, फिर पुनः प्रयास के लिए Enter दबाएँ"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "कोई विंडो नहीं मिली।"
+output.no_tabs: "कोई टैब नहीं मिला।"
+output.no_panes: "कोई पैन नहीं मिला।"
+output.no_windows_in_list: "कोई विंडो नहीं मिली"
+output.no_tabs_in_window: "विंडो %{window_id} में कोई टैब नहीं मिला"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "सक्रिय पैन: %{pane} (टैब: %{tab}, विंडो: %{window})"
+output.pane_running: "चल रहा है (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "बाहर निकला (कोड: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "टैब %{tab_id} बनाया गया (पैन %{pane_id})"
+output.created_pane: "पैन %{pane_id} बनाया गया"
+output.pane_closed: "पैन %{pane_id} बंद हो गया।"
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "कोई सक्रिय पैन नहीं मिला। पैन ID निर्दिष्ट करने के लिए -t का उपयोग करें।"  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID सेट नहीं है। इसे Windows Terminal पैन के अंदर चलाएँ।"  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "अज्ञात शेल प्रकार '%{shell}'. उपयोग करें: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "wtcli wait-for स्पॉन करने में विफल"
+error.wtcli_wait_for_parse: "wtcli wait-for आउटपुट पार्स करने में विफल"
+error.wtcli_wait_for_failed: "wtcli wait-for विफल हुआ: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "बंडल स्रोत: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI PATH पर नहीं है"
+hooks.installed: "✓ इंस्टॉल किया गया"
+hooks.marketplace_path_stale: "⚠ मार्केटप्लेस पथ पुराना है"
+hooks.installed_but_disabled: "⚠ इंस्टॉल है लेकिन अक्षम है"
+hooks.not_installed: "✗ इंस्टॉल नहीं है"
+hooks.uninstall_skipped: "छोड़ा गया (CLI PATH पर नहीं है)"
+hooks.install_attempted: "wt-agent-hooks इंस्टॉल का प्रयास किया गया (निष्क्रियक्षम)। परिणाम देखने के लिए `wta hooks status` चलाएँ। ट्रेस लॉग: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

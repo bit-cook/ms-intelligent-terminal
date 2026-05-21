@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "[‫!!‬_مرحبًا Intelligent Terminal_‫!!‬]"
 setup.title.agent_missing: "[‫!!‬_الوكيل غير موجود_‫!!‬]"
 setup.title.agent_error: "[‫!!‬_فشل اتصال الوكيل_‫!!‬]"
 setup.title.switch_agent: "[‫!!‬_تبديل الوكيل_‫!!‬]"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "[‫!!‬_تم تحديد وكيل CLI %{name}_‫!!‬]"
+auth.agent_selected_with_status: "[‫!!‬_وكيل CLI %{name} — _‫!!‬]"
+auth.checking_authentication: "[‫!!‬_  %{spinner} جارٍ التحقق من المصادقة..._‫!!‬]"
+auth.waiting_for_authorization: "[‫!!‬_  %{spinner} في انتظار التفويض..._‫!!‬]"
+auth.code_copied_hint: "[‫!!‬_  تم نسخ الرمز إلى الحافظة — الصقه في المتصفح._‫!!‬]"
+auth.sign_in_prompt: "[‫!!‬_سجّل الدخول لاستخدام الوكيل:_‫!!‬]"
+auth.card_connect: "[‫!!‬_  وصّل %{name} لتفعيل ميزات الوكيل_‫!!‬]"
+auth.button_sign_in_github: "[‫!!‬_[ سجّل الدخول باستخدام GitHub ]_‫!!‬]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[‫!!‬_[ سجّل الدخول باستخدام %{name} ]_‫!!‬]"
+auth.hint_footer: "[‫!!‬_  اضغط Enter لتسجيل الدخول، Esc للعودة_‫!!‬]"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "[‫!!‬_جارٍ التفكير…_‫!!‬]"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "[‫!!‬_مرحبًا بك في Intelligent Terminal!_‫!!‬]"
+chat.plan_header: "[‫!!‬_الخطة:_‫!!‬]"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "[‫!!‬_اسأل أي شيء، / للأوامر.._‫!!‬]"  # {Locked="/"}
+input.placeholder.connecting: "[‫!!‬_جارٍ الاتصال..._‫!!‬]"
+input.placeholder.disconnected: "[‫!!‬_غير متصل_‫!!‬]"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: "[‫!!‬_ / الأوامر _‫!!‬]"
+commands.help_title: "[‫!!‬_ المساعدة _‫!!‬]"
+commands.help_header: "[‫!!‬_أوامر الشرطة المائلة — اكتب / في مربع الإدخال._‫!!‬]"
+commands.help_escape_hint: "[‫!!‬_  //text     يرسل '/' حرفيًا (يتجاوز محلل الأوامر)_‫!!‬]"  # {Locked="//text","/"}
+commands.help_close_hint: "[‫!!‬_  Esc        إغلاق هذه المساعدة_‫!!‬]"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "[‫!!‬_(↑ ↓ للتنقل • Enter للاختيار • Esc للإلغاء)_‫!!‬]"
+recommendations.button_run_command: "[‫!!‬_[ تشغيل الأمر ]_‫!!‬]"
+recommendations.button_insert_in_terminal: "[‫!!‬_إدراج في الطرفية_‫!!‬]"
+recommendations.button_open_in_new_tab: "[‫!!‬_فتح في علامة تبويب جديدة ↵_‫!!‬]"
+recommendations.button_open_in_new_panel: "[‫!!‬_فتح في لوحة جديدة ↵_‫!!‬]"
+recommendations.button_open_tab: "[‫!!‬_فتح علامة تبويب ↵_‫!!‬]"
+recommendations.button_open_panel: "[‫!!‬_فتح اللوحة ↵_‫!!‬]"
+recommendations.button_execute: "[‫!!‬_تنفيذ ↵_‫!!‬]"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "[‫!!‬_طُلب الإذن_‫!!‬]"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[‫!!‬_[Y/N للإجابة · غيّر الحجم للبطاقة الكاملة]_‫!!‬]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "[‫!!‬_غير مثبّت — اختر للتثبيت تلقائيًا_‫!!‬]"
+agent.status.not_found: "[‫!!‬_غير موجود_‫!!‬]"
+agent.status.detected: "[‫!!‬_تم الاكتشاف_‫!!‬]"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "[‫!!‬_جارٍ التشغيل: winget install GitHub.Copilot_‫!!‬]"
+agent.install.launch_failed: "[‫!!‬_فشل تشغيل winget: %{error}_‫!!‬]"
+agent.install.winget_exited: "[‫!!‬_خرج winget بشكل غير متوقع: %{error}_‫!!‬]"
+agent.install.winget_failed_code: "[‫!!‬_فشل تثبيت winget (رمز الخروج %{code})_‫!!‬]"
+agent.install.unsupported: "[‫!!‬_التثبيت التلقائي غير مدعوم لـ %{agent}_‫!!‬]"
+agent.custom.auth_hint: "[‫!!‬_تأكّد من تثبيت %{name} وأنه ضمن PATH._‫!!‬]"  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "[‫!!‬_جارٍ التحميل..._‫!!‬]"
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "[‫!!‬_(↑ ↓ للتنقل • Enter لبدء الجلسة في علامة تبويب جديدة • Shift+enter لبدء الجلسة في جزء الوكيل • Esc للخروج)_‫!!‬]"
+agents.status.active: "[‫!!‬_نشط_‫!!‬]"
+agents.status.waiting_for_input: "[‫!!‬_في انتظار الإدخال_‫!!‬]"
+agents.status.error: "[‫!!‬_خطأ_‫!!‬]"
+agents.status.idle: "[‫!!‬_خامل_‫!!‬]"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "[‫!!‬_  (Ctrl+Shift+. لإظهار/إخفاء جزء الوكيل • Ctrl+Alt+/ لإظهار/إخفاء جلسة الوكيل)_‫!!‬]"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "[‫!!‬_تم الإلغاء._‫!!‬]"
+system.no_prompt_in_flight: "[‫!!‬_لا توجد مطالبة جارية._‫!!‬]"
+system.authentication_failed: "[‫!!‬_فشلت المصادقة_‫!!‬]"
+system.command_copied_retry: "[‫!!‬_تم نسخ الأمر — شغّله في طرفية أخرى، ثم اضغط Enter لإعادة المحاولة_‫!!‬]"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "[‫!!‬_لم يتم العثور على نوافذ._‫!!‬]"
+output.no_tabs: "[‫!!‬_لم يتم العثور على علامات تبويب._‫!!‬]"
+output.no_panes: "[‫!!‬_لم يتم العثور على أجزاء._‫!!‬]"
+output.no_windows_in_list: "[‫!!‬_لم يتم العثور على نوافذ_‫!!‬]"
+output.no_tabs_in_window: "[‫!!‬_لم يتم العثور على علامات تبويب في النافذة %{window_id}_‫!!‬]"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "[‫!!‬_الجزء النشط: %{pane} (علامة التبويب: %{tab}، النافذة: %{window})_‫!!‬]"
+output.pane_running: "[‫!!‬_قيد التشغيل (PID: %{pid})_‫!!‬]"  # {Locked="PID"}
+output.pane_exited: "[‫!!‬_تم الخروج (الرمز: %{code}، PID: %{pid})_‫!!‬]"  # {Locked="PID"}
+output.created_tab: "[‫!!‬_تم إنشاء علامة التبويب %{tab_id} (الجزء %{pane_id})_‫!!‬]"
+output.created_pane: "[‫!!‬_تم إنشاء الجزء %{pane_id}_‫!!‬]"
+output.pane_closed: "[‫!!‬_الجزء %{pane_id} مُغلق._‫!!‬]"
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "[‫!!‬_لم يتم العثور على جزء نشط. استخدم -t لتحديد معرّف الجزء._‫!!‬]"  # {Locked="-t"}
+error.wt_com_clsid_not_set: "[‫!!‬_WT_COM_CLSID غير معيّن. شغّل داخل جزء Windows Terminal._‫!!‬]"  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "[‫!!‬_نوع الصدفة غير معروف '%{shell}'. استخدم: bash, powershell, cmd, fish_‫!!‬]"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "[‫!!‬_فشل تشغيل wtcli wait-for_‫!!‬]"
+error.wtcli_wait_for_parse: "[‫!!‬_فشل تحليل مخرجات wtcli wait-for_‫!!‬]"
+error.wtcli_wait_for_failed: "[‫!!‬_فشل wtcli wait-for: %{stderr}_‫!!‬]"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "[‫!!‬_مصدر الحزمة: %{source}%{path_suffix}_‫!!‬]"
+hooks.cli_not_on_path: "[‫!!‬_✗ CLI ليس ضمن PATH_‫!!‬]"
+hooks.installed: "[‫!!‬_✓ مثبّت_‫!!‬]"
+hooks.marketplace_path_stale: "[‫!!‬_⚠ مسار المتجر قديم_‫!!‬]"
+hooks.installed_but_disabled: "[‫!!‬_⚠ مثبّت لكنه معطّل_‫!!‬]"
+hooks.not_installed: "[‫!!‬_✗ غير مثبّت_‫!!‬]"
+hooks.uninstall_skipped: "[‫!!‬_تم التخطي (CLI ليس ضمن PATH)_‫!!‬]"
+hooks.install_attempted: "[‫!!‬_تمت محاولة تثبيت wt-agent-hooks (عملية متكررة). شغّل `wta hooks status` لفحص النتيجة. سجل التتبع: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log_‫!!‬]"

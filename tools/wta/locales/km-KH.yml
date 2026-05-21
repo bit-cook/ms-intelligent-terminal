@@ -1,5 +1,124 @@
 # Setup screen titles
+# {Locked="Intelligent Terminal"} - product name, do not translate
 setup.title.first_run: "សូមស្វាគម្ន៍មកកាន់ Intelligent Terminal!"
 setup.title.agent_missing: "រកមិនឃើញភ្នាក់ងារ"
 setup.title.agent_error: "ការតភ្ជាប់ទៅភ្នាក់ងារបានបរាជ័យ"
 setup.title.switch_agent: "ប្តូរភ្នាក់ងារ"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "CLI ភ្នាក់ងារ %{name} ត្រូវបានជ្រើសរើស"
+auth.agent_selected_with_status: "CLI ភ្នាក់ងារ %{name} — "
+auth.checking_authentication: "  %{spinner} កំពុងពិនិត្យការផ្ទៀងផ្ទាត់..."
+auth.waiting_for_authorization: "  %{spinner} កំពុងរង់ចាំការអនុញ្ញាត..."
+auth.code_copied_hint: "  កូដត្រូវបានចម្លងទៅក្ដារតម្បៀតខ្ទាស់ — បិទភ្ជាប់វានៅក្នុងកម្មវិធីរុករករបស់អ្នក។"
+auth.sign_in_prompt: "ចូលគណនី ដើម្បីប្រើភ្នាក់ងាររបស់អ្នក៖"
+auth.card_connect: "  ភ្ជាប់ %{name} ដើម្បីបើកមុខងារភ្នាក់ងារ"
+auth.button_sign_in_github: "[ ចូលគណនីដោយប្រើ GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ ចូលគណនីដោយប្រើ %{name} ]"
+auth.hint_footer: "  ចុច Enter ដើម្បីចូលគណនី, Esc ដើម្បីត្រឡប់ក្រោយ"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "កំពុងគិត…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "សូមស្វាគម្ន៍មកកាន់ Intelligent Terminal!"
+chat.plan_header: "ផែនការ៖"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "សួរអ្វីក៏បាន, / សម្រាប់ពាក្យបញ្ជា.."  # {Locked="/"}
+input.placeholder.connecting: "កំពុងភ្ជាប់..."
+input.placeholder.disconnected: "ផ្តាច់"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " ពាក្យបញ្ជា / "
+commands.help_title: " ជំនួយ "
+commands.help_header: "ពាក្យបញ្ជាដោយប្រើ slash — វាយ / នៅក្នុងប្រអប់បញ្ចូល។"
+commands.help_escape_hint: "  //text     ផ្ញើតួអក្សរ '/' ដោយផ្ទាល់ (រំលងកម្មវិធីញែកពាក្យបញ្ជា)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        បិទជំនួយនេះ"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ ដើម្បីរុករក • Enter ដើម្បីជ្រើសរើស • Esc ដើម្បីបោះបង់)"
+recommendations.button_run_command: "[ ដំណើរការពាក្យបញ្ជា ]"
+recommendations.button_insert_in_terminal: "បញ្ចូលក្នុងស្ថានីយ"
+recommendations.button_open_in_new_tab: "បើកក្នុងផ្ទាំងថ្មី ↵"
+recommendations.button_open_in_new_panel: "បើកក្នុងបន្ទះថ្មី ↵"
+recommendations.button_open_tab: "បើកផ្ទាំង ↵"
+recommendations.button_open_panel: "បើកបន្ទះ ↵"
+recommendations.button_execute: "ប្រតិបត្តិ ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "បានស្នើសុំការអនុញ្ញាត"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N ដើម្បីឆ្លើយ · ប្តូរទំហំសម្រាប់កាតពេញ]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "មិនបានដំឡើង — ជ្រើសរើសដើម្បីដំឡើងដោយស្វ័យប្រវត្តិ"
+agent.status.not_found: "រកមិនឃើញ"
+agent.status.detected: "បានរកឃើញ"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "កំពុងដំណើរការ៖ winget install GitHub.Copilot"
+agent.install.launch_failed: "បរាជ័យក្នុងការដំណើរការ winget៖ %{error}"
+agent.install.winget_exited: "winget បានបញ្ឈប់ដោយមិនរំពឹងទុក៖ %{error}"
+agent.install.winget_failed_code: "winget install បានបរាជ័យ (កូដចាកចេញ %{code})"
+agent.install.unsupported: "ការដំឡើងស្វ័យប្រវត្តិមិនត្រូវបានគាំទ្រសម្រាប់ %{agent}"
+agent.custom.auth_hint: "ត្រូវប្រាកដថា %{name} ត្រូវបានដំឡើង និងស្ថិតនៅលើ PATH របស់អ្នក។"  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "កំពុងផ្ទុក..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ ដើម្បីរុករក • Enter ដើម្បីបើកវគ្គក្នុងផ្ទាំងថ្មី • Shift+enter ដើម្បីបើកវគ្គក្នុងបន្ទះភ្នាក់ងារ • Esc ដើម្បីចាកចេញ)"
+agents.status.active: "សកម្ម"
+agents.status.waiting_for_input: "កំពុងរង់ចាំការបញ្ចូល"
+agents.status.error: "កំហុស"
+agents.status.idle: "ទំនេរ"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. ដើម្បីបង្ហាញ/លាក់បន្ទះភ្នាក់ងារ • Ctrl+Alt+/ ដើម្បីបង្ហាញ/លាក់វគ្គភ្នាក់ងារ)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "បានបោះបង់។"
+system.no_prompt_in_flight: "គ្មានសំណើកំពុងដំណើរការ។"
+system.authentication_failed: "ការផ្ទៀងផ្ទាត់បានបរាជ័យ"
+system.command_copied_retry: "ពាក្យបញ្ជាត្រូវបានចម្លង — ដំណើរការវានៅក្នុងស្ថានីយផ្សេង បន្ទាប់មកចុច Enter ដើម្បីព្យាយាមម្តងទៀត"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "រកមិនឃើញបង្អួច។"
+output.no_tabs: "រកមិនឃើញផ្ទាំង។"
+output.no_panes: "រកមិនឃើញបន្ទះ។"
+output.no_windows_in_list: "រកមិនឃើញបង្អួច"
+output.no_tabs_in_window: "រកមិនឃើញផ្ទាំងនៅក្នុងបង្អួច %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "បន្ទះសកម្ម៖ %{pane} (ផ្ទាំង៖ %{tab}, បង្អួច៖ %{window})"
+output.pane_running: "កំពុងដំណើរការ (PID៖ %{pid})"  # {Locked="PID"}
+output.pane_exited: "បានចាកចេញ (កូដ៖ %{code}, PID៖ %{pid})"  # {Locked="PID"}
+output.created_tab: "បានបង្កើតផ្ទាំង %{tab_id} (បន្ទះ %{pane_id})"
+output.created_pane: "បានបង្កើតបន្ទះ %{pane_id}"
+output.pane_closed: "បន្ទះ %{pane_id} ត្រូវបានបិទ។"
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "រកមិនឃើញបន្ទះសកម្ម។ ប្រើ -t ដើម្បីបញ្ជាក់លេខសម្គាល់បន្ទះ។"  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID មិនត្រូវបានកំណត់ទេ។ ដំណើរការនៅខាងក្នុងបន្ទះ Windows Terminal។"  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "ប្រភេទសែលមិនស្គាល់ '%{shell}'។ ប្រើ៖ bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "បរាជ័យក្នុងការបង្កើត wtcli wait-for"
+error.wtcli_wait_for_parse: "បរាជ័យក្នុងការញែកលទ្ធផល wtcli wait-for"
+error.wtcli_wait_for_failed: "wtcli wait-for បានបរាជ័យ៖ %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "ប្រភពកញ្ចប់៖ %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI មិននៅលើ PATH"
+hooks.installed: "✓ បានដំឡើង"
+hooks.marketplace_path_stale: "⚠ ផ្លូវ marketplace ហួសសម័យ"
+hooks.installed_but_disabled: "⚠ បានដំឡើង ប៉ុន្តែបានបិទ"
+hooks.not_installed: "✗ មិនបានដំឡើង"
+hooks.uninstall_skipped: "បានរំលង (CLI មិននៅលើ PATH)"
+hooks.install_attempted: "បានព្យាយាមដំឡើង wt-agent-hooks (idempotent)។ ដំណើរការ `wta hooks status` ដើម្បីពិនិត្យលទ្ធផល។ កំណត់ហេតុ trace៖ %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"

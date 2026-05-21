@@ -3,3 +3,121 @@ setup.title.first_run: "Velkomin í Intelligent Terminal!"
 setup.title.agent_missing: "Agent fannst ekki"
 setup.title.agent_error: "Tenging við agent mistókst"
 setup.title.switch_agent: "Skipta um agent"
+
+# ── Auth flow (src/ui/auth.rs) ──────────────────────────────────────────────
+# {Locked="CLI"} - acronym, common usage across Microsoft localizations
+auth.agent_selected: "Agent CLI %{name} er valinn"
+auth.agent_selected_with_status: "Agent CLI %{name} — "
+auth.checking_authentication: "  %{spinner} Athuga auðkenningu..."
+auth.waiting_for_authorization: "  %{spinner} Bíð eftir heimild..."
+auth.code_copied_hint: "  Kóði afritaður á klippiborð — límdu hann í vafrann."
+auth.sign_in_prompt: "Skráðu þig inn til að nota agentinn:"
+auth.card_connect: "  Tengdu %{name} til að virkja agent-eiginleika"
+auth.button_sign_in_github: "[ Skrá inn með GitHub ]"  # {Locked="GitHub"}
+auth.button_sign_in_with: "[ Skrá inn með %{name} ]"
+auth.hint_footer: "  Ýttu á Enter til að skrá inn, Esc til að fara til baka"  # {Locked="Enter","Esc"}
+
+# ── Chat view (src/ui/chat.rs) ──────────────────────────────────────────────
+chat.activity_thinking: "Hugsa…"
+# {Locked="Intelligent Terminal"} - product name, do not translate
+chat.welcome_title: "Velkomin í Intelligent Terminal!"
+chat.plan_header: "Áætlun:"
+chat.plan_marker_completed: "[x]"  # {Locked}
+chat.plan_marker_in_progress: "[>]"  # {Locked}
+chat.plan_marker_pending: "[ ]"  # {Locked}
+
+# ── Input placeholders (src/ui/input.rs) ────────────────────────────────────
+input.placeholder.connected: "Spurðu hvers sem er, / fyrir skipanir.."  # {Locked="/"}
+input.placeholder.connecting: "tengist..."
+input.placeholder.disconnected: "ótengt"
+
+# ── Command popup (src/ui/command_popup.rs) ─────────────────────────────────
+# {Locked="/"} - slash-command prefix, must remain ASCII
+commands.popup_title: " / skipanir "
+commands.help_title: " Hjálp "
+commands.help_header: "Skástriks-skipanir — sláðu inn / í innsláttarreitinn."
+commands.help_escape_hint: "  //text     Senda bókstaflegt '/' (sneiðir hjá skipanagreini)"  # {Locked="//text","/"}
+commands.help_close_hint: "  Esc        Loka þessari hjálp"  # {Locked="Esc"}
+
+# ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
+# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+recommendations.nav_hint: "(↑ ↓ til að fletta • Enter til að velja • Esc til að hætta við)"
+recommendations.button_run_command: "[ Keyra skipun ]"
+recommendations.button_insert_in_terminal: "Setja inn í útstöð"
+recommendations.button_open_in_new_tab: "Opna í nýjum flipa ↵"
+recommendations.button_open_in_new_panel: "Opna í nýjum glugga ↵"
+recommendations.button_open_tab: "Opna flipa ↵"
+recommendations.button_open_panel: "Opna glugga ↵"
+recommendations.button_execute: "Framkvæma ↵"
+
+# ── Permission dialog compact mode (src/ui/permission.rs) ───────────────────
+permission.compact.default_description: "Beðið um heimild"
+permission.compact.prefix: "[!] "  # {Locked}
+permission.compact.hint: "[Y/N til að svara · breyttu stærð fyrir fullt spjald]"  # {Locked="Y/N"}
+
+# ── Agent status (src/agent_check.rs) ───────────────────────────────────────
+agent.status.not_installed_auto: "Ekki uppsett — veldu til að setja upp sjálfkrafa"
+agent.status.not_found: "Fannst ekki"
+agent.status.detected: "Greint"
+# {Locked="winget","GitHub.Copilot","GitHub","Copilot"} - tool names and command, must run verbatim
+agent.install.running_winget: "Keyri: winget install GitHub.Copilot"
+agent.install.launch_failed: "Mistókst að ræsa winget: %{error}"
+agent.install.winget_exited: "winget hætti óvænt: %{error}"
+agent.install.winget_failed_code: "winget install mistókst (lokakóði %{code})"
+agent.install.unsupported: "Sjálfvirk uppsetning er ekki studd fyrir %{agent}"
+agent.custom.auth_hint: "Gakktu úr skugga um að %{name} sé uppsett og á PATH þínum."  # {Locked="PATH"}
+
+# ── Agents view (src/ui/agents_view.rs) ─────────────────────────────────────
+agents.loading: "Hleð..."
+# {Locked="Enter","Shift+enter","Esc"} - key combinations, do not translate
+agents.footer_hint: "(↑ ↓ til að fletta • Enter til að ræsa setu í nýjum flipa • Shift+enter til að ræsa setu í agent-glugga • Esc til að hætta)"
+agents.status.active: "Virkur"
+agents.status.waiting_for_input: "Bíð eftir innslætti"
+agents.status.error: "Villa"
+agents.status.idle: "Aðgerðalaus"
+
+# ── Layout welcome hint (src/ui/layout.rs) ──────────────────────────────────
+layout.welcome_hint: "  (Ctrl+Shift+. til að sýna/fela agent-glugga • Ctrl+Alt+/ til að sýna/fela agent-setu)"  # {Locked="Ctrl+Shift+.","Ctrl+Alt+/"}
+
+# ── System messages (src/app.rs) ────────────────────────────────────────────
+system.cancelled: "Hætt við."
+system.no_prompt_in_flight: "Engin fyrirspurn í gangi."
+system.authentication_failed: "Auðkenning mistókst"
+system.command_copied_retry: "Skipun afrituð — keyrðu hana í annarri útstöð, ýttu svo á Enter til að reyna aftur"  # {Locked="Enter"}
+
+# ── Runtime CLI output (src/main.rs) ────────────────────────────────────────
+output.no_windows: "Engir gluggar fundust."
+output.no_tabs: "Engir flipar fundust."
+output.no_panes: "Engin svæði fundust."
+output.no_windows_in_list: "Engir gluggar fundust"
+output.no_tabs_in_window: "Engir flipar fundust í glugga %{window_id}"
+# {Locked="WINDOW_ID","TAB_ID","PANE_ID","PID","ACTIVE","ROWS","COLS","FOCUSED","TITLE"} - column identifiers, kept ASCII for parsing
+output.header.windows: "WINDOW_ID    TITLE                          FOCUSED"
+output.header.tabs: "TAB_ID     TITLE                          FOCUSED"
+output.header.panes: "PANE_ID    PID      ACTIVE   ROWS       COLS"
+output.active_pane: "Virkt svæði: %{pane} (flipi: %{tab}, gluggi: %{window})"
+output.pane_running: "Í gangi (PID: %{pid})"  # {Locked="PID"}
+output.pane_exited: "Hætt (kóði: %{code}, PID: %{pid})"  # {Locked="PID"}
+output.created_tab: "Bjó til flipa %{tab_id} (svæði %{pane_id})"
+output.created_pane: "Bjó til svæði %{pane_id}"
+output.pane_closed: "Svæði %{pane_id} lokað."
+
+# ── Errors (src/main.rs + src/agent_check.rs) ───────────────────────────────
+error.no_active_pane: "Ekkert virkt svæði fannst. Notaðu -t til að tilgreina auðkenni svæðis."  # {Locked="-t"}
+error.wt_com_clsid_not_set: "WT_COM_CLSID er ekki stillt. Keyrðu inni í Windows Terminal svæði."  # {Locked="WT_COM_CLSID","Windows Terminal"}
+error.unknown_shell_type: "Óþekkt skeljartegund '%{shell}'. Notaðu: bash, powershell, cmd, fish"  # {Locked="bash","powershell","cmd","fish"}
+# {Locked="wtcli wait-for"} - command name, do not translate
+error.wtcli_wait_for_spawn: "Mistókst að ræsa wtcli wait-for"
+error.wtcli_wait_for_parse: "Mistókst að þátta úttak wtcli wait-for"
+error.wtcli_wait_for_failed: "wtcli wait-for mistókst: %{stderr}"
+
+# ── Hooks status output (src/main.rs) ───────────────────────────────────────
+# {Locked="CLI","PATH","wt-agent-hooks","wta","wta hooks status","%LOCALAPPDATA%","IntelligentTerminal","wta-install-hooks.log"} - tool/CLI names, env vars, log file names
+hooks.bundle_source: "uppruni pakka: %{source}%{path_suffix}"
+hooks.cli_not_on_path: "✗ CLI er ekki á PATH"
+hooks.installed: "✓ uppsett"
+hooks.marketplace_path_stale: "⚠ slóð á markaðstorgi úrelt"
+hooks.installed_but_disabled: "⚠ uppsett en óvirkjað"
+hooks.not_installed: "✗ ekki uppsett"
+hooks.uninstall_skipped: "sleppt (CLI er ekki á PATH)"
+hooks.install_attempted: "wt-agent-hooks uppsetning reynd (idempotent). Keyrðu `wta hooks status` til að skoða niðurstöðuna. Rakningarskrá: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"
