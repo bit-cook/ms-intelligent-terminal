@@ -6,6 +6,7 @@ mod agent_registry;
 mod agent_sessions;
 mod agent_hooks_installer;
 mod app;
+pub mod cmdline;
 mod commands;
 mod coordinator;
 mod event;
