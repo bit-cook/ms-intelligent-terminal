@@ -1171,6 +1171,7 @@ namespace winrt::TerminalApp::implementation
         auto quotedPath = QuoteProgramPath(wtaPath);
         if (!quotedPath)
         {
+            _agentPaneLog("ABORT: wta path contains invalid characters, cannot delegate");
             return; // Invalid WTA path (contains NUL or quote) — cannot launch.
         }
         std::wstring cmdline = *quotedPath + L" delegate";
@@ -1212,6 +1213,7 @@ namespace winrt::TerminalApp::implementation
         auto quotedPrompt = QuoteArgForCommandLine(std::wstring_view{ prompt });
         if (!quotedPrompt)
         {
+            _agentPaneLog("ABORT: delegate prompt contains invalid characters");
             return; // Prompt contains embedded NUL — cannot safely launch.
         }
         cmdline += L" " + *quotedPrompt;
@@ -1715,7 +1717,13 @@ namespace winrt::TerminalApp::implementation
         }
 
         const auto& globals = _settings.GlobalSettings();
-        std::wstring cmdline = std::wstring{ wtaPath };
+        auto quotedWtaPath = Microsoft::Terminal::CommandLine::QuoteProgramPath(wtaPath);
+        if (!quotedWtaPath)
+        {
+            _agentPaneLog("ABORT: wta path contains invalid characters");
+            return;
+        }
+        std::wstring cmdline = *quotedWtaPath;
 
         // Tell wta which tab owns its pane up-front (passed as a hidden CLI
         // arg). wta seeds app_state.tab_id from this before any ACP work
@@ -2081,7 +2089,13 @@ namespace winrt::TerminalApp::implementation
         // Build the wta command line (single-process TUI mode, no subcommand).
         if (const auto wtaPath = _DetectWtaPath(); !wtaPath.empty())
         {
-            cmdline = std::wstring{ wtaPath };
+            auto quotedWtaPath = Microsoft::Terminal::CommandLine::QuoteProgramPath(wtaPath);
+            if (!quotedWtaPath)
+            {
+                _agentPaneLog("ABORT: wta path contains invalid characters");
+                return;
+            }
+            cmdline = *quotedWtaPath;
 
             const auto agentCliPath = _ResolveEffectiveAgentCliPath(globals, [this]() { return _DetectAgentCli(); });
             const auto acpAgent = globals.AcpAgent();
