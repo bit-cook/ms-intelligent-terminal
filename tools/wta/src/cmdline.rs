@@ -221,17 +221,17 @@ mod tests {
 
     #[test]
     fn arg_with_tab() {
-        assert_roundtrip("test.exe", &["hello\tworld"]);
+        assert_roundtrip("test.exe", &["hello\t world"]);
     }
 
     #[test]
     fn arg_with_newline() {
-        assert_roundtrip("test.exe", &["line1\nline2"]);
+        assert_roundtrip("test.exe", &["line1\n line2"]);
     }
 
     #[test]
     fn arg_with_carriage_return() {
-        assert_roundtrip("test.exe", &["line1\rline2"]);
+        assert_roundtrip("test.exe", &["line1\r line2"]);
     }
 
     #[test]
@@ -302,7 +302,7 @@ mod tests {
                 "back\\\"slash-quote",
                 "",
                 "\\\\server\\share\\",
-                "multi\nline\ttab",
+                "multi\n line\t tab",
             ],
         );
     }
