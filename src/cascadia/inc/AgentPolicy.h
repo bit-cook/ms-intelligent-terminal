@@ -68,8 +68,9 @@ namespace Microsoft::Terminal::Settings::Model::AgentPolicy
 
     inline constexpr wchar_t PolicyRegKey[] = LR"(Software\Policies\Microsoft\IntelligentTerminal)";
 
-    // Per-DLL cached snapshot. The shared_ptr is swapped atomically so
-    // readers never need to take the mutex — only Reload() locks.
+    // Per-DLL cached snapshot, protected by a mutex.
+    // Reload() builds a new snapshot and swaps it under the lock.
+    // _GetSnapshot() reads the shared_ptr under the same lock.
     inline std::mutex s_policyMutex;
     inline std::shared_ptr<const PolicySnapshot> s_snapshot;
     inline std::atomic_bool s_loaded{ false }; // true once Reload() has run in this DLL

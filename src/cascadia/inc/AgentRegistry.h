@@ -6,7 +6,7 @@
 #include <array>
 #include <string_view>
 #include <vector>
-#include <AgentPolicy.h>
+#include "AgentPolicy.h"
 
 // Built-in agents shared by:
 //   - Settings UI (TerminalSettingsEditor/AIAgentsViewModel.cpp) — populates

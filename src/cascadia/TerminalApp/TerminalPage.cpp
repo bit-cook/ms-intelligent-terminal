@@ -1817,7 +1817,8 @@ namespace winrt::TerminalApp::implementation
         }
 
         const auto agentCliPath = _ResolveEffectiveAgentCliPath(globals, [this]() { return _DetectAgentCli(); });
-        if (agentCliPath.empty() && AgentPolicy::IsAllowedAgentsPolicyConfigured())
+        namespace Reg3 = ::Microsoft::Terminal::Settings::Model::AgentRegistry;
+        if (agentCliPath.empty() && AgentPolicy::IsAllowedAgentsPolicyConfigured() && Reg3::FilteredAcpAgents().empty())
         {
             _agentPaneLog("_AutoCreateHiddenAgentPane: ABORT — all agents blocked by GPO policy");
             return;
