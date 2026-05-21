@@ -1168,7 +1168,12 @@ namespace winrt::TerminalApp::implementation
         using Microsoft::Terminal::CommandLine::QuoteProgramPath;
 
         // Build: wta delegate --agent-config <json> --cwd <cwd> "<prompt>"
-        std::wstring cmdline = QuoteProgramPath(wtaPath) + L" delegate";
+        auto quotedPath = QuoteProgramPath(wtaPath);
+        if (!quotedPath)
+        {
+            return; // Invalid WTA path (contains NUL or quote) — cannot launch.
+        }
+        std::wstring cmdline = *quotedPath + L" delegate";
 
         const auto delegateAgent = _ResolveEffectiveDelegateAgent(globals);
         const auto delegateModel = globals.DelegateModel();
@@ -1197,11 +1202,17 @@ namespace winrt::TerminalApp::implementation
         }
         if (!activeCwd.empty())
         {
-            cmdline += L" --cwd " + QuoteArgForCommandLine(std::wstring_view{ activeCwd });
+            if (auto q = QuoteArgForCommandLine(std::wstring_view{ activeCwd }))
+            {
+                cmdline += L" --cwd " + *q;
+            }
         }
 
         // Append the prompt as a positional argument.
-        cmdline += L" " + QuoteArgForCommandLine(std::wstring_view{ prompt });
+        if (auto q = QuoteArgForCommandLine(std::wstring_view{ prompt }))
+        {
+            cmdline += L" " + *q;
+        }
 
         _agentPaneLog("launching: " + winrt::to_string(winrt::hstring{ cmdline }));
 
@@ -1712,7 +1723,10 @@ namespace winrt::TerminalApp::implementation
         // _NotifyAgentTabChanged → tab_changed events.
         if (const auto stableId = tab->StableId(); !stableId.empty())
         {
-            cmdline += L" --owner-tab-id " + Microsoft::Terminal::CommandLine::QuoteArgForCommandLine(std::wstring_view{ stableId });
+            if (auto q = Microsoft::Terminal::CommandLine::QuoteArgForCommandLine(std::wstring_view{ stableId }))
+            {
+                cmdline += L" --owner-tab-id " + *q;
+            }
         }
 
         const auto agentCliPath = _ResolveEffectiveAgentCliPath(globals, [this]() { return _DetectAgentCli(); });

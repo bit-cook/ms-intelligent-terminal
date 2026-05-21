@@ -7,12 +7,13 @@
 // Eliminates hand-rolled escaping throughout the codebase. Use this
 // whenever building a commandline string for CreateProcess/ShellExecute.
 //
-// Pure Win32 + STL, no WinRT dependency.
+// Pure Win32 + STL, no WinRT dependency. Non-throwing API — returns
+// empty optional on invalid input (embedded NUL, invalid program path).
 
 #pragma once
 
 #include <cwchar>
-#include <stdexcept>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -23,29 +24,31 @@ namespace Microsoft::Terminal::CommandLine
     // by CommandLineToArgvW. Handles:
     //   - Backslashes before `"` are doubled (2n+1 backslashes + `"`)
     //   - Trailing backslashes before the closing `"` are doubled
-    //   - Embedded NUL characters are rejected (they would truncate the
-    //     commandline at the OS level)
     //   - All other characters are passed through literally
+    //
+    // Returns std::nullopt if the argument contains embedded NUL (which
+    // would silently truncate the commandline at the OS level).
     //
     // NOTE: This is for argv[1..n] only. argv[0] (the program path) has
     // different rules — use QuoteProgramPath() for that.
-    inline std::wstring QuoteArgForCommandLine(std::wstring_view arg)
+    inline std::optional<std::wstring> QuoteArgForCommandLine(std::wstring_view arg) noexcept
     {
+        // Reject embedded NUL — it would truncate the commandline.
+        for (const auto ch : arg)
+        {
+            if (ch == L'\0')
+            {
+                return std::nullopt;
+            }
+        }
+
         std::wstring result;
-        // Reserve: arg size + quotes + some escaping headroom
         result.reserve(arg.size() + 8);
         result.push_back(L'"');
 
         size_t backslashes = 0;
         for (const auto ch : arg)
         {
-            if (ch == L'\0')
-            {
-                // Embedded NUL would silently truncate the commandline.
-                // Reject it deterministically rather than producing a
-                // subtly broken commandline.
-                throw std::invalid_argument("QuoteArgForCommandLine: embedded NUL in argument");
-            }
             if (ch == L'\\')
             {
                 ++backslashes;
@@ -75,19 +78,17 @@ namespace Microsoft::Terminal::CommandLine
     // Quote a program path (argv[0]) for use in a Windows commandline string.
     // argv[0] has simpler rules than argv[1..n]: backslashes are always literal
     // and `"` cannot be escaped inside it. We wrap in quotes (for paths with
-    // spaces) and reject paths containing `"` (which are invalid on Windows
-    // file systems anyway).
-    inline std::wstring QuoteProgramPath(std::wstring_view path)
+    // spaces) and reject paths containing `"` or NUL (which are invalid on
+    // Windows file systems anyway).
+    //
+    // Returns std::nullopt if the path contains `"` or embedded NUL.
+    inline std::optional<std::wstring> QuoteProgramPath(std::wstring_view path) noexcept
     {
         for (const auto ch : path)
         {
-            if (ch == L'"')
+            if (ch == L'"' || ch == L'\0')
             {
-                throw std::invalid_argument("QuoteProgramPath: path contains '\"'");
-            }
-            if (ch == L'\0')
-            {
-                throw std::invalid_argument("QuoteProgramPath: path contains embedded NUL");
+                return std::nullopt;
             }
         }
         std::wstring result;
@@ -110,6 +111,9 @@ namespace Microsoft::Terminal::CommandLine
     //
     // Any empty field is omitted from the JSON (the Rust side uses
     // Option<String> and falls back to defaults for missing fields).
+    //
+    // Returns empty string on failure (invalid input containing NUL).
+    // Callers should check for empty return if they need error handling.
     inline std::wstring BuildAgentConfigArg(
         std::wstring_view agent,
         std::wstring_view agentId,
@@ -122,6 +126,8 @@ namespace Microsoft::Terminal::CommandLine
         // (this header is used in both TerminalApp and TerminalSettingsEditor).
         // The JSON spec is simple enough for known-safe field names: only the
         // VALUES need escaping, and we do it correctly per RFC 8259.
+        // NUL characters in values are escaped as \u0000 (valid JSON), so
+        // they don't pose a truncation risk in the final commandline.
         auto jsonEscapeValue = [](std::wstring_view val) -> std::wstring {
             std::wstring out;
             out.reserve(val.size() + 4);
@@ -177,6 +183,13 @@ namespace Microsoft::Terminal::CommandLine
 
         json += L'}';
 
-        return L" --agent-config " + QuoteArgForCommandLine(json);
+        // The JSON blob itself won't contain NUL (all control chars are
+        // escaped above), so QuoteArgForCommandLine won't fail here.
+        auto quoted = QuoteArgForCommandLine(json);
+        if (!quoted)
+        {
+            return {};
+        }
+        return L" --agent-config " + *quoted;
     }
 }

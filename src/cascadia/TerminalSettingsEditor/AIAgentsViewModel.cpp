@@ -968,12 +968,15 @@ namespace winrt::Microsoft::Terminal::Settings::Editor::implementation
         if (!wtaPath.empty())
         {
             // Use correct CommandLineToArgvW quoting for the agent argument.
-            const std::wstring args = L"probe-models --agent " +
-                ::Microsoft::Terminal::CommandLine::QuoteArgForCommandLine(std::wstring_view{ agentCmdline });
-            // 40s ceiling matches probe.rs's internal limits (npx
-            // initialize 25s + new_session 10s + slack). Cached
-            // adapters return in <2s.
-            stdoutText = ::Microsoft::Terminal::WtaProcess::RunWtaCaptureStdout(wtaPath, args, 40'000);
+            auto quoted = ::Microsoft::Terminal::CommandLine::QuoteArgForCommandLine(std::wstring_view{ agentCmdline });
+            if (quoted)
+            {
+                const std::wstring args = L"probe-models --agent " + *quoted;
+                // 40s ceiling matches probe.rs's internal limits (npx
+                // initialize 25s + new_session 10s + slack). Cached
+                // adapters return in <2s.
+                stdoutText = ::Microsoft::Terminal::WtaProcess::RunWtaCaptureStdout(wtaPath, args, 40'000);
+            }
         }
 
         std::vector<Model::AcpModelInfo> parsed;
