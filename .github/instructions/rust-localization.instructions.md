@@ -46,15 +46,15 @@ Since YAML has no structured comment system like `.resw`, we use `#` comments wi
 ### Section-level (applies to all strings in a group)
 
 ```yaml
-# {Locked="Intelligent Terminal"} - product name, do not translate
-setup.title.first_run: "Welcome to Intelligent Terminal!"
-setup.title.agent_missing: "Agent not found"
+# {Locked="Copilot","CLI"} - these tokens must stay in English
+agent.status.connected: "Connected to Copilot CLI"
+agent.status.disconnected: "Disconnected from agent"
 ```
 
 ### Line-level (applies to one specific string)
 
 ```yaml
-setup.title.first_run: "Welcome to Intelligent Terminal!"  # {Locked="Intelligent Terminal"}
+hint.confirm: "Press Enter to confirm"  # {Locked="Enter"} keyboard key name
 ```
 
 ### Rules
@@ -63,6 +63,8 @@ setup.title.first_run: "Welcome to Intelligent Terminal!"  # {Locked="Intelligen
 - **Line-level** `{Locked}` comment → applies only to that line
 - Multiple locked tokens: `# {Locked="Copilot","CLI"}`
 - Full lock (entire value must not be translated): `# {Locked}`
+- Pseudo-locale-only lock (real locales translate, pseudo-locales keep English): `# {Locked=qps-ploc,qps-ploca,qps-plocm}`
+  - Use this for product names like "Intelligent Terminal" that real locales should translate but pseudo-locales should not mangle. This mirrors the `.resw` `{Locked=qps-ploc,qps-ploca,qps-plocm}` convention.
 - **Translation rule:** Locked tokens must appear **verbatim** (in English) in all locale files. This matches the `.resw` `{Locked}` convention — see `.github/instructions/localization.instructions.md` for the full list of non-translatable terms.
 
 ## Terminology Alignment
