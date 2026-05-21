@@ -114,8 +114,9 @@ namespace Microsoft::Terminal::CommandLine
     //
     // All control characters in field values (including NUL) are escaped
     // per RFC 8259, so the resulting JSON blob is always valid and safe
-    // for commandline transport.
-    inline std::wstring BuildAgentConfigArg(
+    // for commandline transport. Returns std::nullopt on (unlikely)
+    // quoting failure; callers should log and abort.
+    inline std::optional<std::wstring> BuildAgentConfigArg(
         std::wstring_view agent,
         std::wstring_view agentId,
         std::wstring_view delegateAgent,
@@ -189,7 +190,7 @@ namespace Microsoft::Terminal::CommandLine
         auto quoted = QuoteArgForCommandLine(json);
         if (!quoted)
         {
-            return {};
+            return std::nullopt;
         }
         return L" --agent-config " + *quoted;
     }

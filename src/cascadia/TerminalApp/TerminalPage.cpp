@@ -1180,12 +1180,20 @@ namespace winrt::TerminalApp::implementation
         const auto delegateModel = globals.DelegateModel();
 
         // Pass agent config fields as JSON (same mechanism as the agent pane).
-        cmdline += Microsoft::Terminal::CommandLine::BuildAgentConfigArg(
-            std::wstring_view{ agentCliPath },
-            std::wstring_view{} /* agentId — not needed for delegate */,
-            std::wstring_view{ delegateAgent },
-            std::wstring_view{ delegateModel },
-            std::wstring_view{} /* acpModel */);
+        if (auto agentArg = Microsoft::Terminal::CommandLine::BuildAgentConfigArg(
+                std::wstring_view{ agentCliPath },
+                std::wstring_view{} /* agentId — not needed for delegate */,
+                std::wstring_view{ delegateAgent },
+                std::wstring_view{ delegateModel },
+                std::wstring_view{} /* acpModel */))
+        {
+            cmdline += *agentArg;
+        }
+        else
+        {
+            _agentPaneLog("ABORT: failed to build agent config for delegate");
+            return;
+        }
 
         // Pass CWD from the active pane.
         winrt::hstring activeCwd;
@@ -1749,12 +1757,20 @@ namespace winrt::TerminalApp::implementation
         // This eliminates per-field hand-rolled escaping — BuildAgentConfigArg
         // performs RFC 8259 JSON encoding internally, and only one correctly-
         // quoted argument boundary is needed (via QuoteArgForCommandLine).
-        cmdline += Microsoft::Terminal::CommandLine::BuildAgentConfigArg(
-            std::wstring_view{ agentCliPath },
-            std::wstring_view{ acpAgent },
-            std::wstring_view{ delegateAgent },
-            std::wstring_view{ delegateModel },
-            std::wstring_view{ acpModel });
+        if (auto agentArg = Microsoft::Terminal::CommandLine::BuildAgentConfigArg(
+                std::wstring_view{ agentCliPath },
+                std::wstring_view{ acpAgent },
+                std::wstring_view{ delegateAgent },
+                std::wstring_view{ delegateModel },
+                std::wstring_view{ acpModel }))
+        {
+            cmdline += *agentArg;
+        }
+        else
+        {
+            _agentPaneLog("ABORT: failed to build agent config");
+            return;
+        }
 
         if (!globals.AutoFixEnabled())
         {
@@ -2103,12 +2119,20 @@ namespace winrt::TerminalApp::implementation
             const auto delegateModel = globals.DelegateModel();
 
             // Pass all agent-related config as a single JSON-encoded argument.
-            cmdline += Microsoft::Terminal::CommandLine::BuildAgentConfigArg(
-                std::wstring_view{ agentCliPath },
-                std::wstring_view{ acpAgent },
-                std::wstring_view{ delegateAgent },
-                std::wstring_view{ delegateModel },
-                std::wstring_view{} /* acpModel — not used in this path */);
+            if (auto agentArg = Microsoft::Terminal::CommandLine::BuildAgentConfigArg(
+                    std::wstring_view{ agentCliPath },
+                    std::wstring_view{ acpAgent },
+                    std::wstring_view{ delegateAgent },
+                    std::wstring_view{ delegateModel },
+                    std::wstring_view{} /* acpModel — not used in this path */))
+            {
+                cmdline += *agentArg;
+            }
+            else
+            {
+                _agentPaneLog("ABORT: failed to build agent config");
+                return;
+            }
 
             if (!globals.AutoFixEnabled())
             {
