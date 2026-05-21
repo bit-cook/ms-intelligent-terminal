@@ -1721,9 +1721,9 @@ namespace winrt::TerminalApp::implementation
         const auto acpModel = globals.AcpModel();
 
         // Pass all agent-related config as a single JSON-encoded argument.
-        // This eliminates per-field hand-rolled escaping — the JSON library
-        // handles special characters, and only one correctly-quoted argument
-        // boundary is needed (via QuoteArgForCommandLine).
+        // This eliminates per-field hand-rolled escaping — BuildAgentConfigArg
+        // performs RFC 8259 JSON encoding internally, and only one correctly-
+        // quoted argument boundary is needed (via QuoteArgForCommandLine).
         cmdline += Microsoft::Terminal::CommandLine::BuildAgentConfigArg(
             std::wstring_view{ agentCliPath },
             std::wstring_view{ acpAgent },

@@ -65,8 +65,9 @@ namespace Microsoft::Terminal::CommandLine
 
     // Build a JSON-encoded `--agent-config` argument from the given fields.
     // Returns the full fragment: ` --agent-config "<escaped-json>"`
-    // Uses JsonCpp for serialization and QuoteArgForCommandLine for the
-    // single argument boundary.
+    // Uses manual RFC 8259-compliant JSON construction (no external JSON
+    // library dependency) and QuoteArgForCommandLine for the single
+    // argument boundary.
     //
     // Usage:
     //   cmdline += BuildAgentConfigArg(agentCli, agentId, delegateAgent,
