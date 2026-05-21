@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <cwchar>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -21,12 +23,12 @@ namespace Microsoft::Terminal::CommandLine
     // by CommandLineToArgvW. Handles:
     //   - Backslashes before `"` are doubled (2n+1 backslashes + `"`)
     //   - Trailing backslashes before the closing `"` are doubled
+    //   - Embedded NUL characters are rejected (they would truncate the
+    //     commandline at the OS level)
     //   - All other characters are passed through literally
     //
     // NOTE: This is for argv[1..n] only. argv[0] (the program path) has
-    // different rules — backslashes are always literal, and `"` cannot be
-    // escaped inside it. For argv[0], simply wrap in quotes if needed and
-    // reject paths containing `"`.
+    // different rules — use QuoteProgramPath() for that.
     inline std::wstring QuoteArgForCommandLine(std::wstring_view arg)
     {
         std::wstring result;
@@ -37,6 +39,13 @@ namespace Microsoft::Terminal::CommandLine
         size_t backslashes = 0;
         for (const auto ch : arg)
         {
+            if (ch == L'\0')
+            {
+                // Embedded NUL would silently truncate the commandline.
+                // Reject it deterministically rather than producing a
+                // subtly broken commandline.
+                throw std::invalid_argument("QuoteArgForCommandLine: embedded NUL in argument");
+            }
             if (ch == L'\\')
             {
                 ++backslashes;
@@ -60,6 +69,32 @@ namespace Microsoft::Terminal::CommandLine
         result.append(backslashes * 2, L'\\');
         result.push_back(L'"');
 
+        return result;
+    }
+
+    // Quote a program path (argv[0]) for use in a Windows commandline string.
+    // argv[0] has simpler rules than argv[1..n]: backslashes are always literal
+    // and `"` cannot be escaped inside it. We wrap in quotes (for paths with
+    // spaces) and reject paths containing `"` (which are invalid on Windows
+    // file systems anyway).
+    inline std::wstring QuoteProgramPath(std::wstring_view path)
+    {
+        for (const auto ch : path)
+        {
+            if (ch == L'"')
+            {
+                throw std::invalid_argument("QuoteProgramPath: path contains '\"'");
+            }
+            if (ch == L'\0')
+            {
+                throw std::invalid_argument("QuoteProgramPath: path contains embedded NUL");
+            }
+        }
+        std::wstring result;
+        result.reserve(path.size() + 2);
+        result.push_back(L'"');
+        result.append(path);
+        result.push_back(L'"');
         return result;
     }
 

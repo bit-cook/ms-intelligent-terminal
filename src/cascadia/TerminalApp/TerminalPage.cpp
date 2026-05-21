@@ -1165,9 +1165,10 @@ namespace winrt::TerminalApp::implementation
         const auto agentCliPath = _ResolveEffectiveAgentCliPath(globals, [this]() { return _DetectAgentCli(); });
 
         using Microsoft::Terminal::CommandLine::QuoteArgForCommandLine;
+        using Microsoft::Terminal::CommandLine::QuoteProgramPath;
 
         // Build: wta delegate --agent-config <json> --cwd <cwd> "<prompt>"
-        std::wstring cmdline = QuoteArgForCommandLine(wtaPath) + L" delegate";
+        std::wstring cmdline = QuoteProgramPath(wtaPath) + L" delegate";
 
         const auto delegateAgent = _ResolveEffectiveDelegateAgent(globals);
         const auto delegateModel = globals.DelegateModel();

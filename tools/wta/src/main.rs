@@ -115,6 +115,35 @@ struct AgentConfig {
     acp_model: Option<String>,
 }
 
+/// Parsed fields from an `--agent-config` JSON blob, ready to overlay onto
+/// individual CLI args.
+struct AgentConfigOverlay {
+    agent: Option<String>,
+    agent_id: Option<String>,
+    delegate_agent: Option<String>,
+    delegate_model: Option<String>,
+    acp_model: Option<String>,
+}
+
+/// Parse a JSON `--agent-config` value and return the overlay fields.
+/// Returns `None` if `config_json` is `None`; errors on invalid JSON.
+fn parse_agent_config(config_json: Option<&str>) -> anyhow::Result<Option<AgentConfigOverlay>> {
+    match config_json {
+        None => Ok(None),
+        Some(json) => {
+            let config: AgentConfig = serde_json::from_str(json)
+                .context("--agent-config: invalid JSON")?;
+            Ok(Some(AgentConfigOverlay {
+                agent: config.agent,
+                agent_id: config.agent_id,
+                delegate_agent: config.delegate_agent,
+                delegate_model: config.delegate_model,
+                acp_model: config.acp_model,
+            }))
+        }
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(
     name = "wta",
@@ -166,7 +195,7 @@ struct Cli {
     /// JSON-encoded agent configuration. When present, fields from this
     /// JSON object override the corresponding individual CLI args above.
     /// This eliminates hand-rolled commandline escaping on the host side —
-    /// the JSON library handles all special characters, and only one
+    /// JSON encoding handles all special characters, and only one
     /// correctly-quoted argument boundary is needed.
     ///
     /// Expected shape:
@@ -479,23 +508,21 @@ async fn main() -> Result<()> {
     // CLI args. This is the secure path: the host serializes all agent
     // config as a single JSON blob, eliminating per-field commandline
     // escaping. Invalid JSON is a hard error (don't silently fall back).
-    if let Some(ref config_json) = cli.agent_config {
-        let config: AgentConfig = serde_json::from_str(config_json)
-            .context("--agent-config: invalid JSON")?;
-        if let Some(agent) = config.agent {
+    if let Some(overlay) = parse_agent_config(cli.agent_config.as_deref())? {
+        if let Some(agent) = overlay.agent {
             cli.agent = agent;
         }
-        if config.agent_id.is_some() {
-            cli.agent_id = config.agent_id;
+        if overlay.agent_id.is_some() {
+            cli.agent_id = overlay.agent_id;
         }
-        if config.delegate_agent.is_some() {
-            cli.delegate_agent = config.delegate_agent;
+        if overlay.delegate_agent.is_some() {
+            cli.delegate_agent = overlay.delegate_agent;
         }
-        if config.delegate_model.is_some() {
-            cli.delegate_model = config.delegate_model;
+        if overlay.delegate_model.is_some() {
+            cli.delegate_model = overlay.delegate_model;
         }
-        if config.acp_model.is_some() {
-            cli.acp_model = config.acp_model;
+        if overlay.acp_model.is_some() {
+            cli.acp_model = overlay.acp_model;
         }
     }
 
@@ -713,17 +740,15 @@ async fn main() -> Result<()> {
             agent_config,
         }) => {
             // Apply JSON config overlay (same as top-level path).
-            if let Some(ref config_json) = agent_config {
-                let config: AgentConfig = serde_json::from_str(config_json)
-                    .context("delegate --agent-config: invalid JSON")?;
-                if let Some(a) = config.agent {
+            if let Some(overlay) = parse_agent_config(agent_config.as_deref())? {
+                if let Some(a) = overlay.agent {
                     agent = a;
                 }
-                if config.delegate_agent.is_some() {
-                    delegate_agent = config.delegate_agent;
+                if overlay.delegate_agent.is_some() {
+                    delegate_agent = overlay.delegate_agent;
                 }
-                if config.delegate_model.is_some() {
-                    delegate_model = config.delegate_model;
+                if overlay.delegate_model.is_some() {
+                    delegate_model = overlay.delegate_model;
                 }
             }
             run_delegate(&prompt, &agent, delegate_agent.as_deref(), delegate_model.as_deref(), cwd.as_deref()).await
