@@ -58,8 +58,17 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     // Truncate again at the line level just in case the localized template
     // expands beyond the available width (e.g. RTL or longer translations).
     let truncated = truncate_to_width(&text, visible_width);
+    // Clamp the left padding to whatever room is left after the truncated
+    // body. In very narrow terminals (`area.width < HORIZONTAL_PADDING`) we
+    // skip padding entirely so the indicator still shows at least one
+    // visible cell (the ellipsis from `truncate_to_width`) instead of
+    // rendering as a row of pure padding.
+    let prefix_width = (area.width as usize).saturating_sub(
+        unicode_width::UnicodeWidthStr::width(truncated.as_str()),
+    );
+    let prefix = " ".repeat(prefix_width.min(2));
     let line = Line::from(Span::styled(
-        format!("  {}", truncated),
+        format!("{prefix}{truncated}"),
         theme::DIM,
     ));
     frame.render_widget(Paragraph::new(line), area);
