@@ -446,6 +446,20 @@ pub fn route_agent_event_to_registry(
 
     reg.apply(ev);
 
+    // Stamp `AgentPane` origin on the live session if the agent-pane
+    // origin index recorded its session id. This is what flips the
+    // "agent pane" prefix on for *live* rows — historical rows pick up
+    // the same flag through `history_loader::load_all`'s join. We
+    // re-read the index on every routed event (small file, infrequent
+    // event) rather than caching, to stay correct after a new session
+    // is created while wta is already running.
+    if !key_for_refresh.is_empty() {
+        let agent_pane_keys = crate::agent_pane_origin::load_default_set();
+        if agent_pane_keys.contains(&key_for_refresh) {
+            reg.set_origin(&key_for_refresh, crate::agent_sessions::SessionOrigin::AgentPane);
+        }
+    }
+
     // Upgrade synthetic title from disk if the CLI has now written one.
     if reg.title_is_synthetic(&key_for_refresh) {
         if let Some(cli) = reg.cli_source_for(&key_for_refresh) {
@@ -1553,7 +1567,30 @@ impl App {
         match s.status {
             Idle | Working | Attention | Error => {
                 if let Some(pane) = &s.pane_session_id {
-                    crate::shell::wt_channel::spawn_wtcli_focus_pane(pane);
+                    // Skip self-focus: if the user pressed Enter on the
+                    // row that represents the pane this WTA is already
+                    // running in, the focus call is a no-op for them and
+                    // can throw `winrt::hresult_error` (E_FAIL /
+                    // 0x80004005) on the WT side. Compare case-insensitively
+                    // because pane GUIDs arrive in mixed case (hooks emit
+                    // lowercase, WT-native events emit canonical
+                    // uppercase) and `self.pane_id` is populated from
+                    // whichever path discovered it first.
+                    let is_self = self
+                        .pane_id
+                        .as_deref()
+                        .map(|own| own.eq_ignore_ascii_case(pane.as_str()))
+                        .unwrap_or(false);
+                    if is_self {
+                        tracing::info!(
+                            target: "agents_view",
+                            key = %s.key,
+                            pane = %pane,
+                            "skipping focus_pane: row points at our own pane",
+                        );
+                    } else {
+                        crate::shell::wt_channel::spawn_wtcli_focus_pane(pane);
+                    }
                     #[cfg(test)]
                     {
                         self.last_dispatched_command = Some(DispatchedCommand {
@@ -6850,6 +6887,11 @@ mod tests {
 
         // Bind, then unbind — mirrors the Copilot order: agent.session.end
         // hook arrives and runs SessionStopped before WT emits closed.
+        // The session is NOT tagged with `SessionOrigin::AgentPane` (this
+        // test sets up state via raw SessionStarted, so origin defaults
+        // to Unknown), which means SessionStopped immediately transitions
+        // to Ended and releases the pane binding — exactly the precondition
+        // this test depends on.
         app.agent_sessions.apply(SessionEvent::SessionStarted {
             key: "copilot-key".into(),
             cli_source: CliSource::Copilot,
