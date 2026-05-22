@@ -76,8 +76,14 @@ fn truncate_to_width(text: &str, max_cells: usize) -> String {
         let w = UnicodeWidthChar::width(ch).unwrap_or(0);
         if used + w > max_cells {
             // Replace the last char with an ellipsis if there's room.
-            if max_cells >= 1 && !out.is_empty() {
+            if !out.is_empty() {
                 out.pop();
+                out.push('…');
+            } else {
+                // Very narrow budget (e.g. max_cells == 1 with a wide-char
+                // first glyph): nothing was emitted yet, so a blank row
+                // would render. Show '…' instead so the user knows there's
+                // hidden content.
                 out.push('…');
             }
             break;
@@ -108,5 +114,14 @@ mod tests {
     #[test]
     fn truncate_zero_width_returns_empty() {
         assert_eq!(truncate_to_width("anything", 0), "");
+    }
+
+    #[test]
+    fn truncate_wide_char_with_narrow_budget_emits_ellipsis() {
+        // CJK full-width glyph is 2 cells; with max_cells=1, we can't fit it
+        // but we still want a visible truncation marker rather than a blank
+        // row. Regression for the Copilot-review edge case.
+        let out = truncate_to_width("中文", 1);
+        assert_eq!(out, "…", "got: {out:?}");
     }
 }

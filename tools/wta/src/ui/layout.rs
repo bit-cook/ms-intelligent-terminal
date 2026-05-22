@@ -234,8 +234,8 @@ pub fn input_cursor_position(app: &App, area: Rect) -> Option<Position> {
     };
 
     // Match the constraint layout in `render` — chat / rec / perm / filler /
-    // hint / rec_hint / input, so the input chunk is at index 6. Keep both
-    // in lockstep or the cursor lands on the wrong line.
+    // hint / rec_hint / queue_hint / input, so the input chunk is at index 7.
+    // Keep both in lockstep or the cursor lands on the wrong line.
     let now = std::time::Instant::now();
     let hint_visible = app
         .transient_hint

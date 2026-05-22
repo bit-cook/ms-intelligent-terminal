@@ -953,8 +953,8 @@ impl TabSession {
         self.clear_recommendations();
         // /clear, /new, /restart, tab reset and session-load all funnel
         // through here. Queued prompts belonged to the conversation being
-        // wiped — survive across the reset would surprise the user by
-        // firing into the fresh session.
+        // wiped — allowing them to survive across the reset would surprise
+        // the user by firing into the fresh session.
         self.pending_prompts.clear();
     }
 
@@ -5093,8 +5093,11 @@ impl App {
     ///
     /// **Per-tick policy:** at most one queued prompt per tab per call.
     /// `turn_submit_prompt` flips the state to `Submitted`, so a second pass
-    /// would no-op anyway. This keeps ordering deterministic and avoids any
-    /// risk of starving the agent with a synchronous flood.
+    /// would no-op anyway. Per-tab dispatch order is FIFO and deterministic.
+    /// Cross-tab dispatch order is determined by sorting tab ids, since
+    /// `HashMap::keys()` iteration order is otherwise nondeterministic — this
+    /// matters mostly for tests and log reproducibility, not user-visible
+    /// behavior (a single tick rarely drains more than one tab anyway).
     ///
     /// **Gates** — only dispatch when ALL of:
     /// * connection is `Connected`,
@@ -5113,7 +5116,10 @@ impl App {
             return;
         }
         // Snapshot the tab keys so the inner mutable borrow is unambiguous.
-        let tab_ids: Vec<String> = self.tab_sessions.keys().cloned().collect();
+        // Sort for deterministic cross-tab dispatch order (HashMap iteration
+        // is intentionally randomized).
+        let mut tab_ids: Vec<String> = self.tab_sessions.keys().cloned().collect();
+        tab_ids.sort();
         for tab_id in tab_ids {
             let Some(tab) = self.tab_sessions.get(&tab_id) else {
                 continue;
@@ -7722,7 +7728,7 @@ mod tests {
         type_text(&mut app, "second");
         press_enter(&mut app);
         assert!(matches!(app.current_tab().turn, TurnState::Submitted(_)),
-            "still submitted; queued prompt didn't pre-empt");
+            "still submitted; queued prompt didn't preempt");
         assert_eq!(app.current_tab().pending_prompts.len(), 1);
         assert_eq!(app.current_tab().pending_prompts[0].text, "second");
         // No user bubble for the queued one yet — chat reflects only the
