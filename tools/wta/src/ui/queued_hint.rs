@@ -68,7 +68,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let prefix_width = (area.width as usize).saturating_sub(
         unicode_width::UnicodeWidthStr::width(truncated.as_str()),
     );
-    let prefix = " ".repeat(prefix_width.min(2));
+    let prefix = " ".repeat(prefix_width.min(HORIZONTAL_PADDING as usize));
     let line = Line::from(Span::styled(
         format!("{prefix}{truncated}"),
         theme::DIM,

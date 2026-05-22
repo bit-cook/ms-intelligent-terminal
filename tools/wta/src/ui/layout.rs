@@ -222,12 +222,14 @@ pub fn input_cursor_position(app: &App, area: Rect) -> Option<Position> {
         area
     };
 
-    let rec_height = if app.current_tab().turn.recommendations().is_some() {
-        Constraint::Length(app.rec_panel_height(main_area.width))
+    let rec_height_u = if app.current_tab().turn.recommendations().is_some() {
+        app.rec_panel_height(main_area.width)
     } else {
-        Constraint::Length(0)
+        0
     };
-    let perm_height = Constraint::Length(app.permission_panel_height(main_area.width));
+    let rec_height = Constraint::Length(rec_height_u);
+    let perm_height_u = app.permission_panel_height(main_area.width);
+    let perm_height = Constraint::Length(perm_height_u);
     let input_height = {
         let tab = app.current_tab();
         input::input_height(&tab.input, tab.cursor_pos, main_area.width)
@@ -235,27 +237,39 @@ pub fn input_cursor_position(app: &App, area: Rect) -> Option<Position> {
 
     // Match the constraint layout in `render` — chat / rec / perm / filler /
     // hint / rec_hint / queue_hint / input, so the input chunk is at index 7.
-    // Keep both in lockstep or the cursor lands on the wrong line.
+    // Keep both in lockstep — including the same `chat_estimate.min(chat_max)`
+    // clamp `render` applies — or the cursor lands on the wrong line when
+    // chat content overflows the available area.
     let now = std::time::Instant::now();
-    let hint_visible = app
+    let transient_visible = app
         .transient_hint
         .as_ref()
         .map(|(_, deadline)| now < *deadline)
         .unwrap_or(false);
-    let hint_height = if hint_visible {
-        Constraint::Length(1)
-    } else {
-        Constraint::Length(0)
-    };
-    let rec_hint_height = if app.current_tab().turn.recommendations().is_some() {
-        Constraint::Length(1)
-    } else {
-        Constraint::Length(0)
-    };
-    let queue_hint_height = Constraint::Length(queued_hint::queue_hint_height(app));
+    // Mirror `render`: a single hint row is reserved if either the welcome
+    // hint or a transient hint would be visible. Computing this from
+    // transient-only would mis-place the cursor by 1 row while the welcome
+    // hint is up during first-run typing.
+    let welcome_visible = app.show_welcome_hint
+        && app.state == crate::app::ConnectionState::Connected;
+    let hint_visible = welcome_visible || transient_visible;
+    let hint_h: u16 = if hint_visible { 1 } else { 0 };
+    let hint_height = Constraint::Length(hint_h);
+    let rec_hint_h: u16 = if app.current_tab().turn.recommendations().is_some() { 1 } else { 0 };
+    let rec_hint_height = Constraint::Length(rec_hint_h);
+    let queue_hint_h = queued_hint::queue_hint_height(app);
+    let queue_hint_height = Constraint::Length(queue_hint_h);
 
     let chat_content_width = main_area.width.saturating_sub(2);
-    let chat_height = chat::estimated_block_height(app, chat_content_width);
+    let chat_estimate = chat::estimated_block_height(app, chat_content_width);
+    let reserved_below = rec_height_u
+        .saturating_add(perm_height_u)
+        .saturating_add(input_height)
+        .saturating_add(hint_h)
+        .saturating_add(rec_hint_h)
+        .saturating_add(queue_hint_h);
+    let chat_max = main_area.height.saturating_sub(reserved_below).max(1);
+    let chat_height = chat_estimate.min(chat_max);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
