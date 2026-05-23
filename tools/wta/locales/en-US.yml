@@ -81,7 +81,8 @@ commands.stop.summary: "Cancel the in-flight prompt"
 commands.sessions.summary: "Open the historical sessions picker (Ctrl+Shift+/)"  # {Locked="Ctrl+Shift+/"}
 
 # ── Recommendations panel (src/ui/recommendations.rs) ───────────────────────
-# {Locked="Enter","Esc","↵"} - key names and Return-key glyph, do not translate
+# {Locked="Enter","Esc","↑","↓","←","→","↵"} - key names and arrow/Return-key
+# glyphs, do not translate
 recommendations.nav_hint: "(↑ ↓ to navigate suggestions • ← → to switch actions • Enter to select • Esc to cancel)"
 recommendations.button_run_command: "[ Run command ]"
 recommendations.button_insert_in_terminal: "Insert in Terminal"

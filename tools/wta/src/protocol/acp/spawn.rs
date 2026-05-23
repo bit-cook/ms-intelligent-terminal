@@ -83,12 +83,21 @@ pub(crate) fn spawn_agent_process(agent_cmd: &str, cwd: Option<&Path>) -> Result
     // purely a hint for the agent's response language. Format:
     // `<locale>.UTF-8` (BCP-47 with dashes converted to underscores, plus
     // UTF-8 codeset).
+    //
+    // Don't override the user's own locale env vars: if the user has
+    // intentionally pinned `LANG` or `LC_ALL` in their shell (e.g. to
+    // get an English-only Copilot response while running a zh-CN UI),
+    // respect that. Only set what's missing.
     {
         let current_locale = rust_i18n::locale().to_string();
         if !current_locale.is_empty() {
             let posix_locale = format!("{}.UTF-8", current_locale.replace('-', "_"));
-            cmd.env("LANG", &posix_locale);
-            cmd.env("LC_ALL", &posix_locale);
+            if std::env::var_os("LANG").is_none() {
+                cmd.env("LANG", &posix_locale);
+            }
+            if std::env::var_os("LC_ALL").is_none() {
+                cmd.env("LC_ALL", &posix_locale);
+            }
         }
     }
     if let Some(cwd) = cwd {
