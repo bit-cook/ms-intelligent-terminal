@@ -3,145 +3,53 @@
 //
 // RtlHelper.h
 //
-// Pure helper for right-to-left (RTL) language detection. Used by
-// FreOverlay (and any other XAML surface that wants to honor the user's
-// preferred UI language layout direction) to decide whether to set
-// FlowDirection::RightToLeft on its root element.
+// Thin wrapper around the Windows locale database for right-to-left
+// (RTL) language detection. The OS already ships an authoritative
+// classifier for every BCP-47 tag it knows about
+// (`Windows.Globalization.Language.LayoutDirection`), so we delegate
+// to it instead of maintaining our own subtag list. That has three
+// benefits:
 //
-// Design notes
-// ------------
-// XAML cascades FlowDirection down the visual tree and auto-mirrors
-// HorizontalAlignment, so the natural fix for RTL layout is to set
-// FlowDirection on the *root* of a screen and let everything else
-// inherit. That keeps the change surgical: one line of layout code, no
-// per-control re-shuffling, no over-engineering.
-//
-// What counts as "RTL" is determined by the BCP-47 language subtag,
-// matched case-insensitively. The list mirrors the set of RTL locales
-// we ship resources for plus a couple of well-known RTL scripts that
-// could conceivably be passed through `settings.json`'s Language field.
-// `qps-plocm` (Microsoft pseudo-mirrored pseudo-locale) is included so
-// localization engineers can validate the wiring without a real RTL
-// build.
-//
-// Header-only on purpose: the Settings ModelLib is a static lib wrapped
-// by a DLL that only exports WinRT types, and unit tests in ut_app must
-// be able to link this without a separate object.
+//   1. New / less common RTL scripts (e.g. N'Ko `nqo`, Sindhi in
+//      Arabic script) get correct treatment without code changes.
+//   2. Tests don't have to hardcode "what counts as RTL" — there is
+//      no list to drift out of sync.
+//   3. The FRE and the wta TUI agree on classification because both
+//      stacks call the same OS API (wta uses Win32
+//      `GetLocaleInfoEx(LOCALE_IREADINGLAYOUT)`).
 
 #pragma once
 
 #include <string_view>
 
+#include <winrt/Windows.Globalization.h>
+
 namespace Microsoft::Terminal::RtlHelper
 {
-    // BCP-47 language subtags whose scripts are written right-to-left.
-    // Keep ASCII-lowercase; comparison is case-insensitive.
+    // Returns true if `language` is a BCP-47 tag whose preferred
+    // reading layout is right-to-left, as reported by
+    // `Windows::Globalization::Language::LayoutDirection()`. Empty
+    // strings, malformed tags, and unknown languages all yield false
+    // (the safe LTR default — the WinRT `Language` constructor throws
+    // for ill-formed tags).
     //
-    //   ar  — Arabic
-    //   he  — Hebrew (also covers legacy `iw`)
-    //   fa  — Persian / Farsi
-    //   ur  — Urdu
-    //   ug  — Uyghur
-    //   ps  — Pashto
-    //   sd  — Sindhi (Perso-Arabic script)
-    //   ckb — Central Kurdish (Sorani)
-    //   yi  — Yiddish
-    //   dv  — Divehi / Maldivian
-    //
-    // We also recognize the Microsoft pseudo-mirrored pseudo-locale
-    // `qps-plocm`, which is the canonical way to validate RTL plumbing.
-    // Locale-independent ASCII tolower. BCP-47 language tags are
-    // pure ASCII, so we deliberately avoid std::towlower (which honors
-    // the C runtime locale and, e.g., maps 'I' to dotless-i under the
-    // Turkish locale — breaking case-insensitive matching of "IW-IL"
-    // or "QPS-PLOCM"). Mirrors `til::tolower_ascii` exactly; inlined
-    // here to keep the header self-contained.
-    [[nodiscard]] constexpr wchar_t _tolower_ascii(wchar_t c) noexcept
-    {
-        if (c >= L'A' && c <= L'Z')
-        {
-            c = static_cast<wchar_t>(c | 0x20);
-        }
-        return c;
-    }
-
-    // Locale-independent ASCII case-insensitive equality.
-    [[nodiscard]] constexpr bool _equals_insensitive_ascii(std::wstring_view a, std::wstring_view b) noexcept
-    {
-        if (a.size() != b.size())
-        {
-            return false;
-        }
-        for (size_t i = 0; i < a.size(); ++i)
-        {
-            if (_tolower_ascii(a[i]) != _tolower_ascii(b[i]))
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    inline constexpr std::wstring_view kRtlLanguageSubtags[] = {
-        L"ar",
-        L"he",
-        L"iw",
-        L"fa",
-        L"ur",
-        L"ug",
-        L"ps",
-        L"sd",
-        L"ckb",
-        L"yi",
-        L"dv",
-    };
-
-    // Returns true if `language` is a BCP-47 tag whose primary language
-    // subtag (the bit before the first `-`) is right-to-left. Matching
-    // is case-insensitive. Empty strings, malformed input, and unknown
-    // languages all yield false (i.e. the safe LTR default).
-    //
-    // Examples:
-    //   IsRtlLocale(L"ar-SA")     -> true
-    //   IsRtlLocale(L"AR")        -> true
-    //   IsRtlLocale(L"he-IL")     -> true
-    //   IsRtlLocale(L"qps-plocm") -> true   (pseudo-mirrored)
-    //   IsRtlLocale(L"qps-ploc")  -> false  (pseudo-LTR)
-    //   IsRtlLocale(L"en-US")     -> false
-    //   IsRtlLocale(L"")          -> false
-    //   IsRtlLocale(L"-bogus")    -> false
+    // Pseudo-locales: `qps-plocm` is the pseudo-mirrored pseudo-locale
+    // Microsoft ships for RTL validation. The OS classifies it as RTL,
+    // so we get that for free without a special case.
     [[nodiscard]] inline bool IsRtlLocale(std::wstring_view language) noexcept
     {
         if (language.empty())
         {
             return false;
         }
-
-        // Special-case the pseudo-mirrored pseudo-locale. It is not a
-        // BCP-47 language subtag in its own right (`qps` is the
-        // pseudo-language prefix), so we match the whole tag.
-        if (_equals_insensitive_ascii(language, L"qps-plocm"))
+        try
         {
-            return true;
+            const winrt::Windows::Globalization::Language lang{ winrt::hstring{ language } };
+            return lang.LayoutDirection() == winrt::Windows::Globalization::LanguageLayoutDirection::Rtl;
         }
-
-        // Extract the primary language subtag (chars before the first `-`).
-        const auto dash = language.find(L'-');
-        const auto primary = (dash == std::wstring_view::npos)
-                                 ? language
-                                 : language.substr(0, dash);
-        if (primary.empty())
+        catch (...)
         {
             return false;
         }
-
-        for (const auto& tag : kRtlLanguageSubtags)
-        {
-            if (_equals_insensitive_ascii(primary, tag))
-            {
-                return true;
-            }
-        }
-        return false;
     }
 }

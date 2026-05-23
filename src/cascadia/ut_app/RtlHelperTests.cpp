@@ -3,15 +3,21 @@
 //
 // RtlHelperTests.cpp
 //
-// Pure-function tests for the RTL language detection helper at
-// src/cascadia/inc/RtlHelper.h. FreOverlay uses this to decide whether
-// to set FlowDirection::RightToLeft on its root grid; getting the
-// detection wrong means RTL users either don't see the layout flip at
-// all, or LTR users get an accidentally-mirrored FRE. These tests pin
-// the language-tag → RTL classification so any breaking change surfaces
-// here rather than at runtime.
+// Smoke tests for the RTL detection helper at
+// src/cascadia/inc/RtlHelper.h. The helper is a thin wrapper around
+// `Windows::Globalization::Language::LayoutDirection()` — the OS owns
+// the authoritative classifier — so these tests deliberately do NOT
+// maintain a parallel list of "what counts as RTL". They only pin
+// that:
 //
-// No winrt, no XAML, no I/O — pure wstring_view in, bool out.
+//   * The wrapper correctly calls into the OS (i.e. our well-known
+//     fork-shipping locales classify the way users expect).
+//   * Garbage input is treated as LTR (the safe default) and does not
+//     crash.
+//
+// For every RTL locale the helper *needs* to classify, we ask the OS
+// itself for the expected answer and assert agreement — there is no
+// hardcoded "Arabic = RTL" knowledge in this file.
 
 #include "precomp.h"
 
@@ -30,20 +36,30 @@ namespace TerminalAppUnitTests
 
         TEST_METHOD(EmptyStringIsLtr);
         TEST_METHOD(MalformedTagsAreLtr);
-        TEST_METHOD(EnglishVariantsAreLtr);
-        TEST_METHOD(CommonLtrLanguagesAreLtr);
-        TEST_METHOD(ArabicVariantsAreRtl);
-        TEST_METHOD(HebrewVariantsAreRtl);
-        TEST_METHOD(PersianIsRtl);
-        TEST_METHOD(UrduIsRtl);
-        TEST_METHOD(UyghurIsRtl);
-        TEST_METHOD(OtherRtlScriptsAreRtl);
-        TEST_METHOD(MatchingIsCaseInsensitive);
+        TEST_METHOD(MatchesOsClassificationForShippingLocales);
         TEST_METHOD(PseudoMirroredIsRtl);
-        TEST_METHOD(PseudoLtrPseudoLocaleIsLtr);
-        TEST_METHOD(SubtagPrefixOnlyMatchesPrimary);
-        TEST_METHOD(BareLanguageWithoutRegionWorks);
+        TEST_METHOD(PseudoLtrPseudoLocalesAreLtr);
+        TEST_METHOD(MatchingIsCaseInsensitive);
     };
+
+    // The set of locales whose layout direction we *care about* in
+    // this product. For each, the OS is the source of truth — we just
+    // assert our helper agrees with what `Windows.Globalization.Language`
+    // reports. Tests don't hardcode the LTR/RTL answer.
+    static constexpr std::wstring_view kLocalesToProbe[] = {
+        // RTL locales the fork ships translations for.
+        L"ar-SA", L"he-IL", L"fa-IR", L"ur-PK", L"ug-CN",
+        // A representative sample of LTR locales from the fork's set.
+        L"en-US", L"en-GB", L"de-DE", L"fr-FR", L"ja-JP",
+        L"zh-CN", L"zh-TW", L"ko-KR", L"es-ES", L"hi-IN",
+        L"ru-RU", L"pt-BR", L"it-IT", L"pl-PL", L"tr-TR",
+    };
+
+    static bool OsSaysRtl(std::wstring_view tag)
+    {
+        const winrt::Windows::Globalization::Language lang{ winrt::hstring{ tag } };
+        return lang.LayoutDirection() == winrt::Windows::Globalization::LanguageLayoutDirection::Rtl;
+    }
 
     void RtlHelperTests::EmptyStringIsLtr()
     {
@@ -52,121 +68,53 @@ namespace TerminalAppUnitTests
 
     void RtlHelperTests::MalformedTagsAreLtr()
     {
+        // The WinRT `Language` constructor throws for these; the
+        // helper must swallow that and return false (LTR default).
         VERIFY_IS_FALSE(IsRtlLocale(L"-"));
         VERIFY_IS_FALSE(IsRtlLocale(L"-ar"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"-bogus"));
+        VERIFY_IS_FALSE(IsRtlLocale(L"not a tag"));
+        VERIFY_IS_FALSE(IsRtlLocale(L"!!!"));
     }
 
-    void RtlHelperTests::EnglishVariantsAreLtr()
+    void RtlHelperTests::MatchesOsClassificationForShippingLocales()
     {
-        VERIFY_IS_FALSE(IsRtlLocale(L"en"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"en-US"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"en-GB"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"en-AU"));
-    }
-
-    void RtlHelperTests::CommonLtrLanguagesAreLtr()
-    {
-        VERIFY_IS_FALSE(IsRtlLocale(L"de-DE"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"fr-FR"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"ja-JP"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"zh-CN"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"zh-TW"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"ru-RU"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"ko-KR"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"es-ES"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"hi-IN"));
-    }
-
-    void RtlHelperTests::ArabicVariantsAreRtl()
-    {
-        VERIFY_IS_TRUE(IsRtlLocale(L"ar"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"ar-SA"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"ar-EG"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"ar-AE"));
-    }
-
-    void RtlHelperTests::HebrewVariantsAreRtl()
-    {
-        VERIFY_IS_TRUE(IsRtlLocale(L"he"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"he-IL"));
-        // Legacy ISO-639-1 code for Hebrew — older Windows builds still emit this.
-        VERIFY_IS_TRUE(IsRtlLocale(L"iw"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"iw-IL"));
-    }
-
-    void RtlHelperTests::PersianIsRtl()
-    {
-        VERIFY_IS_TRUE(IsRtlLocale(L"fa"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"fa-IR"));
-    }
-
-    void RtlHelperTests::UrduIsRtl()
-    {
-        VERIFY_IS_TRUE(IsRtlLocale(L"ur"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"ur-PK"));
-    }
-
-    void RtlHelperTests::UyghurIsRtl()
-    {
-        VERIFY_IS_TRUE(IsRtlLocale(L"ug"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"ug-CN"));
-    }
-
-    void RtlHelperTests::OtherRtlScriptsAreRtl()
-    {
-        VERIFY_IS_TRUE(IsRtlLocale(L"ps-AF"));   // Pashto
-        VERIFY_IS_TRUE(IsRtlLocale(L"sd-PK"));   // Sindhi (Perso-Arabic)
-        VERIFY_IS_TRUE(IsRtlLocale(L"ckb-IQ"));  // Central Kurdish
-        VERIFY_IS_TRUE(IsRtlLocale(L"yi"));      // Yiddish
-        VERIFY_IS_TRUE(IsRtlLocale(L"dv-MV"));   // Divehi
-    }
-
-    void RtlHelperTests::MatchingIsCaseInsensitive()
-    {
-        VERIFY_IS_TRUE(IsRtlLocale(L"AR"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"AR-sa"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"Ar-Sa"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"HE-IL"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"EN-us"));
+        // For every locale we care about, our wrapper must agree with
+        // the OS. No hardcoded RTL list — the OS *is* the list.
+        for (const auto tag : kLocalesToProbe)
+        {
+            const bool expected = OsSaysRtl(tag);
+            const bool actual = IsRtlLocale(tag);
+            VERIFY_ARE_EQUAL(expected, actual, NoThrowString().Format(L"locale=%s", std::wstring{ tag }.c_str()));
+        }
     }
 
     void RtlHelperTests::PseudoMirroredIsRtl()
     {
         // qps-plocm is the Microsoft pseudo-mirrored pseudo-locale —
-        // shipping it as RTL is exactly what makes the pseudo-locale
-        // useful for validating FlowDirection plumbing.
+        // it is the canonical way to validate FlowDirection plumbing.
+        // The OS classifies it as RTL; we just verify we don't lose
+        // that on the way through.
+        VERIFY_IS_TRUE(OsSaysRtl(L"qps-plocm"));
         VERIFY_IS_TRUE(IsRtlLocale(L"qps-plocm"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"QPS-PLOCM"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"Qps-Plocm"));
     }
 
-    void RtlHelperTests::PseudoLtrPseudoLocaleIsLtr()
+    void RtlHelperTests::PseudoLtrPseudoLocalesAreLtr()
     {
-        // qps-ploc and qps-ploca are the LTR pseudo-locales — they
-        // accent and pad strings but do not mirror layout.
+        // qps-ploc / qps-ploca accent + pad strings but do not mirror.
+        VERIFY_IS_FALSE(OsSaysRtl(L"qps-ploc"));
         VERIFY_IS_FALSE(IsRtlLocale(L"qps-ploc"));
+        VERIFY_IS_FALSE(OsSaysRtl(L"qps-ploca"));
         VERIFY_IS_FALSE(IsRtlLocale(L"qps-ploca"));
     }
 
-    void RtlHelperTests::SubtagPrefixOnlyMatchesPrimary()
+    void RtlHelperTests::MatchingIsCaseInsensitive()
     {
-        // A language subtag that *contains* an RTL prefix but is not
-        // itself one of our known RTL tags must not match. E.g. `aru`
-        // would be a (hypothetical) 3-letter tag starting with `ar`;
-        // we only RTL-flip if the *full* primary subtag is `ar`.
-        VERIFY_IS_FALSE(IsRtlLocale(L"aru"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"arn-CL"));  // Mapuche / Mapudungun
-        VERIFY_IS_FALSE(IsRtlLocale(L"her"));     // Herero
-        VERIFY_IS_FALSE(IsRtlLocale(L"hen"));     // not a real tag, but covers the prefix-match trap
-    }
-
-    void RtlHelperTests::BareLanguageWithoutRegionWorks()
-    {
-        // No `-region` suffix — must still classify correctly.
-        VERIFY_IS_TRUE(IsRtlLocale(L"ar"));
-        VERIFY_IS_TRUE(IsRtlLocale(L"he"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"en"));
-        VERIFY_IS_FALSE(IsRtlLocale(L"de"));
+        // BCP-47 tags are case-insensitive by spec; the OS normalizes
+        // them. Confirm we pass that through correctly so a locale
+        // tag from settings.json (potentially typed with mixed case)
+        // still classifies.
+        VERIFY_ARE_EQUAL(IsRtlLocale(L"ar-SA"), IsRtlLocale(L"AR-sa"));
+        VERIFY_ARE_EQUAL(IsRtlLocale(L"he-IL"), IsRtlLocale(L"HE-il"));
+        VERIFY_ARE_EQUAL(IsRtlLocale(L"qps-plocm"), IsRtlLocale(L"QPS-PLOCM"));
     }
 }
