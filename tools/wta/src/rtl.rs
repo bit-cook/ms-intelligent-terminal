@@ -164,6 +164,16 @@ mod tests {
     }
 
     #[test]
+    fn en_us_is_ltr() {
+        // Smoke-test anchor: en-US is the universal LTR baseline.
+        // Catches a regression where the helper inverts its result or
+        // returns true on success unconditionally, without relying on
+        // OS enumeration to find any LTR locale to compare against.
+        assert!(!os_says_rtl("en-US"));
+        assert!(!is_rtl_locale("en-US"));
+    }
+
+    #[test]
     fn malformed_tags_are_ltr() {
         assert!(!is_rtl_locale("-"));
         assert!(!is_rtl_locale("-ar"));

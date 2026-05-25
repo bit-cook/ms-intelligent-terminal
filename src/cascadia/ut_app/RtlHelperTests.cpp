@@ -32,6 +32,7 @@ namespace TerminalAppUnitTests
         TEST_CLASS(RtlHelperTests);
 
         TEST_METHOD(EmptyStringIsLtr);
+        TEST_METHOD(EnUsIsLtr);
         TEST_METHOD(MalformedTagsAreLtr);
         TEST_METHOD(MatchesOsClassificationForEveryInstalledLocale);
         TEST_METHOD(PseudoMirroredIsRtl);
@@ -85,6 +86,16 @@ namespace TerminalAppUnitTests
     void RtlHelperTests::EmptyStringIsLtr()
     {
         VERIFY_IS_FALSE(IsRtlLocale(L""));
+    }
+
+    void RtlHelperTests::EnUsIsLtr()
+    {
+        // Smoke-test anchor: en-US is the universal LTR baseline.
+        // Catches a regression where the helper inverts its result or
+        // returns true on success unconditionally, without relying on
+        // OS enumeration to find any LTR locale to compare against.
+        VERIFY_IS_FALSE(OsSaysRtl(L"en-US"));
+        VERIFY_IS_FALSE(IsRtlLocale(L"en-US"));
     }
 
     void RtlHelperTests::MalformedTagsAreLtr()
