@@ -205,54 +205,51 @@ jobs:
       # config-file resolution picks it up.
       additionalTargets: 'x86_64-pc-windows-msvc i686-pc-windows-msvc aarch64-pc-windows-msvc'
 
-  # Inject the Azure Artifacts source replacement into .cargo/config.toml.
-  # The repo's .cargo/config.toml is checked in and carries the
-  # `+crt-static` rustflags that wta.exe needs to start without
-  # VCRUNTIME140.dll on customer machines (the package ships no VC
-  # runtime and strips the Microsoft.VCLibs dependency). Earlier this
-  # step used `Set-Content`, which silently clobbered those rustflags
-  # and produced CI-built wta.exe binaries that imported
-  # VCRUNTIME140.dll and failed to launch in clean environments
-  # (e.g. Windows Sandbox).
+  # Write .cargo/config.toml from scratch. CI owns this file fully —
+  # it bundles both halves of the configuration in a single Set-Content
+  # call so the step is trivially idempotent (re-runs produce the same
+  # file) and never needs to read the existing content back.
   #
-  # The strategy: read the file, locate any previously CI-injected
-  # block via a sentinel marker line, truncate the file at that
-  # marker, then append a fresh canonical CI block. Idempotent by
-  # construction — regardless of starting state, the final file is
-  # always the repo's checked-in content followed by exactly one
-  # canonical CI block. Safe under retries, dirty workspaces, future
-  # URL changes, or hand-edits.
+  # The two halves:
   #
-  # Cargo discovers .cargo/config.toml by walking from the current
-  # working directory (repo root) up — NOT from the manifest directory.
-  # The config must live at the repo root, not inside tools/wta/.
+  #   1. `[target.*-pc-windows-msvc] rustflags = +crt-static` — static-
+  #      link the MSVC CRT so wta.exe doesn't import VCRUNTIME140.dll
+  #      (the package strips Microsoft.VCLibs and ships no VC runtime;
+  #      missing the flag here causes wta.exe to fail to launch on
+  #      clean machines like Windows Sandbox).
+  #
+  #   2. `[registries] / [source.crates-io]` — route Cargo through
+  #      the internal Azure Artifacts feed. CI-only; the public feed
+  #      isn't reachable from the build agents.
+  #
+  # IMPORTANT: the rustflags block MUST stay in sync with the
+  # repo-root `.cargo/config.toml` used by local builds. If you change
+  # one, change the other. Cargo discovers config.toml by walking up
+  # from CWD (repo root), not from --manifest-path, which is why the
+  # local version lives at the repo root and not inside tools/wta/.
   - pwsh: |-
       $configDir = '.cargo'
       $configPath = Join-Path $configDir 'config.toml'
       New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+      @"
+      [target.x86_64-pc-windows-msvc]
+      rustflags = ["-C", "target-feature=+crt-static"]
 
-      $marker = '# === BEGIN: Azure Artifacts source replacement (CI-injected) ==='
-      $existing = if (Test-Path $configPath) { Get-Content $configPath -Raw } else { '' }
-      $markerIdx = $existing.IndexOf($marker)
-      if ($markerIdx -ge 0) {
-        $existing = $existing.Substring(0, $markerIdx)
-      }
-      $existing = $existing.TrimEnd()
+      [target.i686-pc-windows-msvc]
+      rustflags = ["-C", "target-feature=+crt-static"]
 
-      $injection = @"
-      $marker
+      [target.aarch64-pc-windows-msvc]
+      rustflags = ["-C", "target-feature=+crt-static"]
+
       [registries]
       WindowsTerminalCargo = { index = "sparse+https://pkgs.dev.azure.com/microsoft/Dart/_packaging/IntelligentTerminal_Cargo/Cargo/index/" }
 
       [source.crates-io]
       replace-with = "WindowsTerminalCargo"
-      "@
-
-      $final = if ($existing) { "$existing`n`n$injection`n" } else { "$injection`n" }
-      Set-Content -Path $configPath -Value $final -Encoding utf8NoBOM -NoNewline
+      "@ | Set-Content -Path $configPath -Encoding utf8NoBOM
       Write-Host "Wrote $configPath:"
       Get-Content $configPath
-    displayName: Inject Cargo registry config (CI only)
+    displayName: Write Cargo config (CI only)
 
   # CargoAuthenticate issues a Bearer token (using System.AccessToken) for
   # every Azure Artifacts Cargo feed referenced in the config file.
