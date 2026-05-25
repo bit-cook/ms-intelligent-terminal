@@ -253,7 +253,13 @@ fn build_completed_turn_lines<'a>(
         }
     }
 
-    lines.push(Line::default());
+    // Push a trailing blank only if the last detail (or the prompt header
+    // for collapsed turns) didn't already supply one. Agent / Error /
+    // System / Plan / AgentEvent all trail a blank via build_message_lines;
+    // ToolCall does not, and collapsed turns stop at the prompt header.
+    if lines.last().map_or(true, |l| !l.spans.is_empty()) {
+        lines.push(Line::default());
+    }
     lines
 }
 
