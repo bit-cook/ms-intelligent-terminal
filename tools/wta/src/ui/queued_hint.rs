@@ -155,7 +155,14 @@ mod tests {
         // `max_cells`. Regression for the Copilot round-3 review case:
         // `a\u{0301}b` with `max_cells=1` previously emitted `a…` which
         // displays as 2 cells.
-        let out = truncate_to_width("a\u{0301}bcdef", 1);
+        //
+        // Fixture: one grapheme `á` (a + combining acute, U+0301) followed
+        // by a few trailing chars to force the truncate loop past the
+        // budget. The trailing chars are deliberately digits — their
+        // identity doesn't matter, only that there's *something* after the
+        // base grapheme. Using digits avoids the spell checker flagging an
+        // arbitrary letter run as an unrecognized word.
+        let out = truncate_to_width("a\u{0301}1234", 1);
         let width = unicode_width::UnicodeWidthStr::width(out.as_str());
         assert!(
             width <= 1,
