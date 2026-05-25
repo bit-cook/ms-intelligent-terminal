@@ -6018,10 +6018,13 @@ impl App {
     /// machine back to Idle, and pushes a "Cancelled." system bubble.
     /// Returns `true` iff a turn was actually in flight and was cancelled.
     ///
-    /// Note: when the queue is non-empty, the per-tick `drain_pending_prompts`
-    /// hook will promote the next queued prompt on the following tick. That's
-    /// the intended "Esc peels prompts off the head one by one" UX — each
-    /// Esc cancels the current head; the queue keeps rotating.
+    /// **Esc ordering note:** the Esc handler runs `pending_prompts.pop_back()`
+    /// (LIFO) *before* falling through to this helper, so on a non-empty
+    /// queue Esc removes the most-recently queued prompt rather than
+    /// cancelling the in-flight head. This helper only fires when the
+    /// queue is empty (or the call comes from Ctrl+C, which has no
+    /// queue-pop short-circuit). After cancel, `drain_pending_prompts`
+    /// can promote any newly queued prompt on the next tick.
     fn cancel_in_flight_turn(&mut self) -> bool {
         // Surfaced{end_pending:false} is the "accepts new prompt" state —
         // not in flight even though the turn isn't Idle. Mirror the matcher
@@ -8620,7 +8623,7 @@ mod tests {
     }
 
     #[test]
-    fn drain_noops_when_disconnected() {
+    fn drain_no_ops_when_disconnected() {
         let mut app = connected_app_with_text("first");
         press_enter(&mut app);
         type_text(&mut app, "queued");
@@ -8640,7 +8643,7 @@ mod tests {
 
     #[test]
     fn queued_prompt_preview_truncates_and_collapses_whitespace() {
-        let q = QueuedPrompt::new("  hello\n\nworld   ".into());
+        let q = QueuedPrompt::new("  hello  \n\n  world   ".into());
         assert_eq!(q.preview(40), "hello world");
         let long = QueuedPrompt::new("x".repeat(100));
         let preview = long.preview(10);
