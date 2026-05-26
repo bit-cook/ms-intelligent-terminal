@@ -3965,6 +3965,27 @@ namespace winrt::TerminalApp::implementation
     void TerminalPage::_AgentToggleButtonOnClick(const IInspectable& /*sender*/,
                                                   const RoutedEventArgs& /*eventArgs*/)
     {
+        // Mirror `_HandleOpenAgentPane` (Ctrl+Shift+.) semantics: when the
+        // pane is visible on the active tab and currently showing the
+        // sessions view, switch to chat rather than closing. Otherwise
+        // fall through to the legacy `_OpenOrReuseAgentPane` toggle
+        // (open / close / relocate). Without this, clicking the chat
+        // toggle while the pane is open in sessions view incorrectly
+        // hides the pane instead of revealing the chat view.
+        const auto pane = _FindAgentPane();
+        const auto activeTab = _GetFocusedTabImpl();
+        const bool visibleOnActiveTab =
+            pane && activeTab && (_FindTabContainingAgentPane() == activeTab) && !pane->IsHidden();
+
+        if (visibleOnActiveTab && _agentSessionsViewActive)
+        {
+            // Request only. wta flips its per-tab `current_view` to chat
+            // and echoes back the snapshot via `agent_state_changed`;
+            // `OnAgentStateChanged` is the sole writer of the mirrors.
+            _RequestAgentState("chat", std::nullopt);
+            return;
+        }
+
         _OpenOrReuseAgentPane(L"", false, L"ToolbarButton");
         _UpdateBottomBarState();
     }
