@@ -1568,7 +1568,6 @@ async fn run_acp_app(
                 let wt_event_tx = event_tx.clone();
                 tokio::task::spawn_local(async move {
                     while let Some(event_json) = wt_rx.recv().await {
-                        tracing::debug!(event = %event_json, "wt_event_rx: received event");
                         let method = event_json
                             .get("method")
                             .and_then(|v| v.as_str())
@@ -1609,6 +1608,15 @@ async fn run_acp_app(
                             .get("tab_id")
                             .and_then(|v| v.as_str())
                             .map(str::to_string);
+                        let body_bytes = serde_json::to_string(&params)
+                            .map(|s| s.len())
+                            .unwrap_or(0);
+                        tracing::debug!(
+                            method = %method,
+                            pane_id = %pane_id,
+                            bytes = body_bytes,
+                            "wt_event_rx: received event"
+                        );
                         let _ = wt_event_tx.send(app::AppEvent::WtEvent {
                             method,
                             pane_id,
