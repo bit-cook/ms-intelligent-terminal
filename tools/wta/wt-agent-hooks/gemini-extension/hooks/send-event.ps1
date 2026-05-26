@@ -158,7 +158,7 @@ try {
     # Drop large model-bound fields wta never reads, so multi-KB tool output
     # doesn't ride the hook -> wtcli -> COM -> wta pipeline for nothing.
     if ($parsed -is [System.Management.Automation.PSCustomObject]) {
-        foreach ($key in @('tool_result', 'tool_response')) {
+        foreach ($key in @('tool_result', 'tool_response', 'tool_output', 'toolResult', 'toolResponse', 'toolOutput')) {
             if ($parsed.PSObject.Properties[$key]) {
                 $parsed.PSObject.Properties.Remove($key)
             }
