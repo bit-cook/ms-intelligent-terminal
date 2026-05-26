@@ -152,23 +152,38 @@ if (-not $Global:__ShellInteg_Installed) {
     // script — current (shell-integration_vN.ps1) AND legacy (shell-integration.ps1)
     // — so upgrades can rewrite the line in place.
     //
-    // Pattern (multiline): line begins with `.` + whitespace + a quoted path
-    // whose FINAL filename component is `shell-integration*.ps1`. The path
-    // component check (preceded by `/`, `\`, or the opening quote; followed
-    // only by non-separator chars before `.ps1`) avoids false matches on
-    // directories that happen to contain "shell-integration" or on trailing
-    // comments after an unrelated dot-source line.
+    // Pattern: line begins with `.` + whitespace + a quoted path whose
+    // FINAL filename component is `shell-integration*.ps1`. The path
+    // component check (preceded by `/`, `\`, or the opening quote;
+    // followed only by non-separator chars before `.ps1`) avoids false
+    // matches on directories that happen to contain "shell-integration"
+    // or on trailing comments after an unrelated dot-source line.
+    //
+    // `(^|\n)` substitutes for the C++17 `multiline` flag — MSVC's
+    // STL does NOT define `std::regex_constants::multiline` (only the
+    // basic POSIX flags + icase/nosubs/optimize/collate), so the
+    // documented C++17 spelling does not compile here. We instead match
+    // start-of-string OR a literal newline, and trim the consumed `\n`
+    // out of the returned range so callers still see only the
+    // dot-source line itself.
     inline std::pair<size_t, size_t> FindShellIntegrationDotSourceLine(std::string_view contents)
     {
         static const std::regex pattern{
-            R"(^[ \t]*\.[ \t]+"(?:[^"]*[\\/])?shell-integration[^"\\/]*\.ps1".*)",
-            std::regex_constants::ECMAScript | std::regex_constants::multiline
+            R"((^|\n)[ \t]*\.[ \t]+"(?:[^"]*[\\/])?shell-integration[^"\\/]*\.ps1".*)",
+            std::regex_constants::ECMAScript
         };
         std::cmatch m;
         if (std::regex_search(contents.data(), contents.data() + contents.size(), m, pattern))
         {
-            const size_t start = static_cast<size_t>(m.position());
+            size_t start = static_cast<size_t>(m.position());
             size_t end = start + static_cast<size_t>(m.length());
+            // If the alternation matched `\n` (non-first-line case), the
+            // newline is at `contents[start]`; advance past it so the
+            // returned range starts on the dot-source line proper.
+            if (start < contents.size() && contents[start] == '\n')
+            {
+                ++start;
+            }
             // `.` doesn't match `\n`, so the match naturally stops at end-of-line.
             // For CRLF input a trailing `\r` may remain in the captured range — strip it.
             while (end > start && contents[end - 1] == '\r')
