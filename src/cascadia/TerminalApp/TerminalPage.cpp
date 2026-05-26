@@ -6600,6 +6600,34 @@ namespace winrt::TerminalApp::implementation
                 if (auto wrapped = _WrapInAgentPaneContent(resultPane))
                 {
                     wrapped->IsAgentPane(true);
+
+                    // Mirror the `Pane::Closed` → `SharedWta::ReleasePane`
+                    // wiring that `_AutoCreateHiddenAgentPaneShared`
+                    // installs on the source side. The drag-in pane is a
+                    // freshly-constructed `Pane` object; without this
+                    // handler, any path that calls `pane->Close()` on it
+                    // (Ctrl+C×2 → `OnCloseAgentPaneRequested` →
+                    // `_TeardownAgentPane`, or settings-rebuild via
+                    // `_RebuildAgentStack` → `_TeardownAgentPane`) would
+                    // raise `Closed` without anyone decrementing the
+                    // SharedWta refcount that the source side's
+                    // `AcquirePane()` contributed. The tab-close walk
+                    // in `_RemoveTab` wouldn't catch it either, because
+                    // the pane is already gone from the tree by the time
+                    // the tab finally closes. Net: the master process
+                    // would be kept alive past its last live pane.
+                    //
+                    // No new `AcquirePane()` here — the source side's
+                    // existing refcount carries across the drag (source's
+                    // `_RemoveTab(movingAway=true)` deliberately skips
+                    // `ReleasePane` precisely so the dragged helper has a
+                    // refcount to live on). This `Closed` handler is the
+                    // matching `Release` for that.
+                    wrapped->Closed([](auto&&, auto&&) {
+                        _agentPaneLog("drag-in agent pane closed");
+                        winrt::TerminalApp::implementation::SharedWta::Instance().ReleasePane();
+                    });
+
                     if (const auto agentContent = wrapped->GetContent().try_as<winrt::TerminalApp::AgentPaneContent>())
                     {
                         agentContent.SetAgentPanePosition(_settings.GlobalSettings().AgentPanePosition());
