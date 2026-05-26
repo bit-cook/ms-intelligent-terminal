@@ -803,6 +803,77 @@ impl AgentSessionRegistry {
         }
     }
 
+    /// Join the helper's alive-session mirror into this registry — the
+    /// "upgrade Historical to Live" half of Class A's composite source.
+    ///
+    /// Each `(session_id, pane_session_id)` tuple represents one entry
+    /// from the master's [`SessionInfo`](crate::session_registry::SessionInfo)
+    /// snapshot. For each tuple, if there's a row whose [`AgentKey`]
+    /// equals `session_id` and whose [`liveness`](AgentSession::liveness)
+    /// is `Historical` or `Ended`, upgrade it to `Live` (`AgentStatus::Idle`)
+    /// and bind the pane.
+    ///
+    /// Motivation: at startup the on-disk history scan
+    /// (`history_loader::load_all`) and the helper's `list_sessions`
+    /// bootstrap can land in either order, and a WTA process attached
+    /// to an existing master in another WT window may never see the
+    /// originating `SessionStarted` hook event. Without this join, a
+    /// session that is still alive in some pane would be shown as
+    /// Historical in F2 and Enter would mis-route to "resume new"
+    /// instead of "focus existing".
+    ///
+    /// Idempotent — re-applying with the same snapshot is a no-op
+    /// because the second call sees `liveness == Live` and skips.
+    /// Live rows (Idle/Working/Attention/Error) are never demoted by
+    /// this method — `apply_alive_pane_snapshot` is the canonical
+    /// disappearance path.
+    ///
+    /// The join is intentionally string-keyed (no `SessionId` import)
+    /// to keep this module decoupled from `session_registry`. For
+    /// `Class A` (agent-pane-managed) sessions, ACP `session_id`
+    /// equals `AgentKey` for the CLIs that reuse their own session id
+    /// (Claude). For CLIs whose ACP id diverges from the CLI's own id
+    /// (Copilot may differ), the join simply misses — the row stays
+    /// Historical, which is the same behaviour as today and degrades
+    /// gracefully (Enter will start a new session).
+    pub fn apply_alive_session_join<'a>(
+        &mut self,
+        alive: impl IntoIterator<Item = (&'a str, Option<&'a str>)>,
+    ) {
+        let now = SystemTime::now();
+        for (sid, pane_opt) in alive {
+            let Some(entry) = self.sessions.get_mut(sid) else { continue };
+            // Only upgrade non-Live rows; never demote Live rows here.
+            let live = matches!(entry.liveness(), LivenessState::Live);
+            if live { continue; }
+
+            entry.status            = AgentStatus::Idle;
+            entry.last_activity_at  = now;
+            entry.current_tool      = None;
+            entry.attention_reason  = None;
+            entry.last_error        = None;
+            if let Some(pane) = pane_opt {
+                let pane_lc = pane.to_ascii_lowercase();
+                // Drop any previous binding pointing elsewhere.
+                if let Some(old_pane) = entry.pane_session_id.take() {
+                    if old_pane != pane_lc {
+                        self.active_by_pane.remove(&old_pane);
+                    }
+                }
+                entry.pane_session_id = Some(pane_lc.clone());
+                self.active_by_pane.insert(pane_lc.clone(), sid.to_string());
+                self.known_alive_panes.insert(pane_lc);
+            }
+            self.dirty = true;
+            tracing::info!(
+                target: "agent_session_registry",
+                key = %sid,
+                pane = ?pane_opt,
+                "alive snapshot upgraded row Historical/Ended → Live",
+            );
+        }
+    }
+
     /// Drop any synthetic `pane:<guid>` session bound to the given pane.
     /// Used when a real `agent.session.started` arrives to clean up the
     /// placeholder created by an earlier tool event with no agent_session_id.
@@ -2072,6 +2143,147 @@ mod tests {
         assert_eq!(reg.sessions.get("sid").unwrap().liveness(), LivenessState::Live);
 
         // Drop it — also in mixed case absence form (empty snapshot).
+        reg.apply_alive_pane_snapshot(HashSet::new());
+        assert_eq!(reg.sessions.get("sid").unwrap().liveness(), LivenessState::Ended);
+    }
+
+    // -------- B-9: history × alive-mirror join --------
+
+    fn make_historical(key: &str) -> AgentSession {
+        AgentSession {
+            key: key.into(),
+            cli_source: CliSource::Claude,
+            pane_session_id: None,
+            window_id: None,
+            tab_id: None,
+            title: "t".into(),
+            cwd: PathBuf::from("/x"),
+            started_at: SystemTime::UNIX_EPOCH,
+            last_activity_at: SystemTime::UNIX_EPOCH,
+            status: AgentStatus::Historical,
+            last_error: None,
+            current_tool: None,
+            attention_reason: None,
+            log_path: None,
+            origin: SessionOrigin::AgentPane,
+        }
+    }
+
+    #[test]
+    fn apply_alive_session_join_upgrades_historical_to_live_and_binds_pane() {
+        // The scenario the join is meant to fix: history scan loaded a
+        // row as Historical (it pre-dates this WTA process), but the
+        // master's alive snapshot says the session is still running in
+        // some pane. The join must upgrade the row to Live (Idle) and
+        // bind the pane so a subsequent F2 Enter routes to "focus".
+        let mut reg = AgentSessionRegistry::new();
+        reg.merge_historical(vec![make_historical("sid-hist")]);
+        assert_eq!(reg.sessions.get("sid-hist").unwrap().liveness(),
+                   LivenessState::Historical);
+
+        reg.apply_alive_session_join([("sid-hist", Some("pane-XYZ"))]);
+
+        let s = reg.sessions.get("sid-hist").unwrap();
+        assert_eq!(s.liveness(), LivenessState::Live);
+        assert_eq!(s.status, AgentStatus::Idle);
+        assert_eq!(s.pane_session_id.as_deref(), Some("pane-xyz"),
+                   "pane GUID is bound and lowercased");
+        assert_eq!(reg.active_by_pane.get("pane-xyz").map(|k| k.as_str()),
+                   Some("sid-hist"));
+        assert!(reg.take_dirty());
+    }
+
+    #[test]
+    fn apply_alive_session_join_is_noop_for_already_live_rows() {
+        // If the alive snapshot replays a session that we already know
+        // about via SessionStarted, the join must NOT clobber tool /
+        // attention state by demoting back to Idle. Live wins.
+        let mut reg = AgentSessionRegistry::new();
+        reg.apply(SessionEvent::SessionStarted {
+            key: k("sid"), cli_source: CliSource::Claude,
+            pane_session_id: pane("pane-orig"), cwd: PathBuf::from("/x"),
+            title: "t".into(),
+        });
+        reg.apply(SessionEvent::ToolStarting { key: k("sid"), tool_name: "bash".into() });
+        let _ = reg.take_dirty();
+
+        reg.apply_alive_session_join([("sid", Some("pane-different"))]);
+        let s = reg.sessions.get("sid").unwrap();
+        assert_eq!(s.status, AgentStatus::Working, "tool state preserved");
+        assert_eq!(s.pane_session_id.as_deref(), Some("pane-orig"),
+                   "pane binding not overwritten");
+        assert!(!reg.take_dirty(), "no-op must not flag dirty");
+    }
+
+    #[test]
+    fn apply_alive_session_join_upgrades_ended_rows_too() {
+        // An "Ended" row could be ended by a stale tombstone (e.g.
+        // an old PaneClosed event reconciled against a stale pane).
+        // If the alive mirror later says "this sid is live in pane Y",
+        // the row should come back to Live with the new pane bound.
+        let mut reg = AgentSessionRegistry::new();
+        reg.apply(SessionEvent::SessionStarted {
+            key: k("sid"), cli_source: CliSource::Claude,
+            pane_session_id: pane("pane-old"), cwd: PathBuf::from("/x"),
+            title: "t".into(),
+        });
+        reg.apply(SessionEvent::PaneClosed { pane_session_id: pane("pane-old") });
+        assert_eq!(reg.sessions.get("sid").unwrap().status, AgentStatus::Ended);
+
+        reg.apply_alive_session_join([("sid", Some("pane-new"))]);
+        let s = reg.sessions.get("sid").unwrap();
+        assert_eq!(s.liveness(), LivenessState::Live);
+        assert_eq!(s.pane_session_id.as_deref(), Some("pane-new"));
+        assert_eq!(reg.active_by_pane.get("pane-new").map(|k| k.as_str()), Some("sid"));
+        assert!(reg.active_by_pane.get("pane-old").is_none(),
+                "old binding cleared by PaneClosed must stay cleared");
+    }
+
+    #[test]
+    fn apply_alive_session_join_ignores_unknown_sids() {
+        // SessionInfo for a sid we don't have in the registry → no-op.
+        // We don't fabricate rows from alive snapshots; SessionStarted
+        // is still the canonical source for new rows.
+        let mut reg = AgentSessionRegistry::new();
+        reg.apply_alive_session_join([("never-seen", Some("pane-x"))]);
+        assert!(reg.sessions.is_empty());
+        assert!(reg.active_by_pane.is_empty());
+        assert!(!reg.take_dirty());
+    }
+
+    #[test]
+    fn apply_alive_session_join_without_pane_only_upgrades_status() {
+        // Some SessionInfo entries have pane_session_id == None (e.g.
+        // legacy sessions replayed before _meta.wta carried a pane id).
+        // The join must still upgrade Historical → Live; no pane is
+        // bound, and active_by_pane is untouched.
+        let mut reg = AgentSessionRegistry::new();
+        reg.merge_historical(vec![make_historical("sid")]);
+
+        reg.apply_alive_session_join([("sid", None)]);
+        let s = reg.sessions.get("sid").unwrap();
+        assert_eq!(s.liveness(), LivenessState::Live);
+        assert_eq!(s.status, AgentStatus::Idle);
+        assert!(s.pane_session_id.is_none(), "no pane binding without a pane id");
+        assert!(reg.active_by_pane.is_empty());
+    }
+
+    #[test]
+    fn apply_alive_session_join_then_pane_snapshot_round_trip() {
+        // Bookend test: history loads Historical → join upgrades to Live
+        // with pane bound → later pane-snapshot drops it → row Ended.
+        // Verifies B-8's apply_alive_pane_snapshot interoperates with
+        // the join (the bound pane lands in known_alive_panes).
+        let mut reg = AgentSessionRegistry::new();
+        reg.merge_historical(vec![make_historical("sid")]);
+        reg.apply_alive_session_join([("sid", Some("pane-1"))]);
+        assert_eq!(reg.sessions.get("sid").unwrap().liveness(), LivenessState::Live);
+
+        // Master initially confirms the pane is alive.
+        reg.apply_alive_pane_snapshot(HashSet::from(["pane-1".into()]));
+        assert_eq!(reg.sessions.get("sid").unwrap().liveness(), LivenessState::Live);
+
+        // Then it disappears from a later snapshot.
         reg.apply_alive_pane_snapshot(HashSet::new());
         assert_eq!(reg.sessions.get("sid").unwrap().liveness(), LivenessState::Ended);
     }

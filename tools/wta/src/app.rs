@@ -961,6 +961,23 @@ pub enum AppEvent {
     /// `intellterm.wta/session_removed`. Symmetric counterpart to
     /// `AliveSessionAdded`.
     AliveSessionRemoved(agent_client_protocol::SessionId),
+    /// Apply an "upgrade Historical/Ended → Live" join between the
+    /// historical-row registry (`agent_sessions`) and the alive-session
+    /// mirror. Posted from either of two places:
+    ///
+    ///   * `AliveSnapshotLoaded` (master's bootstrap reply) — the
+    ///     handler converts each `SessionInfo` into a `(sid, pane)`
+    ///     pair, dispatches `AliveJoinUpgrade`, and lets the main
+    ///     loop apply it serialized w.r.t. other agent-sessions
+    ///     mutations.
+    ///   * `HistoricalSessionsLoaded` (background `history_loader::load_all`)
+    ///     — the handler spawns a one-shot async task to snapshot the
+    ///     current alive registry and posts this event so the join can
+    ///     happen even when the on-disk scan finishes after the alive
+    ///     bootstrap.
+    ///
+    /// See [`crate::agent_sessions::AgentSessionRegistry::apply_alive_session_join`].
+    AliveJoinUpgrade(Vec<(String, Option<String>)>),
 }
 
 // --- Per-tab session storage ---
@@ -2978,6 +2995,7 @@ impl App {
             AppEvent::AliveSnapshotLoaded(_) => "alive_snapshot_loaded",
             AppEvent::AliveSessionAdded(_) => "alive_session_added",
             AppEvent::AliveSessionRemoved(_) => "alive_session_removed",
+            AppEvent::AliveJoinUpgrade(_) => "alive_join_upgrade",
         }
     }
 
@@ -3459,6 +3477,28 @@ impl App {
                 self.agent_sessions.merge_historical(sessions);
                 self.history_load_state = HistoryLoadState::Loaded;
 
+                // B-9: kick off an async snapshot of the alive mirror and
+                // post `AliveJoinUpgrade` so rows whose ACP session_id is
+                // still alive (e.g. this WTA process attached to an
+                // existing master in another WT window and never saw the
+                // SessionStarted hook) get upgraded Historical → Live.
+                // Skip until alive_loaded so we don't run the join over
+                // an empty registry on cold startup — the AliveSnapshotLoaded
+                // handler will fire its own join when bootstrap returns.
+                if self.alive_loaded.load(std::sync::atomic::Ordering::Relaxed) {
+                    if let Some(tx) = self.event_tx.clone() {
+                        let reg = std::sync::Arc::clone(&self.alive);
+                        tokio::task::spawn_local(async move {
+                            let items = reg.snapshot().await;
+                            let tuples: Vec<(String, Option<String>)> = items
+                                .into_iter()
+                                .map(|i| (i.session_id.0.to_string(), i.pane_session_id))
+                                .collect();
+                            let _ = tx.send(AppEvent::AliveJoinUpgrade(tuples));
+                        });
+                    }
+                }
+
                 // If the user is already on the Agents view (e.g. they were
                 // dropped there by --initial-view sessions, or they pressed
                 // F2 / Ctrl+Shift+/ before the scan finished) and nothing
@@ -3481,6 +3521,20 @@ impl App {
                     count,
                     "applied master alive-session bootstrap snapshot"
                 );
+
+                // B-9: eagerly snapshot `(sid, pane)` tuples and post
+                // `AliveJoinUpgrade` so any already-loaded Historical rows
+                // get upgraded to Live. Done before the async registry
+                // write so we don't depend on the spawned task finishing
+                // before the next event handler runs.
+                if let Some(tx) = self.event_tx.clone() {
+                    let tuples: Vec<(String, Option<String>)> = items
+                        .iter()
+                        .map(|i| (i.session_id.0.to_string(), i.pane_session_id.clone()))
+                        .collect();
+                    let _ = tx.send(AppEvent::AliveJoinUpgrade(tuples));
+                }
+
                 let reg = std::sync::Arc::clone(&self.alive);
                 let loaded = std::sync::Arc::clone(&self.alive_loaded);
                 // The registry is async; we cannot await here (sync
@@ -3516,6 +3570,18 @@ impl App {
                 tokio::task::spawn_local(async move {
                     reg.remove(&sid).await;
                 });
+            }
+            AppEvent::AliveJoinUpgrade(tuples) => {
+                tracing::debug!(
+                    target: "alive_mirror",
+                    count = tuples.len(),
+                    "running alive×history join (B-9)"
+                );
+                let pairs: Vec<(&str, Option<&str>)> = tuples
+                    .iter()
+                    .map(|(s, p)| (s.as_str(), p.as_deref()))
+                    .collect();
+                self.agent_sessions.apply_alive_session_join(pairs);
             }
             AppEvent::WtEvent {
                 method,
