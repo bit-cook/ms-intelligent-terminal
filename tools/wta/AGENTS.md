@@ -261,9 +261,27 @@ and `liveness()` derive from it (see `agent_sessions.rs`).
 History scan and alive-mirror bootstrap arrive in either order. Both
 paths post `AppEvent::AliveJoinUpgrade`, which calls
 `AgentSessionRegistry::apply_alive_session_join` to upgrade
-non-Live rows whose ACP session_id is in the alive mirror to
-`LivenessState::Live`. Live rows are never demoted — preserves
+**Historical** rows whose ACP session_id is in the alive mirror to
+`LivenessState::Live`. **Ended** rows (locally tombstoned by a
+`PaneClosed` event in this process) are **not** upgraded — local
+tombstones are authoritative, so a stale `session_added` broadcast
+arriving after `PaneClosed` cannot resurrect a row that has no
+demotion path back. Live rows are never demoted — preserves
 tool/attention state. See `agent_sessions.rs::apply_alive_session_join`.
+
+### Steady-state alive-mirror updates
+
+Every `intellterm.wta/session_added` notification from master also
+runs the incremental join synchronously in `app.rs` (calls
+`apply_alive_session_join([(sid, pane)])` before the async mirror
+upsert), so a Historical row matched by an arriving alive broadcast
+becomes Live in the same tick. Every `intellterm.wta/session_removed`
+notification calls `apply_master_session_ended(sid)` — the
+counterpart of `apply_alive_pane_snapshot` for a single explicit
+disappearance — which demotes a Live row to Ended, clears the pane
+binding, and prunes `known_alive_panes`. Without these two
+synchronous reducer calls, F2 rows would stay frozen at whatever
+state the last bootstrap snapshot saw.
 
 ### Enter / Shift+Enter dispatch
 

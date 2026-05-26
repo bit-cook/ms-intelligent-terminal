@@ -803,6 +803,48 @@ impl AgentSessionRegistry {
         }
     }
 
+    /// Demote the row owned by `session_id` to `Ended` if it is currently
+    /// alive. The incremental counterpart of [`apply_alive_pane_snapshot`]:
+    /// where the snapshot path computes "panes that disappeared from the
+    /// alive set", this path acts on a single explicit `session_removed`
+    /// broadcast from master (i.e. the helper that owned `session_id` just
+    /// disconnected or the agent CLI exited).
+    ///
+    /// Mirrors [`SessionEvent::PaneClosed`]'s reducer: clears the pane
+    /// binding, transitions to [`AgentStatus::Ended`], and removes the
+    /// pane from `active_by_pane`. The pane is **also** removed from
+    /// `known_alive_panes` so a subsequent `apply_alive_pane_snapshot`
+    /// won't try to re-end it.
+    ///
+    /// No-op when the row is `Historical` (it was loaded from disk; no
+    /// pane to demote), `Ended` (already tombstoned by a local
+    /// `PaneClosed` event), or absent (we never had a row for this sid).
+    /// Idempotent.
+    pub fn apply_master_session_ended(&mut self, session_id: &str) {
+        let now = SystemTime::now();
+        let Some(entry) = self.sessions.get_mut(session_id) else {
+            return;
+        };
+        if entry.liveness() != LivenessState::Live {
+            return;
+        }
+        let pane_to_clear = entry.pane_session_id.take();
+        entry.status            = AgentStatus::Ended;
+        entry.current_tool      = None;
+        entry.attention_reason  = None;
+        entry.last_activity_at  = now;
+        self.dirty = true;
+        if let Some(pane) = pane_to_clear {
+            self.active_by_pane.remove(&pane);
+            self.known_alive_panes.remove(&pane);
+        }
+        tracing::info!(
+            target: "agent_session_registry",
+            key = %session_id,
+            "master session_removed broadcast demoted row → Ended",
+        );
+    }
+
     /// Join the helper's alive-session mirror into this registry — the
     /// "upgrade Historical to Live" half of Class A's composite source.
     ///
@@ -2301,5 +2343,82 @@ mod tests {
         // Then it disappears from a later snapshot.
         reg.apply_alive_pane_snapshot(HashSet::new());
         assert_eq!(reg.sessions.get("sid").unwrap().liveness(), LivenessState::Ended);
+    }
+
+    #[test]
+    fn apply_master_session_ended_demotes_live_row_to_ended() {
+        // Mirrors PaneClosed: Live row → Ended with pane binding cleared.
+        // Driven by master's `intellterm.wta/session_removed` broadcast
+        // when a helper exits — without this path the agent_sessions
+        // reducer never sees the disappearance and the F2 row stays
+        // stuck on Live.
+        let mut reg = AgentSessionRegistry::new();
+        reg.apply(SessionEvent::SessionStarted {
+            key: k("sid"), cli_source: CliSource::Claude,
+            pane_session_id: pane("p"), cwd: PathBuf::from("/x"),
+            title: "t".into(),
+        });
+        // Seed known_alive_panes so we can assert it's also pruned.
+        reg.apply_alive_pane_snapshot(HashSet::from(["p".into()]));
+        assert_eq!(reg.sessions.get("sid").unwrap().liveness(), LivenessState::Live);
+        assert!(reg.known_alive_panes.contains("p"));
+
+        reg.apply_master_session_ended("sid");
+        let s = reg.sessions.get("sid").unwrap();
+        assert_eq!(s.liveness(), LivenessState::Ended);
+        assert!(s.pane_session_id.is_none());
+        assert!(reg.active_by_pane.get("p").is_none(),
+            "active_by_pane must be cleared so future pane events don't hit a stale binding");
+        assert!(!reg.known_alive_panes.contains("p"),
+            "known_alive_panes must be pruned so a subsequent pane snapshot doesn't try to re-end");
+        assert!(reg.take_dirty());
+    }
+
+    #[test]
+    fn apply_master_session_ended_is_noop_for_historical_row() {
+        // Historical rows have never been Live in this process; the
+        // master removed broadcast carries no useful information for
+        // them (they never had a pane binding to clear). Must be a
+        // pure no-op so we don't surprise the disk loader.
+        let mut reg = AgentSessionRegistry::new();
+        reg.merge_historical(vec![make_historical("sid")]);
+        reg.take_dirty();
+
+        reg.apply_master_session_ended("sid");
+        let s = reg.sessions.get("sid").unwrap();
+        assert_eq!(s.liveness(), LivenessState::Historical);
+        assert!(!reg.take_dirty(), "no-op must not dirty the registry");
+    }
+
+    #[test]
+    fn apply_master_session_ended_is_noop_for_already_ended_row() {
+        // Two paths can end a row: local PaneClosed and master
+        // session_removed. Whichever wins the race, the other must
+        // be a no-op so we don't double-fire `dirty` or accidentally
+        // re-clear a binding the user has since re-established via
+        // resume.
+        let mut reg = AgentSessionRegistry::new();
+        reg.apply(SessionEvent::SessionStarted {
+            key: k("sid"), cli_source: CliSource::Claude,
+            pane_session_id: pane("p"), cwd: PathBuf::from("/x"),
+            title: "t".into(),
+        });
+        reg.apply(SessionEvent::PaneClosed { pane_session_id: pane("p") });
+        assert_eq!(reg.sessions.get("sid").unwrap().liveness(), LivenessState::Ended);
+        reg.take_dirty();
+
+        reg.apply_master_session_ended("sid");
+        assert!(!reg.take_dirty());
+    }
+
+    #[test]
+    fn apply_master_session_ended_is_noop_for_unknown_sid() {
+        // Master may broadcast `session_removed` for sessions we never
+        // saw (e.g. created in another WT window's WTA process). Must
+        // not fabricate a tombstone row.
+        let mut reg = AgentSessionRegistry::new();
+        reg.apply_master_session_ended("never-seen");
+        assert!(reg.sessions.is_empty());
+        assert!(!reg.take_dirty());
     }
 }

@@ -3770,6 +3770,15 @@ impl App {
                     pane = ?info.pane_session_id,
                     "alive session added by master"
                 );
+                // Run the incremental join synchronously so a Historical
+                // row (loaded from disk) becomes Live the moment master
+                // tells us it's alive. Without this, only the bootstrap
+                // `AliveSnapshotLoaded` join would upgrade rows — every
+                // subsequent `session_added` broadcast would land only
+                // in the mirror and the F2 row would stay Historical.
+                self.agent_sessions.apply_alive_session_join(
+                    [(sid.0.as_ref(), info.pane_session_id.as_deref())],
+                );
                 let reg = std::sync::Arc::clone(&self.alive);
                 tokio::task::spawn_local(async move {
                     reg.upsert(info).await;
@@ -3781,6 +3790,13 @@ impl App {
                     session_id = %sid.0,
                     "alive session removed by master"
                 );
+                // Mirror PaneClosed's reducer for this sid synchronously,
+                // before the async mirror update lands. Otherwise the F2
+                // row stays stuck on Live until the next bootstrap, since
+                // `apply_alive_pane_snapshot` is only called at startup
+                // and `AliveSessionRemoved` had no path into the reducer
+                // (the bug rubber-duck Finding 2 surfaced post-B-12).
+                self.agent_sessions.apply_master_session_ended(sid.0.as_ref());
                 let reg = std::sync::Arc::clone(&self.alive);
                 tokio::task::spawn_local(async move {
                     reg.remove(&sid).await;
