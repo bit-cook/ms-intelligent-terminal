@@ -2,10 +2,10 @@
 extern crate rust_i18n;
 
 mod agent_check;
+mod agent_hooks_installer;
+mod agent_pane_origin;
 mod agent_registry;
 mod agent_sessions;
-mod agent_pane_origin;
-mod agent_hooks_installer;
 mod app;
 mod commands;
 mod coordinator;
@@ -15,10 +15,10 @@ mod history_loader;
 mod logging;
 mod master;
 mod osc52;
-mod protocol;
-mod runtime_paths;
-mod rtl;
 mod pane_context;
+mod protocol;
+mod rtl;
+mod runtime_paths;
 mod session_mgmt;
 mod session_registry;
 mod shell;
@@ -72,15 +72,15 @@ fn normalize_locale(locale: &str) -> String {
         "zh-hk" | "zh-mo" | "zh-hant" | "zh-hant-tw" | "zh-hant-hk" | "zh-hant-mo" => Some("zh-TW"),
         "zh-sg" | "zh-hans" | "zh-hans-cn" | "zh-hans-sg" => Some("zh-CN"),
         // English: Commonwealth regions → en-GB
-        "en-au" | "en-nz" | "en-ie" | "en-in" | "en-sg" | "en-za" | "en-hk"
-        | "en-my" | "en-ph" | "en-pk" | "en-ng" | "en-ke" | "en-gh" => Some("en-GB"),
+        "en-au" | "en-nz" | "en-ie" | "en-in" | "en-sg" | "en-za" | "en-hk" | "en-my" | "en-ph"
+        | "en-pk" | "en-ng" | "en-ke" | "en-gh" => Some("en-GB"),
         // Spanish: Latin American regions → es-MX
-        "es-ar" | "es-co" | "es-cl" | "es-pe" | "es-ve" | "es-ec" | "es-gt"
-        | "es-cu" | "es-bo" | "es-do" | "es-hn" | "es-py" | "es-sv" | "es-ni"
-        | "es-cr" | "es-pa" | "es-uy" | "es-pr" | "es-us" | "es-419" => Some("es-MX"),
+        "es-ar" | "es-co" | "es-cl" | "es-pe" | "es-ve" | "es-ec" | "es-gt" | "es-cu" | "es-bo"
+        | "es-do" | "es-hn" | "es-py" | "es-sv" | "es-ni" | "es-cr" | "es-pa" | "es-uy"
+        | "es-pr" | "es-us" | "es-419" => Some("es-MX"),
         // French: non-Canadian → fr-FR
-        "fr-be" | "fr-ch" | "fr-lu" | "fr-mc" | "fr-sn" | "fr-ci" | "fr-ml"
-        | "fr-cm" | "fr-mg" | "fr-cd" | "fr-dz" | "fr-tn" | "fr-ma" => Some("fr-FR"),
+        "fr-be" | "fr-ch" | "fr-lu" | "fr-mc" | "fr-sn" | "fr-ci" | "fr-ml" | "fr-cm" | "fr-mg"
+        | "fr-cd" | "fr-dz" | "fr-tn" | "fr-ma" => Some("fr-FR"),
         // Portuguese: non-Brazilian → pt-PT
         "pt-ao" | "pt-mz" | "pt-gw" | "pt-tl" | "pt-cv" | "pt-st" => Some("pt-PT"),
         // Serbian: script-based split
@@ -99,7 +99,10 @@ fn normalize_locale(locale: &str) -> String {
     //    Safe for languages where we only have one regional variant (de, fr, ja, etc.)
     if let Some(lang) = locale.split('-').next() {
         let prefix = format!("{}-", lang.to_lowercase());
-        if let Some(found) = available.iter().find(|l| l.to_lowercase().starts_with(&prefix)) {
+        if let Some(found) = available
+            .iter()
+            .find(|l| l.to_lowercase().starts_with(&prefix))
+        {
             return found.to_string();
         }
     }
@@ -503,7 +506,9 @@ async fn main() -> Result<()> {
     //   2. sys_locale (GetUserPreferredUILanguages — automatic OS detection)
     //      — aligns with C++ side's MRT fallback when Language is empty
     let cli = Cli::parse();
-    let locale = cli.language.clone()
+    let locale = cli
+        .language
+        .clone()
         .or_else(|| sys_locale::get_locale())
         .unwrap_or_else(|| "en-US".to_string());
     rust_i18n::set_locale(&normalize_locale(&locale));
@@ -540,10 +545,7 @@ async fn main() -> Result<()> {
             print_output(&result, json_mode, format_tabs_human);
             Ok(())
         }
-        Some(Command::ListPanes {
-            tab_id,
-            window_id,
-        }) => {
+        Some(Command::ListPanes { tab_id, window_id }) => {
             let channel = connect_channel().await?;
             let tid = match tab_id {
                 Some(id) => id,
@@ -614,7 +616,11 @@ async fn main() -> Result<()> {
         }
 
         // ── Capture pane ──
-        Some(Command::CapturePane { target, max_lines, last_prompt }) => {
+        Some(Command::CapturePane {
+            target,
+            max_lines,
+            last_prompt,
+        }) => {
             let channel = connect_channel().await?;
             let pane_id = resolve_pane_id(&channel, &target).await?;
             let mut params = json!({ "session_id": pane_id });
@@ -693,7 +699,10 @@ async fn main() -> Result<()> {
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                bail!("{}", t!("error.wtcli_wait_for_failed", stderr = stderr.trim()));
+                bail!(
+                    "{}",
+                    t!("error.wtcli_wait_for_failed", stderr = stderr.trim())
+                );
             }
 
             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -720,7 +729,14 @@ async fn main() -> Result<()> {
             delegate_model,
             cwd,
         }) => {
-            run_delegate(&prompt, &agent, delegate_agent.as_deref(), delegate_model.as_deref(), cwd.as_deref()).await
+            run_delegate(
+                &prompt,
+                &agent,
+                delegate_agent.as_deref(),
+                delegate_model.as_deref(),
+                cwd.as_deref(),
+            )
+            .await
         }
 
         // ── Listen for events ──
@@ -783,8 +799,7 @@ async fn run_probe_models(agent: &str) -> Result<()> {
         result.available_models.len(),
         result.current_model_id
     );
-    let payload = serde_json::to_string(&result)
-        .context("serialize probe result")?;
+    let payload = serde_json::to_string(&result).context("serialize probe result")?;
     println!("{}", payload);
 
     // Force-exit before the tokio runtime tries to drop. The agent we
@@ -839,7 +854,8 @@ fn run_hooks_uninstall(cli: HooksCliFilter, json_mode: bool) -> Result<()> {
 }
 
 fn format_hooks_status_human(r: &agent_hooks_installer::StatusReport) {
-    let path_suffix = r.bundle_source
+    let path_suffix = r
+        .bundle_source
         .path
         .as_deref()
         .map(|p| format!(" ({})", p))
@@ -899,7 +915,11 @@ fn format_hooks_uninstall_human(r: &agent_hooks_installer::UninstallReport) {
                 "plugin={} marketplace={} staging={}",
                 plugin,
                 mkt,
-                if c.staging_dir_removed { "ok" } else { "failed" },
+                if c.staging_dir_removed {
+                    "ok"
+                } else {
+                    "failed"
+                },
             )
         };
         println!("  {:<10} {}", c.name, summary);
@@ -910,7 +930,11 @@ fn format_hooks_uninstall_human(r: &agent_hooks_installer::UninstallReport) {
 }
 
 fn yn(b: bool) -> &'static str {
-    if b { "yes" } else { "no" }
+    if b {
+        "yes"
+    } else {
+        "no"
+    }
 }
 
 // ─── Helper: connect to WT COM protocol (no debug channel, no ShellManager) ─────────
@@ -996,10 +1020,7 @@ fn format_windows_human(val: &serde_json::Value) {
         println!("{}", t!("output.header.windows"));
         for w in windows {
             let id = json_str_or_num(w, "window_id");
-            let title = w
-                .get("title")
-                .and_then(|v| v.as_str())
-                .unwrap_or("-");
+            let title = w.get("title").and_then(|v| v.as_str()).unwrap_or("-");
             let focused = w
                 .get("is_focused")
                 .and_then(|v| v.as_bool())
@@ -1089,7 +1110,10 @@ fn format_active_pane(val: &serde_json::Value) {
     let id = json_str_or_num(val, "session_id");
     let tab = json_str_or_num(val, "tab_id");
     let win = json_str_or_num(val, "window_id");
-    println!("{}", t!("output.active_pane", pane = id, tab = tab, window = win));
+    println!(
+        "{}",
+        t!("output.active_pane", pane = id, tab = tab, window = win)
+    );
 }
 
 fn format_pane_status(val: &serde_json::Value) {
@@ -1118,7 +1142,10 @@ fn format_pane_status(val: &serde_json::Value) {
 fn format_created_tab(val: &serde_json::Value) {
     let tab_id = json_str_or_num(val, "tab_id");
     let pane_id = json_str_or_num(val, "session_id");
-    println!("{}", t!("output.created_tab", tab_id = tab_id, pane_id = pane_id));
+    println!(
+        "{}",
+        t!("output.created_tab", tab_id = tab_id, pane_id = pane_id)
+    );
 }
 
 fn format_created_pane(val: &serde_json::Value) {
@@ -1235,15 +1262,36 @@ async fn run_delegate(
 
     let (debug_tx, _) = tokio::sync::mpsc::unbounded_channel::<app::DebugMessage>();
     let channel = match connect_to_wt_protocol(debug_tx).await {
-        Ok(ch) => { tracing::info!("WT protocol connected"); ch }
-        Err(e) => { tracing::warn!(error = %e, "WT protocol connection FAILED"); return Err(e); }
+        Ok(ch) => {
+            tracing::info!("WT protocol connected");
+            ch
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "WT protocol connection FAILED");
+            return Err(e);
+        }
     };
     let shell_mgr = ShellManager::new()
         .with_wt_channel(Arc::new(channel) as Arc<dyn shell::wt_channel::WtChannel>);
 
-    match delegate_with_context(&shell_mgr, prompt, agent_cmd, delegate_agent_cmd, delegate_model, cwd).await {
-        Ok(()) => { tracing::info!("delegate OK"); Ok(()) }
-        Err(e) => { tracing::warn!(error = %e, "delegate FAILED"); Err(e) }
+    match delegate_with_context(
+        &shell_mgr,
+        prompt,
+        agent_cmd,
+        delegate_agent_cmd,
+        delegate_model,
+        cwd,
+    )
+    .await
+    {
+        Ok(()) => {
+            tracing::info!("delegate OK");
+            Ok(())
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "delegate FAILED");
+            Err(e)
+        }
     }
 }
 
@@ -1330,7 +1378,8 @@ async fn run_default_tui(cli: Cli) -> Result<()> {
             let cli_arc = Arc::new(channel);
             wt_protocol_channel = Some(Arc::clone(&cli_arc));
 
-            shell_mgr = shell_mgr.with_wt_channel(cli_arc.clone() as Arc<dyn shell::wt_channel::WtChannel>);
+            shell_mgr =
+                shell_mgr.with_wt_channel(cli_arc.clone() as Arc<dyn shell::wt_channel::WtChannel>);
             true
         }
         Err(e) => {
@@ -1347,7 +1396,17 @@ async fn run_default_tui(cli: Cli) -> Result<()> {
         None
     };
 
-    run_acp_tui_mode(cli, shell_mgr, wt_connected, debug_rx, pane_identity, wt_event_rx, wt_protocol_channel, None).await
+    run_acp_tui_mode(
+        cli,
+        shell_mgr,
+        wt_connected,
+        debug_rx,
+        pane_identity,
+        wt_event_rx,
+        wt_protocol_channel,
+        None,
+    )
+    .await
 }
 
 /// Drive the standard ACP TUI but use `pipe_name` as the ACP transport
@@ -1370,8 +1429,8 @@ pub(crate) async fn run_default_tui_over_pipe(cli: Cli, pipe_name: String) -> Re
             wt_event_rx = Some(channel.subscribe_events());
             let cli_arc = Arc::new(channel);
             wt_protocol_channel = Some(Arc::clone(&cli_arc));
-            shell_mgr = shell_mgr
-                .with_wt_channel(cli_arc.clone() as Arc<dyn shell::wt_channel::WtChannel>);
+            shell_mgr =
+                shell_mgr.with_wt_channel(cli_arc.clone() as Arc<dyn shell::wt_channel::WtChannel>);
             true
         }
         Err(e) => {
@@ -1467,8 +1526,18 @@ async fn run_acp_tui_mode(
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let result =
-        run_acp_app(&mut terminal, cli, shell_mgr, wt_connected, debug_rx, pane_identity, wt_event_rx, wt_protocol_channel, connect_master_pipe).await;
+    let result = run_acp_app(
+        &mut terminal,
+        cli,
+        shell_mgr,
+        wt_connected,
+        debug_rx,
+        pane_identity,
+        wt_event_rx,
+        wt_protocol_channel,
+        connect_master_pipe,
+    )
+    .await;
 
     disable_raw_mode()?;
     execute!(
@@ -1578,10 +1647,7 @@ async fn run_info_mode() -> Result<()> {
                             };
 
                             if let Ok(panes) = channel
-                                .request(
-                                    "list_panes",
-                                    serde_json::json!({ "tab_id": tab_id_str }),
-                                )
+                                .request("list_panes", serde_json::json!({ "tab_id": tab_id_str }))
                                 .await
                             {
                                 if let Some(panes_arr) =
@@ -1590,14 +1656,11 @@ async fn run_info_mode() -> Result<()> {
                                     total_panes += panes_arr.len() as u32;
 
                                     for pane in panes_arr {
-                                        if let Some(pid) =
-                                            pane.get("pid").and_then(|v| v.as_u64())
+                                        if let Some(pid) = pane.get("pid").and_then(|v| v.as_u64())
                                         {
                                             if pid == our_pid as u64 {
                                                 let pane_id = match pane.get("session_id") {
-                                                    Some(serde_json::Value::String(s)) => {
-                                                        s.clone()
-                                                    }
+                                                    Some(serde_json::Value::String(s)) => s.clone(),
                                                     Some(serde_json::Value::Number(n)) => {
                                                         n.to_string()
                                                     }
@@ -1784,6 +1847,7 @@ async fn run_acp_app(
             // this the agent loses turn context after a drag.
             let (rename_session_tx, rename_session_rx) =
                 tokio::sync::mpsc::unbounded_channel();
+            let (master_ext_tx, master_ext_rx) = tokio::sync::mpsc::unbounded_channel();
 
             // Spawn the ACP client -- but not in setup mode, where the user
             // hasn't chosen an agent yet. Store params for deferred start.
@@ -1810,6 +1874,7 @@ async fn run_acp_app(
                         drop_session_rx,
                         rename_session_rx,
                         restart_rx,
+                        master_ext_rx,
                         shell_mgr_for_pipe,
                         wt_connected,
                     )
@@ -1840,12 +1905,13 @@ async fn run_acp_app(
                     drop_session_rx,
                     rename_session_rx,
                     restart_rx,
+                    master_ext_rx,
                     Arc::clone(&shell_mgr),
                     wt_connected,
                 ));
                 None
             } else {
-                Some((prompt_rx, cancel_rx, new_session_rx, load_session_rx, drop_session_rx, rename_session_rx, restart_rx))
+                Some((prompt_rx, cancel_rx, new_session_rx, load_session_rx, drop_session_rx, rename_session_rx, restart_rx, master_ext_rx))
             };
 
             let (recommendation_tx, recommendation_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -1868,7 +1934,7 @@ async fn run_acp_app(
             ));
 
             let autofix_enabled = !cli.no_autofix;
-            let mut app_state = app::App::new(prompt_tx, recommendation_tx, permission_tx, cancel_tx, new_session_tx, load_session_tx, drop_session_tx, rename_session_tx, restart_tx, debug_capture_enabled, wt_connected, autofix_enabled);
+            let mut app_state = app::App::new(prompt_tx, recommendation_tx, permission_tx, cancel_tx, new_session_tx, load_session_tx, drop_session_tx, rename_session_tx, restart_tx, master_ext_tx, debug_capture_enabled, wt_connected, autofix_enabled);
 
             // ── Preflight: check the agent CLI before connecting ──────────
             // Skip preflight when FRE is active — FRE has its own agent
@@ -2080,18 +2146,11 @@ async fn run_acp_app(
             // shouldn't be dropped into an empty session list.
             if cli.setup.is_none() && cli.initial_view == InitialView::Sessions {
                 tracing::info!(target: "initial_view", "starting in Agents view");
-                app_state.current_tab_mut().current_view = app::View::Agents;
-                // Seed selection so Enter activates the first row immediately
-                // (mirrors the F2 enter-Agents path). Honor the CLI filter so
-                // we don't seed Some(0) when there are no rows for the
-                // current agent CLI.
-                let has_sessions = !app_state
-                    .agent_sessions
-                    .iter_sorted_filtered(app_state.current_cli_filter().as_ref())
-                    .is_empty();
-                if has_sessions {
-                    app_state.current_tab_mut().agents_list_state.select(Some(0));
-                }
+                let tab_id = app_state
+                    .tab_id
+                    .clone()
+                    .unwrap_or_else(|| app::DEFAULT_TAB_ID.to_string());
+                app_state.open_agents_view_for_tab(tab_id);
                 app_state.ensure_history_loaded();
             }
 
@@ -2176,7 +2235,7 @@ async fn run_acp_app(
             app_state.ensure_history_loaded();
 
             // If in setup mode, store ACP params for deferred start after login.
-            if let Some((prompt_rx, cancel_rx, new_session_rx, load_session_rx, drop_session_rx, rename_session_rx, restart_rx)) = deferred_channels {
+            if let Some((prompt_rx, cancel_rx, new_session_rx, load_session_rx, drop_session_rx, rename_session_rx, restart_rx, master_ext_rx)) = deferred_channels {
                 app_state.set_acp_params(
                     agent_cmd.clone(),
                     cli.acp_model.clone(),
@@ -2187,6 +2246,7 @@ async fn run_acp_app(
                     drop_session_rx,
                     rename_session_rx,
                     restart_rx,
+                    master_ext_rx,
                     Arc::clone(&shell_mgr),
                     wt_connected,
                 );
@@ -2299,12 +2359,8 @@ mod cli_tests {
     fn cli_initial_load_session_id_without_cwd_is_allowed() {
         // cwd is optional — the helper falls back to its process cwd when
         // omitted (matches the runtime `load_session` arm's behavior).
-        let cli = Cli::try_parse_from([
-            "wta",
-            "--initial-load-session-id",
-            "sid-only",
-        ])
-        .expect("session id alone must parse");
+        let cli = Cli::try_parse_from(["wta", "--initial-load-session-id", "sid-only"])
+            .expect("session id alone must parse");
         assert_eq!(cli.initial_load_session_id.as_deref(), Some("sid-only"));
         assert!(cli.initial_load_cwd.is_none());
     }

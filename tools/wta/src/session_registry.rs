@@ -146,6 +146,9 @@ pub const INTELLTERM_METHOD_SESSION_ADDED: &str = "intellterm.wta/session_added"
 /// future explicit close).
 pub const INTELLTERM_METHOD_SESSION_REMOVED: &str = "intellterm.wta/session_removed";
 
+/// ExtNotification method for "the authoritative session registry changed; refetch if interested".
+pub const INTELLTERM_METHOD_SESSIONS_CHANGED: &str = "intellterm.wta/sessions/changed";
+
 /// Wire payload for [`INTELLTERM_METHOD_SESSION_REMOVED`].
 ///
 /// We only need the session id — helpers look the row up locally to
@@ -173,10 +176,18 @@ pub fn build_session_removed_notification(sid: &acp::SessionId) -> acp::ExtNotif
     let params = SessionRemovedParams {
         session_id: sid.clone(),
     };
-    let json = serde_json::to_string(&params).expect("SessionRemovedParams is trivially serializable");
+    let json =
+        serde_json::to_string(&params).expect("SessionRemovedParams is trivially serializable");
     let raw = serde_json::value::RawValue::from_string(json)
         .expect("serde_json::to_string always produces valid JSON");
     acp::ExtNotification::new(INTELLTERM_METHOD_SESSION_REMOVED, Arc::from(raw))
+}
+
+/// Build a `sessions/changed` ExtNotification. No payload by design.
+pub fn build_sessions_changed_notification() -> acp::ExtNotification {
+    let raw = serde_json::value::RawValue::from_string("{}".to_string())
+        .expect("literal object is valid JSON");
+    acp::ExtNotification::new(INTELLTERM_METHOD_SESSIONS_CHANGED, Arc::from(raw))
 }
 
 /// Parsed view of an inbound ACP `ExtNotification` from master, as
@@ -189,13 +200,17 @@ pub fn build_session_removed_notification(sid: &acp::SessionId) -> acp::ExtNotif
 pub enum WtaExtNotification {
     SessionAdded(SessionInfo),
     SessionRemoved(acp::SessionId),
+    SessionsChanged,
     /// Not one of ours. Caller should silently ignore.
     Unknown,
     /// Method matched but params failed to parse. Caller should log
     /// and skip rather than tear down the connection — a malformed
     /// notification is a master-side bug, but the helper must remain
     /// usable.
-    MalformedParams { method: String, error: String },
+    MalformedParams {
+        method: String,
+        error: String,
+    },
 }
 
 /// Identify whether an `ExtNotification` is one of ours and, if so,
@@ -204,22 +219,31 @@ pub fn parse_ext_notification(n: &acp::ExtNotification) -> WtaExtNotification {
     let method: &str = &n.method;
     let raw: &serde_json::value::RawValue = &n.params;
     match method {
-        INTELLTERM_METHOD_SESSION_ADDED => match serde_json::from_str::<acp::SessionInfo>(raw.get()) {
-            Ok(mut wire) => {
-                let wta = extract_wta_meta(&mut wire.meta);
-                WtaExtNotification::SessionAdded(SessionInfo {
-                    session_id: wire.session_id,
-                    cwd: wire.cwd,
-                    title: wire.title,
-                    updated_at: wire.updated_at,
-                    pane_session_id: wta.pane_session_id,
-                })
+        INTELLTERM_METHOD_SESSION_ADDED => {
+            match serde_json::from_str::<acp::SessionInfo>(raw.get()) {
+                Ok(mut wire) => {
+                    let wta = extract_wta_meta(&mut wire.meta);
+                    WtaExtNotification::SessionAdded(SessionInfo {
+                        session_id: wire.session_id,
+                        cwd: wire.cwd,
+                        title: wire.title,
+                        updated_at: wire.updated_at,
+                        pane_session_id: wta.pane_session_id,
+                        status: None,
+                        cli_source: None,
+                        current_tool: None,
+                        attention_reason: None,
+                        last_activity_at_ms: None,
+                        origin: None,
+                        last_error: None,
+                    })
+                }
+                Err(err) => WtaExtNotification::MalformedParams {
+                    method: method.to_string(),
+                    error: err.to_string(),
+                },
             }
-            Err(err) => WtaExtNotification::MalformedParams {
-                method: method.to_string(),
-                error: err.to_string(),
-            },
-        },
+        }
         INTELLTERM_METHOD_SESSION_REMOVED => {
             match serde_json::from_str::<SessionRemovedParams>(raw.get()) {
                 Ok(p) => WtaExtNotification::SessionRemoved(p.session_id),
@@ -229,8 +253,109 @@ pub fn parse_ext_notification(n: &acp::ExtNotification) -> WtaExtNotification {
                 },
             }
         }
+        INTELLTERM_METHOD_SESSIONS_CHANGED => WtaExtNotification::SessionsChanged,
         _ => WtaExtNotification::Unknown,
     }
+}
+
+// ─── intellterm.wta/sessions/list ────────────────────────────────────────────
+
+pub const INTELLTERM_METHOD_SESSIONS_LIST: &str = "intellterm.wta/sessions/list";
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct SessionsListResponse {
+    #[serde(default)]
+    pub sessions: Vec<SessionInfo>,
+}
+
+pub fn build_sessions_list_request() -> acp::ExtRequest {
+    let raw = serde_json::value::RawValue::from_string("{}".to_string())
+        .expect("literal object is valid JSON");
+    acp::ExtRequest::new(INTELLTERM_METHOD_SESSIONS_LIST, Arc::from(raw))
+}
+
+pub fn parse_sessions_list_response(
+    raw: &serde_json::value::RawValue,
+) -> Result<SessionsListResponse, serde_json::Error> {
+    serde_json::from_str::<SessionsListResponse>(raw.get())
+}
+
+// ─── intellterm.wta/session_resume_dispatched ────────────────────────────────
+
+pub const INTELLTERM_METHOD_SESSION_RESUME_DISPATCHED: &str =
+    "intellterm.wta/session_resume_dispatched";
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct SessionResumeDispatchedParams {
+    pub sid: acp::SessionId,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct SessionResumeDispatchedResponse {
+    pub flipped: bool,
+    pub current_status: String,
+}
+
+pub fn build_session_resume_dispatched_request(sid: &acp::SessionId) -> acp::ExtRequest {
+    let params = SessionResumeDispatchedParams { sid: sid.clone() };
+    let json = serde_json::to_string(&params)
+        .expect("SessionResumeDispatchedParams is trivially serializable");
+    let raw = serde_json::value::RawValue::from_string(json)
+        .expect("serde_json::to_string always produces valid JSON");
+    acp::ExtRequest::new(INTELLTERM_METHOD_SESSION_RESUME_DISPATCHED, Arc::from(raw))
+}
+
+pub fn parse_session_resume_dispatched_params(
+    raw: &serde_json::value::RawValue,
+) -> Result<SessionResumeDispatchedParams, serde_json::Error> {
+    serde_json::from_str::<SessionResumeDispatchedParams>(raw.get())
+}
+
+pub fn parse_session_resume_dispatched_response(
+    raw: &serde_json::value::RawValue,
+) -> Result<SessionResumeDispatchedResponse, serde_json::Error> {
+    serde_json::from_str::<SessionResumeDispatchedResponse>(raw.get())
+}
+
+// ─── intellterm.wta/session_focus ────────────────────────────────────────────
+
+pub const INTELLTERM_METHOD_SESSION_FOCUS: &str = "intellterm.wta/session_focus";
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct SessionFocusParams {
+    pub sid: acp::SessionId,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct SessionFocusResponse {
+    pub focused: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pane_session_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+}
+
+pub fn build_session_focus_request(sid: &acp::SessionId) -> acp::ExtRequest {
+    let params = SessionFocusParams { sid: sid.clone() };
+    let json =
+        serde_json::to_string(&params).expect("SessionFocusParams is trivially serializable");
+    let raw = serde_json::value::RawValue::from_string(json)
+        .expect("serde_json::to_string always produces valid JSON");
+    acp::ExtRequest::new(INTELLTERM_METHOD_SESSION_FOCUS, Arc::from(raw))
+}
+
+pub fn parse_session_focus_params(
+    raw: &serde_json::value::RawValue,
+) -> Result<SessionFocusParams, serde_json::Error> {
+    serde_json::from_str::<SessionFocusParams>(raw.get())
+}
+
+pub fn parse_session_focus_response(
+    raw: &serde_json::value::RawValue,
+) -> Result<SessionFocusResponse, serde_json::Error> {
+    serde_json::from_str::<SessionFocusResponse>(raw.get())
 }
 
 // ─── intellterm.wta/focus_session ────────────────────────────────────────────
@@ -257,8 +382,8 @@ pub fn build_focus_session_request(sid: &acp::SessionId) -> acp::ExtRequest {
     let params = FocusSessionParams {
         session_id: sid.clone(),
     };
-    let json = serde_json::to_string(&params)
-        .expect("FocusSessionParams is trivially serializable");
+    let json =
+        serde_json::to_string(&params).expect("FocusSessionParams is trivially serializable");
     let raw = serde_json::value::RawValue::from_string(json)
         .expect("serde_json::to_string always produces valid JSON");
     acp::ExtRequest::new(INTELLTERM_METHOD_FOCUS_SESSION, Arc::from(raw))
@@ -289,13 +414,30 @@ pub fn parse_focus_session_params(
 ///                  field was introduced) so this is `Option`. Serialized
 ///                  into `acp::SessionInfo._meta.wta.pane_session_id` on
 ///                  the wire so we don't pollute the standard ACP schema.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct SessionInfo {
     pub session_id: acp::SessionId,
     pub cwd: PathBuf,
+    #[serde(default)]
     pub title: Option<String>,
+    #[serde(default)]
     pub updated_at: Option<String>,
+    #[serde(default)]
     pub pane_session_id: Option<String>,
+    #[serde(default)]
+    pub status: Option<String>,
+    #[serde(default)]
+    pub cli_source: Option<String>,
+    #[serde(default)]
+    pub current_tool: Option<String>,
+    #[serde(default)]
+    pub attention_reason: Option<String>,
+    #[serde(default)]
+    pub last_activity_at_ms: Option<u64>,
+    #[serde(default)]
+    pub origin: Option<String>,
+    #[serde(default)]
+    pub last_error: Option<String>,
 }
 
 impl SessionInfo {
@@ -308,6 +450,13 @@ impl SessionInfo {
             title: None,
             updated_at: None,
             pane_session_id: None,
+            status: None,
+            cli_source: None,
+            current_tool: None,
+            attention_reason: None,
+            last_activity_at_ms: None,
+            origin: None,
+            last_error: None,
         }
     }
 
@@ -342,6 +491,9 @@ pub trait SessionRegistry: Send + Sync {
     /// stable order should sort by `session_id` themselves. The clone is
     /// cheap because `SessionInfo` is small (`Arc<str>` for the id).
     async fn snapshot(&self) -> Vec<SessionInfo>;
+
+    /// Atomically flip a Historical row to Idle for resume dispatch.
+    async fn mark_resume_dispatched(&self, sid: &acp::SessionId) -> Option<(bool, String)>;
 }
 
 /// Production implementation. Uses `tokio::sync::Mutex` for parity with the
@@ -382,6 +534,18 @@ impl SessionRegistry for InMemoryRegistry {
     async fn snapshot(&self) -> Vec<SessionInfo> {
         let guard = self.inner.lock().await;
         guard.values().cloned().collect()
+    }
+
+    async fn mark_resume_dispatched(&self, sid: &acp::SessionId) -> Option<(bool, String)> {
+        let mut guard = self.inner.lock().await;
+        let row = guard.get_mut(sid)?;
+        let current = row.status.clone().unwrap_or_else(|| "Idle".to_string());
+        if current.eq_ignore_ascii_case("Historical") {
+            row.status = Some("Idle".to_string());
+            Some((true, "Idle".to_string()))
+        } else {
+            Some((false, current))
+        }
     }
 }
 
@@ -453,7 +617,9 @@ pub async fn apply_ext_notification(
         // and never mutate the registry. A future master may broadcast
         // notifications we don't recognise — silently ignoring them
         // keeps the helper forward-compatible.
-        WtaExtNotification::Unknown | WtaExtNotification::MalformedParams { .. } => {}
+        WtaExtNotification::SessionsChanged
+        | WtaExtNotification::Unknown
+        | WtaExtNotification::MalformedParams { .. } => {}
     }
     parsed
 }
@@ -567,7 +733,12 @@ mod tests {
         let loaded = AtomicBool::new(false);
         reg.upsert(info("stale", Some("pa"))).await;
         reg.upsert(info("keep", Some("pb"))).await;
-        apply_snapshot(&reg, &loaded, vec![info("keep", Some("pb")), info("fresh", None)]).await;
+        apply_snapshot(
+            &reg,
+            &loaded,
+            vec![info("keep", Some("pb")), info("fresh", None)],
+        )
+        .await;
         let mut snap = reg.snapshot().await;
         snap.sort_by(|l, r| l.session_id.0.cmp(&r.session_id.0));
         let ids: Vec<&str> = snap.iter().map(|s| &*s.session_id.0).collect();
@@ -696,6 +867,13 @@ mod tests {
             title: Some("hello".into()),
             updated_at: Some("2025-01-01T00:00:00Z".into()),
             pane_session_id: Some("pane-X".into()),
+            status: None,
+            cli_source: None,
+            current_tool: None,
+            attention_reason: None,
+            last_activity_at_ms: None,
+            origin: None,
+            last_error: None,
         };
         let acp = to_acp_session_info(&row);
         assert_eq!(acp.session_id, row.session_id);
@@ -730,6 +908,13 @@ mod tests {
             title: Some("hello".into()),
             updated_at: Some("2025-01-02T03:04:05Z".into()),
             pane_session_id: Some("pane-ZZ".into()),
+            status: None,
+            cli_source: None,
+            current_tool: None,
+            attention_reason: None,
+            last_activity_at_ms: None,
+            origin: None,
+            last_error: None,
         };
         let ext = build_session_added_notification(&row);
         assert_eq!(&*ext.method, INTELLTERM_METHOD_SESSION_ADDED);
@@ -778,12 +963,58 @@ mod tests {
 
     #[test]
     fn parse_session_added_with_garbage_params_is_malformed_not_panic() {
-        let raw = serde_json::value::RawValue::from_string(r#"{"not":"a session"}"#.into()).unwrap();
+        let raw =
+            serde_json::value::RawValue::from_string(r#"{"not":"a session"}"#.into()).unwrap();
         let ext = acp::ExtNotification::new(INTELLTERM_METHOD_SESSION_ADDED, Arc::from(raw));
         assert!(matches!(
             parse_ext_notification(&ext),
             WtaExtNotification::MalformedParams { .. }
         ));
+    }
+
+    // ─── Task C sessions/list + sessions/changed schemas ───────────
+
+    #[test]
+    fn build_sessions_changed_notification_decodes_to_changed() {
+        let ext = build_sessions_changed_notification();
+        assert_eq!(&*ext.method, INTELLTERM_METHOD_SESSIONS_CHANGED);
+        assert_eq!(
+            parse_ext_notification(&ext),
+            WtaExtNotification::SessionsChanged
+        );
+    }
+
+    #[test]
+    fn sessions_list_response_round_trips_session_info() {
+        let mut info = SessionInfo::new(acp::SessionId::new("sid-1"), PathBuf::from("/repo"));
+        info.title = Some("title".to_string());
+        info.status = Some("Idle".to_string());
+        info.cli_source = Some("Copilot".to_string());
+        info.last_activity_at_ms = Some(42);
+        let resp = SessionsListResponse {
+            sessions: vec![info.clone()],
+        };
+        let raw = serde_json::value::to_raw_value(&resp).unwrap();
+        let parsed = parse_sessions_list_response(&raw).unwrap();
+        assert_eq!(parsed.sessions, vec![info]);
+    }
+
+    #[test]
+    fn session_resume_dispatched_request_carries_sid() {
+        let sid = acp::SessionId::new("resume-me");
+        let req = build_session_resume_dispatched_request(&sid);
+        assert_eq!(&*req.method, INTELLTERM_METHOD_SESSION_RESUME_DISPATCHED);
+        let parsed = parse_session_resume_dispatched_params(&req.params).unwrap();
+        assert_eq!(parsed.sid, sid);
+    }
+
+    #[test]
+    fn session_focus_request_carries_sid() {
+        let sid = acp::SessionId::new("focus-me");
+        let req = build_session_focus_request(&sid);
+        assert_eq!(&*req.method, INTELLTERM_METHOD_SESSION_FOCUS);
+        let parsed = parse_session_focus_params(&req.params).unwrap();
+        assert_eq!(parsed.sid, sid);
     }
 
     // ─── focus_session ──────────────────────────────────────────────
@@ -816,8 +1047,7 @@ mod tests {
         let map = meta.expect("meta created");
         let wta = map.get("wta").and_then(|v| v.as_object()).unwrap();
         assert_eq!(
-            wta.get("pane_session_id")
-                .and_then(|v| v.as_str()),
+            wta.get("pane_session_id").and_then(|v| v.as_str()),
             Some("pane-A")
         );
     }
@@ -863,6 +1093,13 @@ mod tests {
             title: None,
             updated_at: None,
             pane_session_id: Some("pane-1".to_string()),
+            status: None,
+            cli_source: None,
+            current_tool: None,
+            attention_reason: None,
+            last_activity_at_ms: None,
+            origin: None,
+            last_error: None,
         };
         let ext = build_session_added_notification(&info);
         let classified = apply_ext_notification(&reg, &ext).await;
@@ -880,6 +1117,13 @@ mod tests {
             title: None,
             updated_at: None,
             pane_session_id: None,
+            status: None,
+            cli_source: None,
+            current_tool: None,
+            attention_reason: None,
+            last_activity_at_ms: None,
+            origin: None,
+            last_error: None,
         };
         reg.upsert(info.clone()).await;
         let ext = build_session_removed_notification(&info.session_id);
@@ -897,6 +1141,13 @@ mod tests {
             title: None,
             updated_at: None,
             pane_session_id: None,
+            status: None,
+            cli_source: None,
+            current_tool: None,
+            attention_reason: None,
+            last_activity_at_ms: None,
+            origin: None,
+            last_error: None,
         };
         reg.upsert(pre.clone()).await;
         let raw = serde_json::value::RawValue::from_string("{}".into()).unwrap();
