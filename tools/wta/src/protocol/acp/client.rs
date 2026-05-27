@@ -2337,7 +2337,18 @@ pub async fn run_acp_client_over_pipe(
                     }
 
                     let session_id = acp::SessionId::new(req.session_id.clone());
-                    let load_req = acp::LoadSessionRequest::new(session_id.clone(), cwd);
+                    let mut load_req = acp::LoadSessionRequest::new(session_id.clone(), cwd);
+                    // Tell master which WT pane owns the session we're
+                    // about to rehydrate, so the registry row for the
+                    // resumed sid carries `pane_session_id = <this
+                    // pane's GUID>` and cross-helper Focus actions
+                    // (F2 Enter on the resumed row in a sibling
+                    // window's tab) can resolve to a real WT pane to
+                    // focus. Without this the row appears live but
+                    // pane_session_id stays None, and the focus
+                    // dispatch errors with "Cannot focus session …:
+                    // it appears live but no pane GUID is bound yet."
+                    inject_wta_pane_meta(&mut load_req.meta);
                     let load_future = conn_for_load.load_session(load_req);
                     let load_result = tokio::time::timeout(
                         std::time::Duration::from_secs(60),
@@ -3631,6 +3642,44 @@ mod tests {
             None,
             "stripping braces from `{{}}` leaves the empty string — must not write `pane_session_id`: \"\"",
         );
+        unsafe { std::env::remove_var("WT_SESSION") };
+    }
+
+    /// Regression for the cross-window focus bug: the helper-over-pipe
+    /// `session/load` path must inject `_meta.wta.pane_session_id`
+    /// alongside the request so master's `SessionInfo.pane_session_id`
+    /// for the resumed sid points at THIS pane's GUID. Without the
+    /// binding the row in a sibling window's F2 list appears live but
+    /// `decide_enter_action` returns `NotResumable { LiveWithoutPane }`
+    /// and the user sees "Cannot focus session …: it appears live but
+    /// no pane GUID is bound yet."
+    ///
+    /// Exercises the same shape of code as the actual call site
+    /// (build `LoadSessionRequest` + call `inject_wta_pane_meta` on its
+    /// meta field) and asserts master would extract the same pane id
+    /// via `extract_wta_meta`.
+    #[test]
+    fn load_session_request_carries_pane_session_id_after_injection() {
+        use agent_client_protocol as acp;
+        let _g = crate::test_support::lock_env();
+        unsafe {
+            std::env::set_var("WT_SESSION", "{B1234567-89AB-CDEF-0123-456789ABCDEF}");
+        }
+
+        let sid = acp::SessionId::new("sess-target".to_string());
+        let cwd = std::path::PathBuf::from("/repo");
+        let mut req = acp::LoadSessionRequest::new(sid, cwd);
+        assert!(req.meta.is_none(), "fresh LoadSessionRequest has no meta");
+
+        inject_wta_pane_meta(&mut req.meta);
+
+        let extracted = crate::session_registry::extract_wta_meta(&mut req.meta);
+        assert_eq!(
+            extracted.pane_session_id.as_deref(),
+            Some("b1234567-89ab-cdef-0123-456789abcdef"),
+            "master must be able to extract the pane GUID from the load_session request"
+        );
+
         unsafe { std::env::remove_var("WT_SESSION") };
     }
 
