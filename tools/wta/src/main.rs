@@ -4,18 +4,24 @@ extern crate rust_i18n;
 mod agent_check;
 mod agent_registry;
 mod agent_sessions;
+mod agent_pane_origin;
 mod agent_hooks_installer;
 mod app;
 mod commands;
 mod coordinator;
 mod event;
+mod helper;
 mod history_loader;
 mod logging;
+mod master;
 mod osc52;
 mod protocol;
 mod runtime_paths;
+mod rtl;
 mod pane_context;
 mod shell;
+#[cfg(test)]
+mod test_support;
 mod theme;
 mod ui;
 mod ui_trace;
@@ -24,7 +30,6 @@ use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 use crossterm::{
     cursor::SetCursorStyle,
-    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     style::Print,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -62,8 +67,8 @@ fn normalize_locale(locale: &str) -> String {
     //    Aligns with Windows MRT language-distance behavior for our locale set.
     let affinity_target = match locale.to_lowercase().as_str() {
         // Chinese: script-based split
-        "zh-hk" | "zh-mo" | "zh-hant" => Some("zh-TW"),
-        "zh-sg" | "zh-hans" => Some("zh-CN"),
+        "zh-hk" | "zh-mo" | "zh-hant" | "zh-hant-tw" | "zh-hant-hk" | "zh-hant-mo" => Some("zh-TW"),
+        "zh-sg" | "zh-hans" | "zh-hans-cn" | "zh-hans-sg" => Some("zh-CN"),
         // English: Commonwealth regions → en-GB
         "en-au" | "en-nz" | "en-ie" | "en-in" | "en-sg" | "en-za" | "en-hk"
         | "en-my" | "en-ph" | "en-pk" | "en-ng" | "en-ke" | "en-gh" => Some("en-GB"),
@@ -167,6 +172,14 @@ struct Cli {
     #[arg(long, value_enum, default_value_t = InitialView::Chat)]
     initial_view: InitialView,
 
+    /// UI language override, passed by Windows Terminal from the
+    /// `settings.json` `Language` field. When present, wta uses this
+    /// directly for i18n instead of detecting the OS locale — ensuring
+    /// the agent pane displays the same language as the Terminal chrome.
+    /// When absent, wta falls back to `sys_locale` (automatic detection).
+    #[arg(long)]
+    language: Option<String>,
+
     /// Stable GUID of the WT tab that owns this wta process. Passed in by
     /// TerminalPage when spawning the agent pane (both _OpenOrReuseAgentPane
     /// and _AutoCreateHiddenAgentPane). Seeded into app_state.tab_id before
@@ -175,6 +188,18 @@ struct Cli {
     /// placeholder. Hidden because nothing outside WT should be setting it.
     #[arg(long, hide = true)]
     owner_tab_id: Option<String>,
+
+    /// Pre-warm mode: the helper is being spawned for a tab whose agent
+    /// pane is *already stashed* on the C++ side (see TerminalPage::
+    /// _AutoCreateHiddenAgentPaneShared autoStash path). Without this
+    /// flag, the helper's `--owner-tab-id` startup branch seeds
+    /// `tab.pane_open = true` and echoes back `agent_state_changed
+    /// { pane_open: true }`, which C++ interprets as "user opened the
+    /// pane" and unstashes it — defeating pre-warm. With this flag the
+    /// helper seeds `tab.pane_open = false`, matching the C++ stash
+    /// state. Hidden because only WT's pre-warm path should set it.
+    #[arg(long, hide = true)]
+    start_stashed: bool,
 
     // Legacy flags (hidden, backward compat)
     #[arg(long, hide = true)]
@@ -185,6 +210,31 @@ struct Cli {
     /// Output raw JSON instead of human-readable format
     #[arg(long, global = true)]
     json: bool,
+
+    /// Run as the wta-master singleton (Z architecture). Listens on
+    /// the named pipe whose name is passed here for wta-helper
+    /// connections; owns the single ACP connection to the agent CLI
+    /// subprocess; multiplexes per-helper ACP sessions onto it. Used
+    /// by `SharedWta::AcquirePane` on the C++ side. Hidden — only
+    /// Windows Terminal should spawn it.
+    ///
+    /// Pipe name is typically `\\.\pipe\wta-master-<GUID>`.
+    #[arg(long, hide = true, value_name = "PIPE_NAME")]
+    master: Option<String>,
+
+    /// Connect to a wta-master singleton over the named pipe whose
+    /// path is passed here, rather than spawning our own agent CLI
+    /// subprocess. Used when this wta is acting as a per-pane helper
+    /// in the helper+master architecture (see
+    /// doc/specs/Multi-window-agent-pane.md). Hidden — only the C++
+    /// side should pass it.
+    ///
+    /// Logically mutually exclusive with `--master`: a process can be
+    /// either the master or a helper, never both. Enforced by clap so
+    /// a misconfigured invocation fails fast instead of silently
+    /// preferring `--master` (the previous behavior).
+    #[arg(long, hide = true, value_name = "PIPE_NAME", conflicts_with = "master")]
+    connect_master: Option<String>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -436,11 +486,17 @@ enum InitialView {
 async fn main() -> Result<()> {
     // Detect and set the system locale for i18n.
     // normalize_locale() maps unmatched regions to the canonical variant (e.g., de-AT → de-DE).
-    if let Some(locale) = sys_locale::get_locale() {
-        rust_i18n::set_locale(&normalize_locale(&locale));
-    }
-
+    //
+    // Priority:
+    //   1. --language flag (passed by Windows Terminal from settings.json Language)
+    //      — aligns with C++ side's PrimaryLanguageOverride behavior
+    //   2. sys_locale (GetUserPreferredUILanguages — automatic OS detection)
+    //      — aligns with C++ side's MRT fallback when Language is empty
     let cli = Cli::parse();
+    let locale = cli.language.clone()
+        .or_else(|| sys_locale::get_locale())
+        .unwrap_or_else(|| "en-US".to_string());
+    rust_i18n::set_locale(&normalize_locale(&locale));
 
     // Legacy flags first (backward compat)
     if cli.test_pipe {
@@ -575,7 +631,7 @@ async fn main() -> Result<()> {
                 .request("close_pane", json!({ "session_id": pane_id }))
                 .await?;
             if !json_mode {
-                println!("Pane {} closed.", pane_id);
+                println!("{}", t!("output.pane_closed", pane_id = pane_id));
             }
             Ok(())
         }
@@ -623,18 +679,18 @@ async fn main() -> Result<()> {
                 ])
                 .output()
                 .await
-                .context("Failed to spawn wtcli wait-for")?;
+                .with_context(|| t!("error.wtcli_wait_for_spawn").into_owned())?;
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                bail!("wtcli wait-for failed: {}", stderr.trim());
+                bail!("{}", t!("error.wtcli_wait_for_failed", stderr = stderr.trim()));
             }
 
             let stdout = String::from_utf8_lossy(&output.stdout);
             let trimmed = stdout.trim();
             if !trimmed.is_empty() {
                 let val: serde_json::Value = serde_json::from_str(trimmed)
-                    .context("Failed to parse wtcli wait-for output")?;
+                    .with_context(|| t!("error.wtcli_wait_for_parse").into_owned())?;
                 print_output(&val, json_mode, format_pane_status);
             }
             Ok(())
@@ -670,8 +726,21 @@ async fn main() -> Result<()> {
         // ── ACP model list probe ──
         Some(Command::ProbeModels { agent }) => run_probe_models(&agent).await,
 
-        // ── No subcommand = ACP TUI mode (default) ──
-        None => run_default_tui(cli).await,
+        // ── No subcommand = ACP TUI mode (default), or one of the
+        //    singleton-service modes ──
+        //    - `--master <pipe>`: wta-master (Z architecture; owns
+        //      agent CLI, serves helper connections over named pipe)
+        //    - `--connect-master <pipe>`: wta-helper (Z architecture;
+        //      per-pane child that speaks ACP to master over the pipe)
+        None => {
+            if let Some(pipe_name) = cli.master.clone() {
+                master::run_master_mode(cli, pipe_name).await
+            } else if let Some(pipe_name) = cli.connect_master.clone() {
+                helper::run_helper_mode(cli, pipe_name).await
+            } else {
+                run_default_tui(cli).await
+            }
+        }
     }
 }
 
@@ -727,11 +796,7 @@ fn run_hooks_install(cli: HooksCliFilter) -> Result<()> {
     // %LOCALAPPDATA%\IntelligentTerminal\logs\wta-install-hooks.log.
     let _guard = logging::init("install-hooks");
     agent_hooks_installer::ensure_installed_scoped(cli.into_scope());
-    println!(
-        "wt-agent-hooks install attempted (idempotent). \
-         Run `wta hooks status` to inspect the result. \
-         Trace log: %LOCALAPPDATA%\\IntelligentTerminal\\logs\\wta-install-hooks.log"
-    );
+    println!("{}", t!("hooks.install_attempted"));
     Ok(())
 }
 
@@ -764,27 +829,31 @@ fn run_hooks_uninstall(cli: HooksCliFilter, json_mode: bool) -> Result<()> {
 }
 
 fn format_hooks_status_human(r: &agent_hooks_installer::StatusReport) {
+    let path_suffix = r.bundle_source
+        .path
+        .as_deref()
+        .map(|p| format!(" ({})", p))
+        .unwrap_or_default();
     println!(
-        "bundle source: {}{}",
-        r.bundle_source.kind,
-        r.bundle_source
-            .path
-            .as_deref()
-            .map(|p| format!(" ({})", p))
-            .unwrap_or_default(),
+        "{}",
+        t!(
+            "hooks.bundle_source",
+            source = r.bundle_source.kind,
+            path_suffix = path_suffix,
+        )
     );
     println!();
     for c in &r.clis {
         let summary = if !c.binary_on_path {
-            "\u{2717} CLI not on PATH".to_string()
+            t!("hooks.cli_not_on_path").into_owned()
         } else if c.plugin_installed && c.plugin_enabled && c.marketplace_path_valid {
-            "\u{2713} installed".to_string()
+            t!("hooks.installed").into_owned()
         } else if c.plugin_installed && !c.marketplace_path_valid {
-            "\u{26a0} marketplace path stale".to_string()
+            t!("hooks.marketplace_path_stale").into_owned()
         } else if c.plugin_installed {
-            "\u{26a0} installed but disabled".to_string()
+            t!("hooks.installed_but_disabled").into_owned()
         } else {
-            "\u{2717} not installed".to_string()
+            t!("hooks.not_installed").into_owned()
         };
         let detail = format!(
             "marketplace={}, path_valid={}, plugin={}, enabled={}{}",
@@ -806,7 +875,7 @@ fn format_hooks_status_human(r: &agent_hooks_installer::StatusReport) {
 fn format_hooks_uninstall_human(r: &agent_hooks_installer::UninstallReport) {
     for c in &r.clis {
         let summary = if !c.attempted {
-            "skipped (CLI not on PATH)".to_string()
+            t!("hooks.uninstall_skipped").into_owned()
         } else {
             let plugin = c
                 .plugin_uninstalled
@@ -859,7 +928,7 @@ async fn resolve_pane_id(channel: &CliChannel, target: &Option<String>) -> Resul
                     serde_json::Value::Number(n) => Some(n.to_string()),
                     _ => None,
                 })
-                .ok_or_else(|| anyhow::anyhow!("No active pane found. Use -t to specify a pane ID."))?;
+                .ok_or_else(|| anyhow::anyhow!("{}", t!("error.no_active_pane")))?;
             Ok(pane_id)
         }
     }
@@ -875,7 +944,7 @@ async fn get_first_window_id(channel: &CliChannel) -> Result<String> {
         .and_then(|w| w.get("window_id"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
-        .ok_or_else(|| anyhow::anyhow!("No windows found"))
+        .ok_or_else(|| anyhow::anyhow!("{}", t!("output.no_windows_in_list")))
 }
 
 /// Get the first tab ID from a window.
@@ -892,7 +961,7 @@ async fn get_first_tab_id(channel: &CliChannel, window_id: &str) -> Result<Strin
             Some(serde_json::Value::Number(n)) => Some(n.to_string()),
             _ => None,
         })
-        .ok_or_else(|| anyhow::anyhow!("No tabs found in window {}", window_id))
+        .ok_or_else(|| anyhow::anyhow!("{}", t!("output.no_tabs_in_window", window_id = window_id)))
 }
 
 // ─── Output helpers ─────────────────────────────────────────────────────────
@@ -911,10 +980,10 @@ fn print_output(val: &serde_json::Value, json_mode: bool, formatter: fn(&serde_j
 fn format_windows_human(val: &serde_json::Value) {
     if let Some(windows) = val.get("windows").and_then(|v| v.as_array()) {
         if windows.is_empty() {
-            println!("No windows found.");
+            println!("{}", t!("output.no_windows"));
             return;
         }
-        println!("{:<12} {:<30} {}", "WINDOW_ID", "TITLE", "FOCUSED");
+        println!("{}", t!("output.header.windows"));
         for w in windows {
             let id = json_str_or_num(w, "window_id");
             let title = w
@@ -940,10 +1009,10 @@ fn format_windows_human(val: &serde_json::Value) {
 fn format_tabs_human(val: &serde_json::Value) {
     if let Some(tabs) = val.get("tabs").and_then(|v| v.as_array()) {
         if tabs.is_empty() {
-            println!("No tabs found.");
+            println!("{}", t!("output.no_tabs"));
             return;
         }
-        println!("{:<10} {:<30} {}", "TAB_ID", "TITLE", "FOCUSED");
+        println!("{}", t!("output.header.tabs"));
         for t in tabs {
             let id = json_str_or_num(t, "tab_id");
             let title = t.get("title").and_then(|v| v.as_str()).unwrap_or("-");
@@ -966,13 +1035,10 @@ fn format_tabs_human(val: &serde_json::Value) {
 fn format_panes_human(val: &serde_json::Value) {
     if let Some(panes) = val.get("panes").and_then(|v| v.as_array()) {
         if panes.is_empty() {
-            println!("No panes found.");
+            println!("{}", t!("output.no_panes"));
             return;
         }
-        println!(
-            "{:<10} {:<8} {:<8} {:<10} {}",
-            "PANE_ID", "PID", "ACTIVE", "ROWS", "COLS"
-        );
+        println!("{}", t!("output.header.panes"));
         for p in panes {
             let id = json_str_or_num(p, "session_id");
             let pid = p
@@ -1013,7 +1079,7 @@ fn format_active_pane(val: &serde_json::Value) {
     let id = json_str_or_num(val, "session_id");
     let tab = json_str_or_num(val, "tab_id");
     let win = json_str_or_num(val, "window_id");
-    println!("Active pane: {} (tab: {}, window: {})", id, tab, win);
+    println!("{}", t!("output.active_pane", pane = id, tab = tab, window = win));
 }
 
 fn format_pane_status(val: &serde_json::Value) {
@@ -1033,21 +1099,21 @@ fn format_pane_status(val: &serde_json::Value) {
         .map(|n| n.to_string())
         .unwrap_or_else(|| "-".to_string());
     if running {
-        println!("Running (PID: {})", pid);
+        println!("{}", t!("output.pane_running", pid = pid));
     } else {
-        println!("Exited (code: {}, PID: {})", exit_code, pid);
+        println!("{}", t!("output.pane_exited", code = exit_code, pid = pid));
     }
 }
 
 fn format_created_tab(val: &serde_json::Value) {
     let tab_id = json_str_or_num(val, "tab_id");
     let pane_id = json_str_or_num(val, "session_id");
-    println!("Created tab {} (pane {})", tab_id, pane_id);
+    println!("{}", t!("output.created_tab", tab_id = tab_id, pane_id = pane_id));
 }
 
 fn format_created_pane(val: &serde_json::Value) {
     let pane_id = json_str_or_num(val, "session_id");
-    println!("Created pane {}", pane_id);
+    println!("{}", t!("output.created_pane", pane_id = pane_id));
 }
 
 /// Extract a field that may be string or number from JSON.
@@ -1063,7 +1129,7 @@ fn json_str_or_num(val: &serde_json::Value, key: &str) -> String {
 
 fn run_pipe_id(json_mode: bool) -> Result<()> {
     let clsid = std::env::var("WT_COM_CLSID")
-        .map_err(|_| anyhow::anyhow!("WT_COM_CLSID not set. Run inside a Windows Terminal pane."))?;
+        .map_err(|_| anyhow::anyhow!("{}", t!("error.wt_com_clsid_not_set")))?;
     if json_mode {
         let val = json!({ "connection_id": clsid, "env": "WT_COM_CLSID" });
         println!("{}", serde_json::to_string_pretty(&val)?);
@@ -1075,7 +1141,7 @@ fn run_pipe_id(json_mode: bool) -> Result<()> {
 
 fn run_set_env(shell_type: &str) -> Result<()> {
     let clsid = std::env::var("WT_COM_CLSID")
-        .map_err(|_| anyhow::anyhow!("WT_COM_CLSID not set. Run inside a Windows Terminal pane."))?;
+        .map_err(|_| anyhow::anyhow!("{}", t!("error.wt_com_clsid_not_set")))?;
 
     match shell_type {
         "bash" | "sh" | "zsh" => {
@@ -1095,7 +1161,7 @@ fn run_set_env(shell_type: &str) -> Result<()> {
             eprintln!("# Run: wta set-env -s fish | source");
         }
         other => {
-            bail!("Unknown shell type '{}'. Use: bash, powershell, cmd, fish", other);
+            bail!("{}", t!("error.unknown_shell_type", shell = other));
         }
     }
 
@@ -1254,51 +1320,7 @@ async fn run_default_tui(cli: Cli) -> Result<()> {
             let cli_arc = Arc::new(channel);
             wt_protocol_channel = Some(Arc::clone(&cli_arc));
 
-            // If WT inherited a duplex pipe pair into our process via
-            // STARTUPINFOEX HANDLE_LIST, prefer it for the methods it carries
-            // (initially: send_input). All other methods fall through to the
-            // CliChannel (wtcli + COM) until they migrate too.
-            let wt_channel_for_mgr: Arc<dyn shell::wt_channel::WtChannel> =
-                match shell::wt_channel::PipeChannel::from_env() {
-                    Ok(Some(pipe)) => match pipe.handshake().await {
-                        Ok(()) => {
-                            tracing::info!(
-                                "PipeChannel handshake OK — routing send_input via inherited pipe"
-                            );
-                            let pipe_arc: Arc<dyn shell::wt_channel::WtChannel> =
-                                Arc::new(pipe);
-                            let cli_dyn: Arc<dyn shell::wt_channel::WtChannel> =
-                                cli_arc.clone();
-                            Arc::new(shell::wt_channel::RoutedChannel::new(
-                                pipe_arc,
-                                cli_dyn,
-                                &["send_input"],
-                            )) as Arc<dyn shell::wt_channel::WtChannel>
-                        }
-                        Err(e) => {
-                            tracing::warn!(
-                                error = %e,
-                                "PipeChannel handshake failed; falling back to CliChannel"
-                            );
-                            cli_arc.clone() as Arc<dyn shell::wt_channel::WtChannel>
-                        }
-                    },
-                    Ok(None) => {
-                        tracing::debug!(
-                            "No inherited pipe handles in env; using CliChannel only"
-                        );
-                        cli_arc.clone() as Arc<dyn shell::wt_channel::WtChannel>
-                    }
-                    Err(e) => {
-                        tracing::warn!(
-                            error = %e,
-                            "PipeChannel::from_env error; using CliChannel only"
-                        );
-                        cli_arc.clone() as Arc<dyn shell::wt_channel::WtChannel>
-                    }
-                };
-
-            shell_mgr = shell_mgr.with_wt_channel(wt_channel_for_mgr);
+            shell_mgr = shell_mgr.with_wt_channel(cli_arc.clone() as Arc<dyn shell::wt_channel::WtChannel>);
             true
         }
         Err(e) => {
@@ -1315,7 +1337,57 @@ async fn run_default_tui(cli: Cli) -> Result<()> {
         None
     };
 
-    run_acp_tui_mode(cli, shell_mgr, wt_connected, debug_rx, pane_identity, wt_event_rx, wt_protocol_channel).await
+    run_acp_tui_mode(cli, shell_mgr, wt_connected, debug_rx, pane_identity, wt_event_rx, wt_protocol_channel, None).await
+}
+
+/// Drive the standard ACP TUI but use `pipe_name` as the ACP transport
+/// (helper mode). Same setup as `run_default_tui` minus the implicit
+/// "spawn agent CLI" path: the helper attaches to wta-master over the
+/// supplied named pipe and forwards ACP traffic over it.
+pub(crate) async fn run_default_tui_over_pipe(cli: Cli, pipe_name: String) -> Result<()> {
+    let _guard = logging::init("main_helper");
+    tracing::info!(target: "helper", pipe = %pipe_name, "=== wta-helper starting (TUI) ===");
+
+    // Debug channel — same wiring as run_default_tui.
+    let (debug_tx, debug_rx) = tokio::sync::mpsc::unbounded_channel::<app::DebugMessage>();
+
+    let mut shell_mgr = ShellManager::new();
+    let mut wt_event_rx = None;
+    let mut wt_protocol_channel: Option<Arc<CliChannel>> = None;
+    let wt_connected = match connect_to_wt_protocol(debug_tx.clone()).await {
+        Ok(channel) => {
+            tracing::info!(target: "helper", "Connected to WT COM protocol — subscribing to events");
+            wt_event_rx = Some(channel.subscribe_events());
+            let cli_arc = Arc::new(channel);
+            wt_protocol_channel = Some(Arc::clone(&cli_arc));
+            shell_mgr = shell_mgr
+                .with_wt_channel(cli_arc.clone() as Arc<dyn shell::wt_channel::WtChannel>);
+            true
+        }
+        Err(e) => {
+            tracing::warn!(target: "helper", error = %e, "NO WT protocol connection");
+            false
+        }
+    };
+    let shell_mgr = Arc::new(shell_mgr);
+
+    let pane_identity = if wt_connected {
+        discover_pane_identity(&shell_mgr).await
+    } else {
+        None
+    };
+
+    run_acp_tui_mode(
+        cli,
+        shell_mgr,
+        wt_connected,
+        debug_rx,
+        pane_identity,
+        wt_event_rx,
+        wt_protocol_channel,
+        Some(pipe_name),
+    )
+    .await
 }
 
 // ─── Existing functions (preserved) ─────────────────────────────────────────
@@ -1366,10 +1438,18 @@ async fn run_acp_tui_mode(
     pane_identity: Option<(String, String, String)>,
     wt_event_rx: Option<tokio::sync::mpsc::UnboundedReceiver<serde_json::Value>>,
     wt_protocol_channel: Option<Arc<CliChannel>>,
+    connect_master_pipe: Option<String>,
 ) -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    // NOTE: We intentionally do NOT call EnableMouseCapture. Without mouse
+    // tracking, the host terminal emulator (Windows Terminal, xterm, kitty,
+    // alacritty, wezterm) translates mouse-wheel events into Up/Down arrow
+    // keystrokes while we are in the alternate screen buffer. That gives us
+    // wheel-driven chat scrolling for free, and — crucially — leaves native
+    // click-drag text selection working so users can highlight and copy
+    // from the agent pane the way they would from any other terminal.
+    execute!(stdout, EnterAlternateScreen)?;
     execute!(stdout, Print("\x1b]11;#0c0c0c\x07"))?;
     // Steady block (DECSCUSR Ps=2): solid filled rectangle, no blink.
     // Survives the alt-screen swap; restored on exit below.
@@ -1378,7 +1458,7 @@ async fn run_acp_tui_mode(
     let mut terminal = Terminal::new(backend)?;
 
     let result =
-        run_acp_app(&mut terminal, cli, shell_mgr, wt_connected, debug_rx, pane_identity, wt_event_rx, wt_protocol_channel).await;
+        run_acp_app(&mut terminal, cli, shell_mgr, wt_connected, debug_rx, pane_identity, wt_event_rx, wt_protocol_channel, connect_master_pipe).await;
 
     disable_raw_mode()?;
     execute!(
@@ -1387,7 +1467,6 @@ async fn run_acp_tui_mode(
         // OSC 111: reset bg to terminal default so the host shell isn't
         // left with our override.
         Print("\x1b]111\x07"),
-        DisableMouseCapture,
         LeaveAlternateScreen
     )?;
     terminal.show_cursor()?;
@@ -1559,6 +1638,7 @@ async fn run_acp_app(
     pane_identity: Option<(String, String, String)>,
     wt_event_rx: Option<tokio::sync::mpsc::UnboundedReceiver<serde_json::Value>>,
     wt_protocol_channel: Option<Arc<CliChannel>>,
+    connect_master_pipe: Option<String>,
 ) -> Result<()> {
     let agent_cmd = cli.agent.clone();
 
@@ -1605,19 +1685,46 @@ async fn run_acp_app(
                             .and_then(|v| v.as_str())
                             .unwrap_or("")
                             .to_string();
-                        let pane_id = event_json
-                            .get("params")
-                            .and_then(|p| p.get("session_id"))
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("")
-                            .to_string();
+
                         let params = event_json
                             .get("params")
                             .cloned()
                             .unwrap_or(serde_json::Value::Null);
+                        // Read `pane_id` (current name) with a fallback
+                        // to `session_id` (the old name before the
+                        // per-tab autofix routing PR renamed it). The
+                        // C++ TerminalPage side now emits `pane_id` for
+                        // `connection_state` / `vt_sequence`, but the
+                        // wtcli `send-event` builder
+                        // (`BuildSendEventJson`) was missed in that
+                        // rename pass — `agent_event` envelopes from
+                        // hook bridge still carried `session_id`.
+                        // Without this fallback every hook event
+                        // arrived with `pane_id = ""`, and downstream
+                        // `route_agent_event_to_registry` collided all
+                        // sessions on the empty-string key in
+                        // `active_by_pane`, triggering spurious
+                        // orphan-handover demotions whenever a second
+                        // session started in the same window (e.g.
+                        // session A → Ended the moment session B's
+                        // first hook fires). Keep the fallback even
+                        // after wtcli is fixed so an old wtcli build
+                        // can talk to a new wta without surprises.
+                        let pane_id = params
+                            .get("pane_id")
+                            .and_then(|v| v.as_str())
+                            .filter(|s| !s.is_empty())
+                            .or_else(|| params.get("session_id").and_then(|v| v.as_str()))
+                            .unwrap_or("")
+                            .to_string();
+                        let tab_id = params
+                            .get("tab_id")
+                            .and_then(|v| v.as_str())
+                            .map(str::to_string);
                         let _ = wt_event_tx.send(app::AppEvent::WtEvent {
                             method,
                             pane_id,
+                            tab_id,
                             params,
                         });
                     }
@@ -1651,10 +1758,57 @@ async fn run_acp_app(
             // cancels any in-flight prompt for it; the next prompt on that
             // tab lazily creates a fresh session.
             let (drop_session_tx, drop_session_rx) = tokio::sync::mpsc::unbounded_channel();
+            // tab-drag rename channel: App emits a RenameSessionRequest when
+            // WT mints a new stable tab id for an existing tab (cross-window
+            // tab drag). ACP client rekeys tab_to_session so the next prompt
+            // on the dragged tab finds the existing ACP SessionId — without
+            // this the agent loses turn context after a drag.
+            let (rename_session_tx, rename_session_rx) =
+                tokio::sync::mpsc::unbounded_channel();
 
             // Spawn the ACP client -- but not in setup mode, where the user
             // hasn't chosen an agent yet. Store params for deferred start.
-            let deferred_channels = if cli.setup.is_none() {
+            //
+            // In helper mode (`--connect-master <pipe>`) we always spawn the
+            // pipe-attached variant regardless of `--setup`: master owns
+            // the agent lifecycle, so there's no FRE flow to defer to.
+            let deferred_channels = if let Some(ref pipe_name) = connect_master_pipe {
+                let pipe_name = pipe_name.clone();
+                let event_tx_for_pipe = event_tx.clone();
+                let shell_mgr_for_pipe = Arc::clone(&shell_mgr);
+                let acp_model = cli.acp_model.clone();
+                let owner_tab = cli.owner_tab_id.clone();
+                tokio::task::spawn_local(async move {
+                    if let Err(e) = protocol::acp::client::run_acp_client_over_pipe(
+                        pipe_name,
+                        acp_model,
+                        owner_tab,
+                        event_tx_for_pipe.clone(),
+                        prompt_rx,
+                        cancel_rx,
+                        new_session_rx,
+                        load_session_rx,
+                        drop_session_rx,
+                        rename_session_rx,
+                        restart_rx,
+                        shell_mgr_for_pipe,
+                        wt_connected,
+                    )
+                    .await
+                    {
+                        tracing::error!(
+                            target: "helper",
+                            error = %e,
+                            "run_acp_client_over_pipe failed"
+                        );
+                        let _ = event_tx_for_pipe.send(app::AppEvent::AgentError {
+                            session_id: None,
+                            message: format!("helper ACP transport failed: {e:#}"),
+                        });
+                    }
+                });
+                None
+            } else if cli.setup.is_none() {
                 tokio::task::spawn_local(protocol::acp::client::run_acp_client(
                     agent_cmd.clone(),
                     cli.acp_model.clone(),
@@ -1665,13 +1819,14 @@ async fn run_acp_app(
                     new_session_rx,
                     load_session_rx,
                     drop_session_rx,
+                    rename_session_rx,
                     restart_rx,
                     Arc::clone(&shell_mgr),
                     wt_connected,
                 ));
                 None
             } else {
-                Some((prompt_rx, cancel_rx, new_session_rx, load_session_rx, drop_session_rx, restart_rx))
+                Some((prompt_rx, cancel_rx, new_session_rx, load_session_rx, drop_session_rx, rename_session_rx, restart_rx))
             };
 
             let (recommendation_tx, recommendation_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -1694,7 +1849,7 @@ async fn run_acp_app(
             ));
 
             let autofix_enabled = !cli.no_autofix;
-            let mut app_state = app::App::new(prompt_tx, recommendation_tx, permission_tx, cancel_tx, new_session_tx, load_session_tx, drop_session_tx, restart_tx, debug_capture_enabled, wt_connected, autofix_enabled);
+            let mut app_state = app::App::new(prompt_tx, recommendation_tx, permission_tx, cancel_tx, new_session_tx, load_session_tx, drop_session_tx, rename_session_tx, restart_tx, debug_capture_enabled, wt_connected, autofix_enabled);
 
             // ── Preflight: check the agent CLI before connecting ──────────
             // Skip preflight when FRE is active — FRE has its own agent
@@ -1703,11 +1858,7 @@ async fn run_acp_app(
                 // Prefer the canonical id the host passed via `--agent-id`
                 // — that's the user's actual setting value (`acpAgent`).
                 // Fall back to reverse-parsing the `--agent` command line
-                // for manual runs / older hosts. The fallback handles bare
-                // names cleanly but is fragile for adapter-style launches
-                // (`npx -y …claude-code-acp` → "claude") and full-path
-                // launches (`C:\…\copilot.exe` → "copilot"), which is the
-                // whole reason `--agent-id` exists.
+                // for manual runs / older hosts.
                 let canonical_id: String = cli
                     .agent_id
                     .as_deref()
@@ -1725,14 +1876,6 @@ async fn run_acp_app(
                     source = if cli.agent_id.is_some() { "--agent-id" } else { "resolved-from-cmd" },
                     "current_agent_id assigned",
                 );
-                // `agent_check::check_agent` accepts the canonical id and
-                // reuses the existing preflight code path (exe discovery,
-                // credential check). For adapter launches we deliberately
-                // probe the adapted CLI (`claude` / `codex`) rather than
-                // the `npx` wrapper, since auth lives on the underlying
-                // CLI's credential store. Custom agent ids (`custom:foo`)
-                // fall through to the unknown profile, which is fine —
-                // preflight is best-effort for those.
                 let agent_id = canonical_id.as_str();
                 let status = agent_check::check_agent(agent_id);
                 let preflight_result = app::PreflightResult {
@@ -1789,6 +1932,37 @@ async fn run_acp_app(
             // ResumePaneAssigned) back into the event loop.
             app_state.set_agent_event_tx(event_tx.clone());
 
+            // Seed `app_state.tab_id` + `pane_open` from `--owner-tab-id`
+            // BEFORE the `--initial-view` block + the `project_active_tab_state`
+            // emit below. Two failure modes if we don't:
+            //   1. `current_tab_mut` in the --initial-view block falls back
+            //      to DEFAULT_TAB_ID — the view setting lands on the wrong
+            //      tab, the echo C++ receives doesn't match any real tab
+            //      and is dropped.
+            //   2. The initial echo has `pane_open=false` (default), which
+            //      C++'s `OnAgentStateChanged` interprets as "hide" and
+            //      stashes the just-spawned agent pane.
+            // The full seed block further down (which logs + redundantly
+            // sets the same fields) becomes idempotent now.
+            //
+            // `--start-stashed` inverts (2): in the pre-warm path the
+            // C++ side has *already stashed* the pane after spawning the
+            // helper, so the helper must seed `pane_open = false` to
+            // match. Without this, helper echoes `pane_open=true`, C++
+            // sees a stashed pane and a `pane_open=true` echo, and
+            // restores the pane — defeating pre-warm.
+            if let Some(ref owner_tab_id) = cli.owner_tab_id {
+                if !owner_tab_id.is_empty() && app_state.tab_id.is_none() {
+                    let tab = app_state
+                        .tab_sessions
+                        .entry(owner_tab_id.clone())
+                        .or_default();
+                    tab.pane_open = !cli.start_stashed;
+                    app_state.tab_id = Some(owner_tab_id.clone());
+                    app_state.owner_tab_id = Some(owner_tab_id.clone());
+                }
+            }
+
             // Apply --initial-view: if `sessions`, jump straight into the
             // Agents view (mirrors the F2 Chat→Agents toggle). Wired to
             // WT's Ctrl+Shift+/ binding via `--initial-view sessions` on
@@ -1814,6 +1988,23 @@ async fn run_acp_app(
                     app_state.current_tab_mut().agents_list_state.select(Some(0));
                 }
                 app_state.ensure_history_loaded();
+            }
+
+            // Project the initial active-tab state to C++ once, after the
+            // --initial-view block has had its say. Without this push,
+            // C++'s `_agentSessionsViewActive` and `Tab.AgentPaneOpen`
+            // mirrors (single writer lives in `OnAgentStateChanged`)
+            // would stay on their defaults until the user's first
+            // interaction, leaving the bar mislabelled in the
+            // `--initial-view sessions` case and the pane-open flag
+            // out of sync with the seeded `pane_open=true` on the
+            // owner tab. Cheap and idempotent.
+            //
+            // Safe before the `Setup` mode block below: that block runs
+            // its own UI and doesn't read the view flag; if we end up in
+            // setup mode the initial "chat" emission is harmless.
+            if wt_connected {
+                app_state.project_active_tab_state();
             }
 
             // NOTE: historical agent sessions used to be loaded here via
@@ -1867,8 +2058,20 @@ async fn run_acp_app(
 
             app_state.set_event_tx(event_tx.clone());
 
+            // Kick the historical-session scan immediately on agent-pane
+            // startup so the F2 sessions view is populated by the time the
+            // user opens it. The scan runs on a `spawn_blocking` thread and
+            // posts `HistoricalSessionsLoaded` back, so it never blocks the
+            // LocalSet or the first frame. Subsequent `ensure_history_loaded`
+            // calls (from F2 / `/sessions`) short-circuit on `Loading`/`Loaded`.
+            //
+            // Only the ACP TUI path reaches here — `wta delegate`, `wta mcp`,
+            // and CLI subcommands never construct an App that wires
+            // `event_tx`, so they don't pay this cost.
+            app_state.ensure_history_loaded();
+
             // If in setup mode, store ACP params for deferred start after login.
-            if let Some((prompt_rx, cancel_rx, new_session_rx, load_session_rx, drop_session_rx, restart_rx)) = deferred_channels {
+            if let Some((prompt_rx, cancel_rx, new_session_rx, load_session_rx, drop_session_rx, rename_session_rx, restart_rx)) = deferred_channels {
                 app_state.set_acp_params(
                     agent_cmd.clone(),
                     cli.acp_model.clone(),
@@ -1877,6 +2080,7 @@ async fn run_acp_app(
                     new_session_rx,
                     load_session_rx,
                     drop_session_rx,
+                    rename_session_rx,
                     restart_rx,
                     Arc::clone(&shell_mgr),
                     wt_connected,
@@ -1913,10 +2117,18 @@ async fn run_acp_app(
                         tab_id = %owner_tab_id,
                         "seeded app_state.tab_id from --owner-tab-id"
                     );
-                    app_state
+                    let tab = app_state
                         .tab_sessions
                         .entry(owner_tab_id.clone())
                         .or_default();
+                    // wta is the source of truth for "does this tab want
+                    // the pane visible". The pane is being spawned right
+                    // now for this owner tab; under the normal user-
+                    // initiated open the user wants it visible, so default
+                    // pane_open=true. The exception is `--start-stashed`
+                    // (pre-warm path) where C++ has already stashed the
+                    // pane — see comment on the earlier seed block.
+                    tab.pane_open = !cli.start_stashed;
                     app_state.tab_id = Some(owner_tab_id);
                 }
             }

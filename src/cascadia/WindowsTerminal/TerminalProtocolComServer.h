@@ -85,8 +85,7 @@ TerminalProtocolComServer : winrt::implements<TerminalProtocolComServer, Protoco
                                            winrt::hstring const& commandline,
                                            bool background);
     void ClosePane(winrt::guid sessionId);
-    // SendInput intentionally removed from COM. Keystroke injection is now
-    // confined to per-wta secure pipes (TerminalProtocolPipeServer).
+    void SendInput(winrt::guid sessionId, winrt::hstring const& text);
     void FocusPane(winrt::guid sessionId);
     void SetSessionVariable(winrt::guid sessionId,
                             winrt::hstring const& name,
@@ -110,6 +109,14 @@ TerminalProtocolComServer : winrt::implements<TerminalProtocolComServer, Protoco
     // Live COM object count (all objects, regardless of auth state).
     // Used by WindowEmperor to decide when the process is truly idle.
     static int32_t s_GetLiveObjectCount() noexcept;
+
+    // Called from WindowEmperor after a new AppHost is appended to its
+    // _windows vector. Re-runs the per-window page event registration so
+    // that the new window's TerminalPage::ProtocolVtSequenceReceived is
+    // wired into the COM fan-out path. Without this, agent panes opened
+    // in any window other than the first would silently fail to forward
+    // their `_internal.attach_pane` and other VT events to wta.
+    static void s_OnWindowAdded(class AppHost* host);
 
     // Deliver an event to all connected COM clients.
     static void s_NotifyEventToComClients(const std::string& eventJson);
@@ -142,10 +149,11 @@ private:
     // the user presses Ctrl+C twice. TerminalPage tears down the agent pane.
     static void _dispatchCloseAgentPaneToPage(const winrt::hstring& eventJson);
 
-    // Same shape, for {method:"view_changed"} emitted by the wta TUI when its
-    // internal view flips (Esc out of Agents, `/sessions` slash command).
-    // TerminalPage mirrors the new view onto its agent bar + bottom bar state.
-    static void _dispatchViewChangedToPage(const winrt::hstring& eventJson);
+    // Same shape, for {method:"agent_state_changed"} — per-tab agent-pane
+    // UI snapshot from wta. The page-side handler routes by `tab_id` to
+    // the matching AgentPaneContent (or to nothing if the tab has no
+    // agent pane / belongs to a different window).
+    static void _dispatchAgentStateChangedToPage(const winrt::hstring& eventJson);
 
     // Same shape, for {method:"resume_in_new_agent_tab"} emitted by the wta
     // TUI on Shift+Enter in the session view. TerminalPage creates a new

@@ -139,19 +139,15 @@ Pane::BuildStartupState Pane::BuildStartupActions(uint32_t currentId, uint32_t n
         return { .args = {}, .firstPane = shared_from_this(), .focusedPaneId = std::nullopt, .panesCreated = 0 };
     }
 
-    // If one of our children is an agent pane, skip it entirely and serialize
-    // only the non-agent subtree. Agent panes are transient and not persisted.
-    if (_firstChild && _secondChild)
-    {
-        if (_secondChild->_isAgentPane)
-        {
-            return _firstChild->BuildStartupActions(currentId, nextId, kind);
-        }
-        if (_firstChild->_isAgentPane)
-        {
-            return _secondChild->BuildStartupActions(currentId, nextId, kind);
-        }
-    }
+    // Agent panes participate in cross-window move; their conpty + helper
+    // child survive via the ContentId reattach mechanism (see _MakePane), and
+    // the helper process is unchanged across the drag. Persistence (the
+    // BuildStartupKind::Persist path) is the SessionId rehydration mechanism
+    // — `TerminalPaneContent::GetNewTerminalArgs(BuildStartupKind::Persist)`
+    // emits the pane's persisted SessionId, and the terminal layer rebinds
+    // the saved session on restore. There is no longer a per-window agent
+    // singleton to special-case, so we let the agent pane serialize through
+    // the normal split-pane path.
 
     auto buildSplitPane = [&](auto newPane) {
         ActionAndArgs actionAndArgs;
@@ -1739,7 +1735,7 @@ void Pane::_CloseChildRoutine(const bool closeFirst)
     // GH#7252: If either child is zoomed, just skip the animation. It won't work.
     const auto eitherChildZoomed = _firstChild->_zoomed || _secondChild->_zoomed;
     // Agent panes close synchronously: TerminalPage's rebuild path
-    // (_TeardownAgentPane → _AutoCreateHiddenAgentPane) mutates this same
+    // (_TeardownAgentPane → _OpenOrReuseAgentPane) mutates this same
     // parent's children on the very next line, so a deferred _CloseChild
     // would land on a tree that's already been re-split and crash inside
     // its XAML re-parenting (observed: TerminalApp.dll AV / 0xC000041D on
@@ -2837,14 +2833,22 @@ std::shared_ptr<Pane> Pane::FindPaneBySessionId(const winrt::guid& sessionId)
     return _FindPane([&](const auto& p) {
         if (!p->_IsLeaf() || !p->_content)
             return false;
-        if (const auto termContent = p->_content.try_as<winrt::TerminalApp::TerminalPaneContent>())
+        // Use `_getTerminalContent()` so agent panes (whose `_content`
+        // is an `AgentPaneContent` wrapping a `TerminalPaneContent`)
+        // are matched too. Without this unwrap, FindPaneBySessionId
+        // would skip every agent pane → `TerminalProtocolComServer::FocusPane`
+        // would walk every tab without finding a match → throw E_FAIL
+        // (0x80004005), which surfaces in WTA as
+        // `FocusPane failed: 0x80004005` whenever the user presses
+        // Enter on an active agent-pane session row in the F2 list.
+        const auto termContent = p->_getTerminalContent();
+        if (!termContent)
+            return false;
+        if (const auto control = termContent.GetTermControl())
         {
-            if (const auto control = termContent.GetTermControl())
+            if (const auto conn = control.Connection())
             {
-                if (const auto conn = control.Connection())
-                {
-                    return conn.SessionId() == sessionId;
-                }
+                return conn.SessionId() == sessionId;
             }
         }
         return false;

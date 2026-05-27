@@ -137,11 +137,12 @@ namespace TerminalApp
         // The page tears down the shared agent pane; wta dies with its ConPty.
         void OnCloseAgentPaneRequested(String eventJson);
 
-        // Inbound event from WTA carrying {method:"view_changed",params:{view}}.
-        // Emitted when the wta TUI flips its internal view (Esc out of Agents,
-        // `/sessions` slash command). Mirrors the new view onto C++ state so
-        // the agent bar title + bottom bar highlight stay in sync.
-        void OnAgentViewChanged(String eventJson);
+        // Inbound event from WTA carrying
+        // {method:"agent_state_changed",params:{tab_id,view,pane_open}}.
+        // Per-tab agent-pane UI snapshot — the page-side handler routes by
+        // `tab_id` to the matching AgentPaneContent (creating or tearing
+        // down the pane on that tab as needed).
+        void OnAgentStateChanged(String eventJson);
 
         // Inbound event from WTA carrying
         // {method:"resume_in_new_agent_tab",params:{session_id,cwd}}.
