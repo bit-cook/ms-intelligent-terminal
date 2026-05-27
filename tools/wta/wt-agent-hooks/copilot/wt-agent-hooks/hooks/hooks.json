@@ -27,6 +27,42 @@
         }]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [{
+          "type": "command",
+          "command": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/send-event.ps1\" -CliSource copilot agent.prompt.submit"
+        }]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [{
+          "type": "command",
+          "command": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/send-event.ps1\" -CliSource copilot agent.tool.starting"
+        }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [{
+          "type": "command",
+          "command": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/send-event.ps1\" -CliSource copilot agent.tool.finished"
+        }]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": ".*",
+        "hooks": [{
+          "type": "command",
+          "command": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/send-event.ps1\" -CliSource copilot agent.tool.failed"
+        }]
+      }
+    ],
     "StopFailure": [
       {
         "matcher": ".*",

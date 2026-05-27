@@ -18,6 +18,33 @@
         }]
       }
     ],
+     "BeforeAgent": [
+      {
+        "matcher": ".*",
+        "hooks": [{
+          "type": "command",
+          "command": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${extensionPath}/hooks/send-event.ps1\" -CliSource gemini agent.prompt.submit"
+        }]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "matcher": ".*",
+        "hooks": [{
+          "type": "command",
+          "command": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${extensionPath}/hooks/send-event.ps1\" -CliSource gemini agent.tool.starting"
+        }]
+      }
+    ],
+    "AfterTool": [
+      {
+        "matcher": ".*",
+        "hooks": [{
+          "type": "command",
+          "command": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${extensionPath}/hooks/send-event.ps1\" -CliSource gemini agent.tool.finished"
+        }]
+      }
+    ],
     "Notification": [
       {
         "matcher": ".*",
