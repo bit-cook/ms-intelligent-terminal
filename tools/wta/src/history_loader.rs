@@ -37,6 +37,20 @@
 //               the row would launch `gemini --resume <id>` and
 //               dead-end on a similar "no session" rejection.
 //
+//   Codex:    ~/.codex/sessions/YYYY/MM/DD/rollout-<iso-ts>-<UUID>.jsonl
+//             - session id   = first JSONL line `session_meta` payload.id
+//             - cwd          = `session_meta` payload.cwd
+//             - title        = first `event_msg` payload.user_message,
+//                              else first `response_item` role=user content
+//                              (skipping synthetic `<environment_context>`
+//                              prefixes injected by the CLI)
+//             - last_activity= `session_meta` payload.timestamp (fallback file mtime)
+//             - skip "phantom" sessions whose jsonl contains only the
+//               `session_meta` header and/or synthetic
+//               `<environment_context>` response_items (no real user
+//               turn). `codex resume <id>` would reject these as having
+//               no conversation to resume.
+//
 // (Note: per-subagent JSONL files may live in nested `<UUID>/` subdirs of
 // `chats/`. Top-level Gemini sessions are flat files named `session-*.jsonl`.
 // under `<UUID>/<name>.json`. We only pick up `session-*.json` at the
