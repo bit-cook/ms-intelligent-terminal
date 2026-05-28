@@ -432,6 +432,17 @@ where
     } else {
         cwd_label.clone()
     };
+    // A `pane:<guid>` key means we couldn't resolve a real ACP session id
+    // from the event payload (broken hook, race between hook arrival and
+    // `new_session` reaching master, etc.). Keep the local placeholder for
+    // helper bookkeeping (so `is_agent_pane(pane_id)` works for the OSC
+    // 133;A handler) but DO NOT publish these to master — master only ever
+    // learns about real ACP sessions via `new_session`/`load_session`,
+    // and feeding it synthetic rows produces duplicate F2 entries that
+    // shadow the real session (one with the real sid, one with `pane:`
+    // key, both pointing at the same agent — see PR B debug session log
+    // around 2026-05-28T00:30 for the user-visible repro).
+    let key_is_synthetic = key.starts_with("pane:");
     let needs_synthetic_start = event != "agent.session.started" && !session_known;
     if needs_synthetic_start {
         let synthetic_event = SessionEvent::SessionStarted {
@@ -442,7 +453,9 @@ where
             title: synth_title.clone(),
         };
         reg.apply(synthetic_event.clone());
-        hook_sink(synthetic_event);
+        if !key_is_synthetic {
+            hook_sink(synthetic_event);
+        }
     }
 
     if event == "agent.session.started" && !asid.is_empty() {
@@ -518,7 +531,14 @@ where
     };
 
     reg.apply(ev.clone());
-    hook_sink(ev);
+    // Same synthetic-key gate as the SessionStarted placeholder above:
+    // events keyed by `pane:<guid>` are helper-local bookkeeping only
+    // and must NOT be published to master. Their session_id is fake
+    // and would land in master's registry as a duplicate row alongside
+    // the real ACP session.
+    if !key_is_synthetic {
+        hook_sink(ev);
+    }
 
     // Phantom-session prune: if this event was a session-end and the
     // row is now Ended for a managed CLI (Claude/Copilot/Gemini) whose
@@ -8435,6 +8455,95 @@ mod tests {
                 tool_name: "edit".to_string(),
             }
         );
+    }
+
+    #[test]
+    fn helper_agent_event_without_agent_session_id_does_not_publish_synthetic_to_master() {
+        // Regression for the user-reported duplicate F2 row:
+        //   "system32  Error                          29 minutes ago"
+        //   "Agent pane session b832a8d3: system32  Active · copilot"
+        //
+        // When an agent_event arrives with no agent_session_id (broken
+        // hook, race, or hook from a workspace shell pane that doesn't
+        // own an ACP session), the helper used to synthesize a
+        // `pane:<guid>` placeholder, apply it locally, AND publish it to
+        // master. Master then surfaced the placeholder as a separate F2
+        // row alongside the real session, both pointing at the same
+        // underlying pane — hence the duplicate.
+        //
+        // Fix: keep the synthetic placeholder local for helper
+        // bookkeeping (is_agent_pane / OSC handler), but DO NOT publish
+        // events with `pane:<guid>` keys to master.
+        let mut app = test_app();
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        app.set_session_hook_tx(tx);
+
+        // Tool event with NO agent_session_id, NO existing pane binding
+        // → resolve_or_synthesize_key returns "pane:<guid>", synthetic
+        // placeholder created locally, but nothing published to master.
+        app.handle_event(AppEvent::WtEvent {
+            method: "agent_event".to_string(),
+            pane_id: "pane-orphan".to_string(),
+            tab_id: Some("tab-1".to_string()),
+            params: json!({
+                "event": "agent.tool.starting",
+                "cli_source": "copilot",
+                "payload": {
+                    "cwd": r#"C:\repo\hook"#,
+                    "tool_name": "edit"
+                }
+            }),
+        });
+
+        assert!(
+            rx.try_recv().is_err(),
+            "synthetic pane:<guid> events must NOT be published to master"
+        );
+        // Local registry still has the placeholder for helper-side
+        // is_agent_pane / OSC handler bookkeeping.
+        assert!(app.agent_sessions.is_agent_pane("pane-orphan"));
+    }
+
+    #[test]
+    fn helper_agent_event_with_real_agent_session_id_still_publishes_to_master() {
+        // Defense against overcorrection: the synthetic-key gate above
+        // must not block legitimate events with real agent_session_ids.
+        let mut app = test_app();
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        app.set_session_hook_tx(tx);
+
+        app.handle_event(AppEvent::WtEvent {
+            method: "agent_event".to_string(),
+            pane_id: "pane-real".to_string(),
+            tab_id: Some("tab-1".to_string()),
+            params: json!({
+                "event": "agent.tool.starting",
+                "cli_source": "copilot",
+                "agent_session_id": "real-sid-deadbeef",
+                "payload": {
+                    "cwd": r#"C:\repo\hook"#,
+                    "tool_name": "edit"
+                }
+            }),
+        });
+
+        // Should publish at least one event (likely synthetic
+        // SessionStarted + ToolStarting). Both must have the REAL key.
+        let mut count = 0;
+        while let Ok(evt) = rx.try_recv() {
+            match evt {
+                crate::agent_sessions::SessionEvent::SessionStarted { key, .. } => {
+                    assert_eq!(key, "real-sid-deadbeef", "real session id preserved");
+                    count += 1;
+                }
+                crate::agent_sessions::SessionEvent::ToolStarting { key, .. } => {
+                    assert_eq!(key, "real-sid-deadbeef", "real session id preserved");
+                    count += 1;
+                }
+                other => panic!("unexpected event: {:?}", other),
+            }
+        }
+        assert!(count >= 1, "at least one real-keyed event must reach master");
     }
 
     fn test_app_with_master_rx() -> (
