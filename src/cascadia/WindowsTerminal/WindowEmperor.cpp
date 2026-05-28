@@ -1051,6 +1051,8 @@ void WindowEmperor::_postQuitMessageIfNeeded() const
 // When headless with no COM clients, uses a short grace period.
 // When headless but COM clients remain, uses a longer timeout to
 // cover crashed clients whose stub refs are stuck in COM GC.
+// Avoids resetting the timer if the desired timeout hasn't changed,
+// so partial COM GC releases don't extend the stale window.
 void WindowEmperor::_updateComIdleTimer()
 {
     const auto headless =
@@ -1063,11 +1065,16 @@ void WindowEmperor::_updateComIdleTimer()
         const auto timeout = TerminalProtocolComServer::s_GetLiveObjectCount() > 0
                                  ? COM_STALE_TIMEOUT_MS
                                  : COM_IDLE_TIMEOUT_MS;
-        SetTimer(_window.get(), IDT_COM_IDLE, timeout, nullptr);
+        if (_activeComIdleTimeoutMs != timeout)
+        {
+            _activeComIdleTimeoutMs = timeout;
+            SetTimer(_window.get(), IDT_COM_IDLE, timeout, nullptr);
+        }
     }
     else
     {
         KillTimer(_window.get(), IDT_COM_IDLE);
+        _activeComIdleTimeoutMs = 0;
     }
 }
 
@@ -1175,6 +1182,7 @@ LRESULT WindowEmperor::_messageHandler(HWND window, UINT const message, WPARAM c
             if (wParam == IDT_COM_IDLE)
             {
                 KillTimer(_window.get(), IDT_COM_IDLE);
+                _activeComIdleTimeoutMs = 0;
                 // If we're still headless after the grace period, exit.
                 // Any remaining COM objects belong to crashed clients whose
                 // stub references haven't been reclaimed by the COM GC yet.

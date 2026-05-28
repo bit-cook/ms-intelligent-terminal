@@ -79,6 +79,7 @@ private:
     void _createMessageWindow(const wchar_t* className);
     void _postQuitMessageIfNeeded() const;
     void _updateComIdleTimer();
+    DWORD _activeComIdleTimeoutMs{ 0 }; // tracks the currently running timer value to avoid resets
     safe_void_coroutine _showMessageBox(winrt::hstring message, bool error);
     void _notificationAreaMenuRequested(WPARAM wParam);
     void _notificationAreaMenuClicked(WPARAM wParam, LPARAM lParam) const;
