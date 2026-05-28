@@ -3335,14 +3335,11 @@ impl App {
                 // the auto-silenced "unknown"/"connected"/success cases.
                 if !notification.acknowledged {
                     let severity_str = match notification.severity {
-                        WtEventSeverity::Critical => "Critical",
-                        WtEventSeverity::Actionable => "Actionable",
-                        WtEventSeverity::Informational => "Informational",
+                        WtEventSeverity::Critical => Some("Critical"),
+                        WtEventSeverity::Actionable => Some("Actionable"),
+                        WtEventSeverity::Informational => None,
                     };
-                    if matches!(
-                        notification.severity,
-                        WtEventSeverity::Critical | WtEventSeverity::Actionable
-                    ) {
+                    if let Some(severity_str) = severity_str {
                         crate::telemetry::log_error_detected(
                             severity_str,
                             &method,
@@ -4027,6 +4024,7 @@ impl App {
                     // (no chunks can be in flight in that case).
                     self.autofix_generation = self.autofix_generation.wrapping_add(1);
                     if let Some(p) = self.autofix_pane_id.take() {
+                        self.autofix_armed_at = None;
                         self.emit_autofix_state_cleared(&p);
                     }
                 }

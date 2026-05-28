@@ -450,6 +450,13 @@ impl PromptTimingState {
     }
 
     fn observe_stdout_read(&self, bytes: usize) {
+        // NOTE: in the (rare) case of multiple concurrent prompts on the
+        // same Client (= same agent CLI subprocess), this attributes every
+        // stdout read to every in-flight prompt. ACP's transport doesn't
+        // demux stdout per session, so per-session `bytes_read_after_prompt`
+        // becomes an upper bound rather than an exact count when prompts
+        // overlap. The `AgentResponseComplete.TotalResponseBytes`
+        // telemetry field documents this caveat.
         let now = now_unix_s();
         let mut guard = self.active.lock().unwrap();
         let mut updates = Vec::new();

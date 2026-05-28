@@ -36,7 +36,12 @@
 //   - ErrorFixResolved         (next command's exit code is 0 after a fix attempt)
 //
 // Conventions:
-//   - TraceLoggingDescription equivalent: passed as the event's metadata comment
+//   - Per-event description: documented in the Rust doc comment above each
+//     `log_*` wrapper in this file. The `tracelogging` crate's `write_event!`
+//     macro does not surface a TraceLoggingDescription-equivalent metadata
+//     field at the wire level, so the human-readable description lives in
+//     source (and in this module's per-event subsection below) rather than
+//     in the event payload.
 //   - Keyword: MICROSOFT_KEYWORD_MEASURES (stub = 0 in OSS; real value in MS-internal build)
 //   - PartA_PrivTags: PDT_ProductAndServiceUsage (stub = 0 in OSS)
 //   - Level: `Verbose`, matching `TraceLoggingWrite`'s C++ default (the C++
@@ -164,6 +169,12 @@ pub fn log_agent_response_first_token(
 /// chunks — it is a transport-level volume metric, not a measure of the
 /// final answer length. The ETW field name (`TotalResponseBytes`) is
 /// preserved for downstream compatibility.
+///
+/// Caveat: when multiple ACP sessions are active concurrently on one
+/// agent CLI subprocess, stdout bytes cannot be cleanly attributed to a
+/// single session — `observe_stdout_read()` charges every read to every
+/// in-flight prompt. In overlapping turns this over-counts; aggregate it
+/// as a coarse upper bound, not a per-session ground truth.
 ///
 /// Uses a distinct event name (`AgentResponseComplete`) — see the note on
 /// `log_agent_response_first_token` for why this is split into two events.
