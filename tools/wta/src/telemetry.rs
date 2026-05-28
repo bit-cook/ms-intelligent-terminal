@@ -4,11 +4,21 @@
 // ETW TraceLogging provider for the WTA (Windows Terminal Agent) process.
 //
 // This module registers the SAME ETW provider as the C++ Windows Terminal
-// side (`Microsoft.Windows.Terminal.App`, GUID
-// `{24a1622f-7da7-5c77-3303-d850bd1ab2ed}`, registered by
+// side (`Microsoft.Windows.Terminal.App`, registered by
 // `g_hTerminalAppProvider` in `src/cascadia/TerminalApp/init.cpp`). WTA and
 // the C++ side therefore emit into a single merged ETW provider stream, so
 // listeners (xperf/wpa/UTC) see one unified view of the fork.
+//
+// In OSS builds the derived GUID is `{24a1622f-7da7-5c77-3303-d850bd1ab2ed}`
+// (TraceLogging-style SHA-1 hash of the provider name, computed identically
+// on both the C++ and Rust sides). Microsoft-internal builds may rewrite the
+// provider-name string literal below via the
+// `Microsoft.Windows.Terminal.Versioning` NuGet package's `Setup.ps1`
+// (see `build/pipelines/templates-v2/steps-setup-versioning.yml`); the GUID
+// then changes deterministically because both sides derive it from the same
+// name. There is intentionally NO explicit GUID literal here — keeping the
+// provider name as the single source of truth means the overlay surface is
+// one string in C++ and one string in Rust.
 //
 // Note: cross-process correlation by `SessionId` is intentionally NOT
 // provided here. The `SessionId` field on WTA events identifies the ACP
@@ -47,18 +57,21 @@ pub const PDT_PRODUCT_AND_SERVICE_PERFORMANCE: u64 = 0x0;
 
 // Provider definition.
 //
-// Provider name and GUID match the C++ side
-// (`Microsoft.Windows.Terminal.App`, `g_hTerminalAppProvider` in
-// `src/cascadia/TerminalApp/init.cpp`). Both processes therefore emit into
-// the same ETW provider stream and listeners get a unified view of the fork.
+// Provider name matches the C++ side (`Microsoft.Windows.Terminal.App`,
+// `g_hTerminalAppProvider` in `src/cascadia/TerminalApp/init.cpp`). The ETW
+// provider GUID is derived from the name by the `tracelogging` crate's
+// `Guid::from_name` (TraceLogging-style SHA-1 hash) — exactly the same
+// algorithm the C++ side uses — so both processes register the SAME GUID
+// without us having to repeat it as a literal. If a Microsoft-internal build
+// overlay rewrites the name string, both sides shift in lockstep.
 //
 // `group_id` is the Microsoft Telemetry option group, equivalent to the C++
 // TraceLoggingOptionMicrosoftTelemetry() macro
-// (group GUID: 9aa7a361-583f-4c09-b1f1-cea1ef5863b0).
+// (group GUID: 9aa7a361-583f-4c09-b1f1-cea1ef5863b0; this is a public,
+// well-known constant and is the same in OSS and internal builds).
 tlg::define_provider!(
     AGENT_PROVIDER,
     "Microsoft.Windows.Terminal.App",
-    id("24a1622f-7da7-5c77-3303-d850bd1ab2ed"),
     group_id("9aa7a361-583f-4c09-b1f1-cea1ef5863b0")
 );
 
