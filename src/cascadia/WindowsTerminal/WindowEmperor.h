@@ -35,7 +35,12 @@ public:
 
     // Grace period before exiting when no windows and no COM clients remain.
     static constexpr UINT_PTR IDT_COM_IDLE = 42;
+    // Grace period after the process becomes fully idle (no windows, no COM).
     static constexpr DWORD COM_IDLE_TIMEOUT_MS = 5000;
+    // Maximum time a headless process waits for stale COM objects to
+    // disconnect before force-exiting. Covers crashed clients whose
+    // stub references haven't been reclaimed by the COM garbage collector.
+    static constexpr DWORD COM_STALE_TIMEOUT_MS = 30000;
 
     WindowEmperor();
     ~WindowEmperor();

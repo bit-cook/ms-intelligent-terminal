@@ -1040,29 +1040,30 @@ void WindowEmperor::_postQuitMessageIfNeeded() const
     if (
         _messageBoxCount <= 0 &&
         _windowCount <= 0 &&
+        TerminalProtocolComServer::s_GetLiveObjectCount() <= 0 &&
         !_app.Logic().Settings().GlobalSettings().AllowHeadless())
     {
         PostQuitMessage(0);
     }
 }
 
-// Re-evaluates whether the process is truly idle (no windows, no message
-// boxes, no live COM clients). If so, starts a grace-period timer; if
-// activity resumes, cancels it. This is the single place that decides
-// about the COM idle timer — all callers just invoke this method and
-// let it recompute from scratch (stateless).
+// Re-evaluates whether the process should schedule an exit.
+// When headless with no COM clients, uses a short grace period.
+// When headless but COM clients remain, uses a longer timeout to
+// cover crashed clients whose stub refs are stuck in COM GC.
 void WindowEmperor::_updateComIdleTimer()
 {
-    const auto idle =
+    const auto headless =
         _windowCount <= 0 &&
         _messageBoxCount <= 0 &&
-        TerminalProtocolComServer::s_GetLiveObjectCount() <= 0 &&
         !_app.Logic().Settings().GlobalSettings().AllowHeadless();
 
-    if (idle)
+    if (headless)
     {
-        // Start (or restart) the grace-period timer.
-        SetTimer(_window.get(), IDT_COM_IDLE, COM_IDLE_TIMEOUT_MS, nullptr);
+        const auto timeout = TerminalProtocolComServer::s_GetLiveObjectCount() > 0
+                                 ? COM_STALE_TIMEOUT_MS
+                                 : COM_IDLE_TIMEOUT_MS;
+        SetTimer(_window.get(), IDT_COM_IDLE, timeout, nullptr);
     }
     else
     {
@@ -1164,17 +1165,22 @@ LRESULT WindowEmperor::_messageHandler(HWND window, UINT const message, WPARAM c
             return 0;
         case WM_COM_IDLE_CHECK:
             // Posted by the COM MTA thread when a COM object is created or
-            // destroyed. Recompute idle state from scratch.
+            // destroyed. Re-evaluate: if the process is now truly idle
+            // (headless AND no COM objects), quit immediately; otherwise
+            // update the grace-period timer.
+            _postQuitMessageIfNeeded();
             _updateComIdleTimer();
             return 0;
         case WM_TIMER:
             if (wParam == IDT_COM_IDLE)
             {
                 KillTimer(_window.get(), IDT_COM_IDLE);
-                // Double-check: still truly idle?
+                // If we're still headless after the grace period, exit.
+                // Any remaining COM objects belong to crashed clients whose
+                // stub references haven't been reclaimed by the COM GC yet.
+                // TerminateProcess (after the message loop) cleans everything.
                 if (_windowCount <= 0 &&
                     _messageBoxCount <= 0 &&
-                    TerminalProtocolComServer::s_GetLiveObjectCount() <= 0 &&
                     !_app.Logic().Settings().GlobalSettings().AllowHeadless())
                 {
                     PostQuitMessage(0);
