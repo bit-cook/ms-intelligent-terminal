@@ -49,7 +49,12 @@
 //     source (and in this module's per-event subsection below) rather than
 //     in the event payload.
 //   - Keyword: MICROSOFT_KEYWORD_MEASURES (stub = 0 in OSS; real value in MS-internal build)
-//   - PartA_PrivTags: PDT_ProductAndServiceUsage (stub = 0 in OSS)
+//   - PartA_PrivTags: per-event — `ErrorDetected` / `ErrorFixResolved` /
+//     `AgentPromptSent` use `PDT_ProductAndServiceUsage` (usage-tagged
+//     product signals), while the latency-bearing
+//     `AgentResponseFirstToken` and `AgentResponseComplete` use
+//     `PDT_ProductAndServicePerformance` (the durations they carry are
+//     perf metrics, not usage counters).
 //   - Level: `Verbose`, matching `TraceLoggingWrite`'s C++ default (the C++
 //     events under this provider also use the implicit Verbose level).
 
