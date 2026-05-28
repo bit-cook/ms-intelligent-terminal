@@ -1552,7 +1552,17 @@ void Pane::_CloseChild(const bool closeFirst)
     {
         remainingChild->_setPaneContent(nullptr);
         closedChild->Closed(closedChildClosedToken);
+        // Revoke our own routing token on the agent pane first so the
+        // Closed.raise below doesn't re-enter _CloseChildRoutine on us.
         remainingChild->Closed(remainingChildClosedToken);
+        // Fire the agent pane's Closed for any *other* subscribers — most
+        // importantly the `SharedWta::ReleasePane` handler registered at
+        // agent-pane creation (TerminalPage.cpp). Without this, the WTA
+        // shared-master refcount leaks every time this branch tears down
+        // an agent pane (the `_RemoveTab` walk-the-tree compensation can't
+        // see it either, since we null the child pointers below before
+        // Tab::Closed bubbles up).
+        remainingChild->Closed.raise(nullptr, nullptr);
         _firstChild = nullptr;
         _secondChild = nullptr;
         // Become an empty leaf so that subsequent `Pane::Shutdown` (driven
