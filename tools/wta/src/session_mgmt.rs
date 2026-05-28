@@ -267,6 +267,39 @@ mod tests {
     }
 
     #[test]
+    fn codex_class_a_live_with_pane_enter_focuses() {
+        let r = row(
+            SessionOrigin::AgentPane,
+            Liveness::Live {
+                pane_session_id: Some("pane-A".into()),
+            },
+            CliSource::Codex,
+            true,
+            true,
+        );
+        assert_eq!(
+            decide_enter_action(&r, false),
+            EnterAction::Focus {
+                pane_session_id: "pane-A".into()
+            }
+        );
+    }
+
+    #[test]
+    fn codex_class_a_live_with_pane_shift_same_as_enter() {
+        let r = row(
+            SessionOrigin::AgentPane,
+            Liveness::Live {
+                pane_session_id: Some("pane-A".into()),
+            },
+            CliSource::Codex,
+            true,
+            true,
+        );
+        assert_eq!(decide_enter_action(&r, true), decide_enter_action(&r, false));
+    }
+
+    #[test]
     fn class_b_live_with_pane_enter_focuses() {
         let r = row(
             SessionOrigin::Unknown,
@@ -360,11 +393,46 @@ mod tests {
     }
 
     #[test]
+    fn codex_class_a_ended_enter_resumes_in_agent_pane_when_supported() {
+        let r = row(
+            SessionOrigin::AgentPane,
+            Liveness::Ended,
+            CliSource::Codex,
+            true,
+            true,
+        );
+        assert_eq!(
+            decide_enter_action(&r, false),
+            EnterAction::ResumeInAgentPane {
+                key: "k".into(),
+                cli: CliSource::Codex
+            }
+        );
+    }
+
+    #[test]
     fn class_a_ended_enter_not_resumable_when_load_unsupported() {
         let r = row(
             SessionOrigin::AgentPane,
             Liveness::Ended,
             CliSource::Copilot,
+            false, // load_session not supported
+            true,
+        );
+        assert_eq!(
+            decide_enter_action(&r, false),
+            EnterAction::NotResumable {
+                reason: NotResumableReason::LoadSessionNotSupported
+            }
+        );
+    }
+
+    #[test]
+    fn codex_class_a_ended_enter_not_resumable_when_load_unsupported() {
+        let r = row(
+            SessionOrigin::AgentPane,
+            Liveness::Ended,
+            CliSource::Codex,
             false, // load_session not supported
             true,
         );
@@ -395,11 +463,46 @@ mod tests {
     }
 
     #[test]
+    fn codex_class_a_ended_shift_resumes_via_cli_flag() {
+        let r = row(
+            SessionOrigin::AgentPane,
+            Liveness::Ended,
+            CliSource::Codex,
+            true,
+            true,
+        );
+        assert_eq!(
+            decide_enter_action(&r, true),
+            EnterAction::ResumeCliFlag {
+                key: "k".into(),
+                cli: CliSource::Codex
+            }
+        );
+    }
+
+    #[test]
     fn class_a_ended_shift_not_resumable_when_cli_has_no_flag() {
         let r = row(
             SessionOrigin::AgentPane,
             Liveness::Ended,
             CliSource::Claude,
+            true,
+            false, // no --resume flag
+        );
+        assert_eq!(
+            decide_enter_action(&r, true),
+            EnterAction::NotResumable {
+                reason: NotResumableReason::CliHasNoResumeFlag
+            }
+        );
+    }
+
+    #[test]
+    fn codex_class_a_ended_shift_not_resumable_when_cli_has_no_flag() {
+        let r = row(
+            SessionOrigin::AgentPane,
+            Liveness::Ended,
+            CliSource::Codex,
             true,
             false, // no --resume flag
         );
@@ -425,6 +528,24 @@ mod tests {
             EnterAction::ResumeInAgentPane {
                 key: "k".into(),
                 cli: CliSource::Gemini
+            }
+        );
+    }
+
+    #[test]
+    fn codex_class_a_historical_enter_routes_like_ended() {
+        let r = row(
+            SessionOrigin::AgentPane,
+            Liveness::Historical,
+            CliSource::Codex,
+            true,
+            true,
+        );
+        assert_eq!(
+            decide_enter_action(&r, false),
+            EnterAction::ResumeInAgentPane {
+                key: "k".into(),
+                cli: CliSource::Codex
             }
         );
     }
