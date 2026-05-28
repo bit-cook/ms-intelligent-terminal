@@ -745,6 +745,21 @@ namespace winrt::TerminalApp::implementation
                 const auto splitDir = _AgentPanePositionToSplitDirection(_settings.GlobalSettings().AgentPanePosition());
                 if (tabImpl->RestoreStashedAgentPane(splitDir))
                 {
+                    // Mirror the unstash to wta so wta's tab.pane_open
+                    // state stays in sync. Without this, the
+                    // `_SetFocusedTab(tab)` above triggers a `tab_changed`
+                    // round-trip whose echo (`agent_state_changed` with
+                    // the stale `pane_open=false`) lands in
+                    // `OnAgentStateChanged` and immediately re-stashes
+                    // the pane we just restored. Matches the unstash
+                    // path in `_OpenOrReuseAgentPane`
+                    // (TerminalPage.cpp:2510-2518).
+                    //
+                    // View is intentionally left as nullopt: focus_pane
+                    // is a "go look at this session" gesture, not a
+                    // chat/sessions view switch, so we let wta echo back
+                    // whichever view the pane was last in.
+                    _RequestAgentStateForTab(tabImpl, std::nullopt, /*pane_open*/ true);
                     co_return true;
                 }
                 // Restore precondition failed (e.g. agent pane is the root
