@@ -131,22 +131,36 @@ once the session later connects.
 
 ## Logs
 
-WTA writes structured logs to:
+WTA writes structured logs (and all other runtime data) under a single root
+resolved by `runtime_paths::intelligent_terminal_root()`. The layout depends
+on whether the process has package identity:
 
 ```
-C:\Users\<user>\AppData\Local\IntelligentTerminal\logs\
+# Packaged (every production wta process — helper is a conpty child of the
+# packaged WindowsTerminal.exe, master is spawned in-package by SharedWta):
+%LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalState\IntelligentTerminal\logs\
+
+# Unpackaged (dev builds run straight out of the Cargo target dir, tests):
+%LOCALAPPDATA%\IntelligentTerminal\logs\
 ```
 
-The path is built off the `LOCALAPPDATA` env var, which is **not** redirected
-into the package sandbox on Win10/11 (the env-var virtualization that
-hides the regular LOCALAPPDATA was a UWP-era behavior; current Windows
-keeps the env var pointing at the real `\AppData\Local\`). Packaged and
-unpackaged wta processes therefore share the same log directory.
+The packaged path keeps WTA's data inside the package's private store, so it
+is removed on uninstall and isolated between the dev-sideload family
+(`IntelligentTerminal_rd9vj3e6a2mbr`) and the store family
+(`Microsoft.IntelligentTerminal_8wekyb3d8bbwe`) instead of sharing one bare
+`%LOCALAPPDATA%\IntelligentTerminal` directory. It sits alongside the WT
+app's own `settings.json` / `state.json` in `LocalState`.
 
-The sandbox path
-`%LOCALAPPDATA%\Packages\IntelligentTerminal_<id>\LocalCache\Local\IntelligentTerminal\logs`
-exists as a transparent virtualization of the same directory (NTFS reparse
-points) — both paths return the same files.
+The family name comes from `GetCurrentPackageFamilyName` (windows-sys);
+`%LOCALAPPDATA%\Packages\<pfn>\LocalState` is exactly what WinRT
+`ApplicationData.Current.LocalFolder` resolves to, so we construct it
+directly rather than pulling in the WinRT projection. When the call reports
+no package identity, the root falls back to the legacy bare path above.
+
+> Earlier builds wrote everything to the bare `%LOCALAPPDATA%\IntelligentTerminal`
+> regardless of identity (the `LOCALAPPDATA` env var is **not** redirected into
+> the sandbox on Win10/11). There is no migration — old data is left in place
+> and simply ignored.
 
 Log level is controlled by `WTA_LOG` env var (default: `info`; set `debug`
 for the noisy traces).
