@@ -441,8 +441,9 @@ namespace winrt::TerminalApp::implementation
         bool hooksFailed = false;
         bool shellIntegFailed = false;
 
-        // 4. Hooks — skip if GPO blocks it.
+        // 4. Hooks — skip if GPO blocks it or settings unavailable.
         if (SessionManagementToggle().IsOn() &&
+            _settings &&
             !_settings.GlobalSettings().IsAgentSessionHooksPolicyLocked())
         {
             auto self = weak.get();
@@ -466,10 +467,10 @@ namespace winrt::TerminalApp::implementation
 
             co_await winrt::resume_background();
             namespace SI = ::Microsoft::Terminal::ShellIntegration;
-            const auto pwshResult = SI::InstallForTarget(SI::Target::Pwsh);
-            const auto wpshResult = SI::InstallForTarget(SI::Target::WindowsPowerShell);
+            const auto pwsh7Result = SI::InstallForTarget(SI::Target::Pwsh);
+            const auto winPsResult = SI::InstallForTarget(SI::Target::WindowsPowerShell);
 
-            if (!pwshResult.success && !wpshResult.success)
+            if (!pwsh7Result.success || !winPsResult.success)
             {
                 shellIntegFailed = true;
             }
