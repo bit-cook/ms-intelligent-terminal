@@ -3959,6 +3959,24 @@ Registered marketplaces:
     }
 
     #[test]
+    fn bundle_resolves_codex_dir_in_dev_tree() {
+        // Dev-tree lookup walks up from CARGO_MANIFEST_DIR to find
+        // tools/wta/wt-agent-hooks/<dir_name>/. Task 2 puts a real
+        // directory at that path, so this should resolve.
+        let resolved = bundle::resolve_cli_dir(CliKind::Codex)
+            .expect("codex bundle should resolve in dev tree");
+        assert!(
+            resolved
+                .join(".agents")
+                .join("plugins")
+                .join("marketplace.json")
+                .is_file(),
+            "resolved codex bundle should contain marketplace.json (got {})",
+            resolved.display(),
+        );
+    }
+
+    #[test]
     fn install_for_codex_skips_when_home_absent() {
         let tmp = unique_dir("codex-home-absent");
         // No ~/.codex created. Function should return cleanly without panic
