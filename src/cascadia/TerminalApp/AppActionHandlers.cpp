@@ -2004,9 +2004,25 @@ namespace winrt::TerminalApp::implementation
     // preference (including roaming/sync arrivals on fresh machines and
     // toggle-OFF cleanup that the FRE/Settings-Save dialog path doesn't
     // perform). Install/Uninstall are both idempotent.
-    safe_void_coroutine TerminalPage::_ReconcileShellIntegration(bool enabled)
+    safe_void_coroutine TerminalPage::_ReconcileShellIntegration()
     {
+        auto weak = get_weak();
         co_await winrt::resume_background();
+        auto self = weak.get();
+        if (!self)
+        {
+            co_return;
+        }
+
+        // Serialize against any other in-flight reconcile so back-to-back
+        // toggle changes (or file-watcher reload storms) can't interleave
+        // an earlier Install's write after a later Uninstall and leave
+        // the $PROFILE block stuck in the wrong state. Reading the
+        // desired flag inside the lock means the last acquirer always
+        // observes the latest UI-thread-published value, so the final
+        // on-disk state matches the latest setting.
+        std::lock_guard<std::mutex> guard{ _shellIntegrationReconcileMutex };
+        const bool enabled = _shellIntegrationDesiredEnabled.load(std::memory_order_acquire);
 
         namespace SI = ::Microsoft::Terminal::ShellIntegration;
         if (enabled)

@@ -332,7 +332,10 @@ namespace winrt::TerminalApp::implementation
             _autoErrorDetectionSnapshotInitialized = true;
             if (shouldReconcile)
             {
-                _ReconcileShellIntegration(currentDetection);
+                // Publish latest desired state BEFORE spawning the
+                // coroutine so the eventual locked re-read picks it up.
+                _shellIntegrationDesiredEnabled.store(currentDetection, std::memory_order_release);
+                _ReconcileShellIntegration();
             }
         }
 

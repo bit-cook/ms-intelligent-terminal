@@ -468,8 +468,16 @@ if (-not $Global:__ShellInteg_Installed) {
         const std::filesystem::path profilePath{ profilePathW };
 
         // If the profile file doesn't exist there is nothing to remove.
+        // Distinguish "confirmed absent" from "stat failed" — the latter
+        // must not silently report success or we leave the block in
+        // place after a toggle-off when e.g. the path is unreachable.
         std::error_code ec;
-        if (!std::filesystem::exists(profilePath, ec))
+        const bool profileExists = std::filesystem::exists(profilePath, ec);
+        if (ec)
+        {
+            return { false, false, L"Failed to stat PowerShell profile" };
+        }
+        if (!profileExists)
         {
             return { true, true, {} };
         }

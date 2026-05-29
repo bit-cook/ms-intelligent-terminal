@@ -384,6 +384,16 @@ namespace winrt::TerminalApp::implementation
         // never ran the install).
         bool _lastAutoErrorDetectionEnabled{ false };
         bool _autoErrorDetectionSnapshotInitialized{ false };
+        // Cross-thread "latest desired state" for the shell-integration
+        // reconcile. SetSettings (UI thread) stores the current value
+        // *before* spawning the fire-and-forget reconcile; the coroutine
+        // reads this inside the serialization mutex so the last lock
+        // acquirer always observes the most recent setting. Together
+        // with idempotent Install/Uninstall this guarantees the on-disk
+        // state matches the latest setting even when reconciles arrive
+        // back-to-back (e.g. file-watcher reload storms).
+        std::atomic<bool> _shellIntegrationDesiredEnabled{ false };
+        std::mutex _shellIntegrationReconcileMutex;
         bool _agentRebuilding{ false };
         // Set when a settings change wants a rebuild but the active
         // tab can't host an agent pane (e.g. the Settings tab itself).
@@ -509,7 +519,7 @@ namespace winrt::TerminalApp::implementation
         winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::UI::Xaml::Controls::ContentDialogResult> _ShowLargePasteWarningDialog();
 
         safe_void_coroutine _InitShellIntegration(const Microsoft::Terminal::Settings::Model::ShellIntegrationTarget target);
-        safe_void_coroutine _ReconcileShellIntegration(bool enabled);
+        safe_void_coroutine _ReconcileShellIntegration();
         void _ShowShellIntegrationDialog(const winrt::hstring& title, const winrt::hstring& message);
         void _OnSettingsInitShellIntegration(const winrt::Windows::Foundation::IInspectable& sender, const Microsoft::Terminal::Settings::Model::ShellIntegrationTarget target);
 
