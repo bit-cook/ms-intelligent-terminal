@@ -2371,10 +2371,22 @@ impl App {
                 // Surface a user-visible system message scoped to the
                 // current tab so the user can read it from the
                 // agent session view (which is rendered in-tab).
-                let cli_id: String = match s.cli_source {
-                    crate::agent_sessions::CliSource::Claude => "claude".to_string(),
-                    crate::agent_sessions::CliSource::Copilot => "copilot".to_string(),
-                    crate::agent_sessions::CliSource::Gemini => "gemini".to_string(),
+                let agent_display: String = match s.cli_source {
+                    crate::agent_sessions::CliSource::Claude => {
+                        crate::agent_registry::lookup_profile_by_id("claude")
+                            .display_name
+                            .to_string()
+                    }
+                    crate::agent_sessions::CliSource::Copilot => {
+                        crate::agent_registry::lookup_profile_by_id("copilot")
+                            .display_name
+                            .to_string()
+                    }
+                    crate::agent_sessions::CliSource::Gemini => {
+                        crate::agent_registry::lookup_profile_by_id("gemini")
+                            .display_name
+                            .to_string()
+                    }
                     crate::agent_sessions::CliSource::Unknown(_) => {
                         t!("system.fallback.this_agent").into_owned()
                     }
@@ -2398,7 +2410,7 @@ impl App {
                     }
                     NotResumableReason::CliHasNoResumeFlag => t!(
                         "system.cannot_resume_no_resume_flag",
-                        agent = cli_id.as_str()
+                        agent = agent_display.as_str()
                     )
                     .into_owned(),
                     NotResumableReason::UnknownCli => t!(
@@ -2562,7 +2574,7 @@ impl App {
             let short_key: String = s.key.chars().take(8).collect();
             let msg = t!(
                 "system.cannot_resume_phantom_via_flag",
-                agent = cli_id,
+                agent = profile.display_name,
                 session_id = short_key.as_str()
             )
             .into_owned();
@@ -2774,17 +2786,29 @@ impl App {
                 "dispatch_resume_in_agent_pane: refusing to load phantom session; pruning row",
             );
             let short_key: String = s.key.chars().take(8).collect();
-            let cli_id: String = match s.cli_source {
-                crate::agent_sessions::CliSource::Claude => "claude".to_string(),
-                crate::agent_sessions::CliSource::Copilot => "copilot".to_string(),
-                crate::agent_sessions::CliSource::Gemini => "gemini".to_string(),
+            let agent_display: String = match s.cli_source {
+                crate::agent_sessions::CliSource::Claude => {
+                    crate::agent_registry::lookup_profile_by_id("claude")
+                        .display_name
+                        .to_string()
+                }
+                crate::agent_sessions::CliSource::Copilot => {
+                    crate::agent_registry::lookup_profile_by_id("copilot")
+                        .display_name
+                        .to_string()
+                }
+                crate::agent_sessions::CliSource::Gemini => {
+                    crate::agent_registry::lookup_profile_by_id("gemini")
+                        .display_name
+                        .to_string()
+                }
                 crate::agent_sessions::CliSource::Unknown(_) => {
                     t!("system.fallback.this_agent").into_owned()
                 }
             };
             let msg = t!(
                 "system.cannot_resume_phantom_via_load",
-                agent = cli_id.as_str(),
+                agent = agent_display.as_str(),
                 session_id = short_key.as_str()
             )
             .into_owned();
