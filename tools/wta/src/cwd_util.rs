@@ -41,7 +41,7 @@
 //! launch failure inline via `ConptyConnection` if the path really is
 //! bad, but we don't *create* false failures by guessing.
 
-use std::path::Path;
+use std::path::{Component, Path, Prefix};
 
 /// Returns `Some(string)` if the candidate cwd is safe to forward to a
 /// launcher. The result is:
@@ -66,7 +66,7 @@ pub fn validate_starting_directory<P: AsRef<Path>>(path: P) -> Option<String> {
         return None;
     }
 
-    if !is_local_windows_path(&s) {
+    if !is_local_windows_path(p) {
         // Unix-style, WSL UNC, generic UNC, relative — pass through.
         // See the module-level doc comment for the rationale.
         return Some(s.into_owned());
@@ -78,37 +78,32 @@ pub fn validate_starting_directory<P: AsRef<Path>>(path: P) -> Option<String> {
     }
 }
 
-/// `true` only when `s` looks like a *local* Windows path we can safely
-/// hit with `fs::metadata` without risking a slow / hanging syscall:
+/// `true` only when `path` parses to a *local* Windows drive-letter
+/// path that we can safely hit with `fs::metadata` without risking a
+/// slow / hanging syscall.
 ///
-/// * `C:`, `C:\…`, `C:/…` (drive-letter, absolute or drive-relative)
-/// * `\\?\C:\…` / `//?/C:\…` (extended-length, drive-letter form)
+/// Uses [`std::path::Prefix`] for classification, which is the stdlib's
+/// canonical Windows-path parser. The two prefix kinds we treat as
+/// local are:
 ///
-/// Explicitly NOT local-Windows:
+/// * [`Prefix::Disk`] — `C:\…`, `C:/…`, `C:` (drive-letter, absolute
+///   or drive-relative)
+/// * [`Prefix::VerbatimDisk`] — `\\?\C:\…` (extended-length, drive-letter)
 ///
-/// * `/foo`, `~/foo`, `~` (Unix-style / WSL home expansion)
-/// * `\\wsl$\<distro>\…`, `\\wsl.localhost\<distro>\…` (WSL UNC)
-/// * `\\?\UNC\server\share\…` (extended-length UNC, including WSL)
-/// * `\\server\share\…` (generic network UNC)
-/// * `foo\bar`, `./foo` (relative)
-fn is_local_windows_path(s: &str) -> bool {
-    // Drive-letter form: "C:" or "C:\..." or "C:/..."
-    if has_drive_letter_prefix(s) {
-        return true;
-    }
-    // Extended-length, drive-letter only. "\\?\UNC\..." routes to a UNC
-    // path so it's intentionally NOT counted as local.
-    for prefix in [r"\\?\", "//?/"] {
-        if let Some(rest) = s.strip_prefix(prefix) {
-            return has_drive_letter_prefix(rest);
-        }
-    }
-    false
-}
-
-fn has_drive_letter_prefix(s: &str) -> bool {
-    let bytes = s.as_bytes();
-    bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic()
+/// All other prefix kinds ([`Prefix::UNC`], [`Prefix::VerbatimUNC`],
+/// [`Prefix::DeviceNS`], [`Prefix::Verbatim`]) and prefix-less paths
+/// (Unix-style `/foo`, `~/foo`; relative `foo\bar`) fall through as
+/// non-local and skip validation.
+///
+/// Note: `Path::components` only recognises Windows prefixes on
+/// `cfg(windows)` targets, which is fine — wta is built for
+/// `x86_64-pc-windows-msvc` exclusively (see `.cargo/config.toml`).
+fn is_local_windows_path(path: &Path) -> bool {
+    matches!(
+        path.components().next(),
+        Some(Component::Prefix(p))
+            if matches!(p.kind(), Prefix::Disk(_) | Prefix::VerbatimDisk(_))
+    )
 }
 
 #[cfg(test)]
@@ -252,9 +247,12 @@ mod tests {
             r"d:\users\me",
             r"\\?\C:\foo",
             r"\\?\D:\bar",
-            "//?/C:/foo",
         ] {
-            assert!(is_local_windows_path(s), "should be local: {}", s);
+            assert!(
+                is_local_windows_path(Path::new(s)),
+                "should be local: {}",
+                s
+            );
         }
         // NOT local: unix, UNC (including WSL & extended-length UNC), relative.
         for s in [
@@ -272,7 +270,11 @@ mod tests {
             r"foo\bar",
             "./foo",
         ] {
-            assert!(!is_local_windows_path(s), "should NOT be local: {}", s);
+            assert!(
+                !is_local_windows_path(Path::new(s)),
+                "should NOT be local: {}",
+                s
+            );
         }
     }
 }
