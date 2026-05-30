@@ -8,9 +8,11 @@
 // timestamp format, log path, and error-handling semantics stay in lock-
 // step.
 //
-// Output: `%LOCALAPPDATA%\IntelligentTerminal\logs\wta-agent-pane.log`,
-// one ISO8601 UTC line per call with millisecond precision so timestamps
-// correlate with `wta-main_*.log` down to the millisecond.
+// Output: the WTA log directory + `wta-agent-pane.log`, one ISO8601 UTC line
+// per call with millisecond precision so timestamps correlate with
+// `wta-main_*.log` down to the millisecond. The log directory is resolved by
+// `_intelligentTerminalLogDir()` below to match wta's Rust
+// `runtime_paths::intelligent_terminal_local_root()`.
 //
 // Header-only `inline` so each translation unit that includes this picks
 // up its own copy of the symbol without ODR conflicts.
@@ -18,6 +20,7 @@
 #pragma once
 
 #include <windows.h>
+#include <appmodel.h>
 
 #include <chrono>
 #include <ctime>
@@ -29,20 +32,52 @@
 
 namespace winrt::TerminalApp::implementation
 {
-    inline void _agentPaneLog(const std::string& msg)
+    // Resolve the WTA log directory. Mirrors wta's
+    // `runtime_paths::intelligent_terminal_local_root()` exactly so the C++
+    // and Rust sides write into the same folder:
+    //
+    //   * Packaged:   %LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalCache\Local\IntelligentTerminal\logs
+    //   * Unpackaged: %LOCALAPPDATA%\IntelligentTerminal\logs
+    //
+    // Logs are transient cache, hence `LocalCache\Local` (not `LocalState`,
+    // which holds persistent state like the agent-pane session index).
+    // Returns an empty path when `%LOCALAPPDATA%` is unavailable.
+    inline std::filesystem::path _intelligentTerminalLogDir()
     {
         wchar_t localAppData[MAX_PATH];
         if (GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, MAX_PATH) == 0)
         {
-            return;
+            return {};
         }
         // Build a `filesystem::path` from the raw wstring. `std::ofstream`'s
         // wstring overload is a MSVC extension; the standard ctor only
         // accepts `const char*`, `std::string`, and `std::filesystem::path`.
         // Going via `path` keeps the code portable.
-        std::filesystem::path logDir{ std::wstring(localAppData) };
-        logDir /= L"IntelligentTerminal";
-        logDir /= L"logs";
+        std::filesystem::path base{ std::wstring(localAppData) };
+
+        // Two-call pattern: query the family-name length first. A packaged
+        // process returns ERROR_INSUFFICIENT_BUFFER and fills `length`; an
+        // unpackaged one returns APPMODEL_ERROR_NO_PACKAGE.
+        UINT32 length = 0;
+        if (GetCurrentPackageFamilyName(&length, nullptr) == ERROR_INSUFFICIENT_BUFFER && length != 0)
+        {
+            std::wstring family(length, L'\0');
+            if (GetCurrentPackageFamilyName(&length, family.data()) == ERROR_SUCCESS)
+            {
+                family.resize(::wcslen(family.c_str())); // drop trailing NUL(s)
+                return base / L"Packages" / family / L"LocalCache" / L"Local" / L"IntelligentTerminal" / L"logs";
+            }
+        }
+        return base / L"IntelligentTerminal" / L"logs";
+    }
+
+    inline void _agentPaneLog(const std::string& msg)
+    {
+        std::filesystem::path logDir = _intelligentTerminalLogDir();
+        if (logDir.empty())
+        {
+            return;
+        }
 
         // No-throw overload — this is a diagnostic logger; we never want
         // a filesystem hiccup (race with a concurrent rmdir, permission
