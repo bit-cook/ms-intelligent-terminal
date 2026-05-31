@@ -988,6 +988,13 @@ pub struct DispatchedCommand {
 pub enum AppEvent {
     Key(KeyEvent),
     Tick,
+    /// High-frequency (~30Hz) reveal animation tick. Drives the typewriter
+    /// smoothing of the streaming agent response (advances `reveal_chars`).
+    /// Separate from `Tick` so we can run the reveal at 30fps without
+    /// quadrupling the spinner's full-frame flush rate: a `RevealTick` only
+    /// forces a redraw when there is unrevealed pending text on the current
+    /// tab (`has_reveal_backlog`).
+    RevealTick,
     Resize(u16, u16), // terminal resize (handled by ratatui)
     /// XAML focus on our hosting TermControl changed — true when the agent
     /// pane gained focus, false when it lost focus. Sourced from xterm
@@ -1052,10 +1059,22 @@ pub enum AppEvent {
     },
     /// Errors raised before a session exists carry None for `session_id`
     /// and route to the active tab; in-flight failures route to the
-    /// session's tab.
+    /// session's tab. `failure` is the typed classification that drives
+    /// recovery (sign-in / `/restart` / show-and-stay); `message` is the
+    /// human-readable line to display.
     AgentError {
         session_id: Option<String>,
+        failure: crate::protocol::acp::failure::AgentFailure,
         message: String,
+    },
+    /// A turn that completed successfully at the protocol level but ended on a
+    /// soft stop (output-token limit, request budget, or refusal). NOT a
+    /// connection failure — the session stays `Connected`; this only appends an
+    /// informational line to the session's chat. Emitted *after*
+    /// `AgentMessageEnd` so the notice follows the agent's streamed content.
+    AgentSoftStop {
+        session_id: String,
+        reason: crate::protocol::acp::soft_stop::SoftStopReason,
     },
     /// Same-tab single-flight guard rejection. The user submitted a new
     /// prompt while the previous one is still in flight on the same tab.
@@ -1315,6 +1334,13 @@ pub struct TabSession {
     // back to the spinner label derived from `turn` when None.
     pub progress_status: Option<String>,
     pub activity_frame: usize,
+    /// Typewriter reveal cursor: how many characters of the *user-visible*
+    /// streaming text are currently shown. The full text lives in
+    /// `turn.buffer()`; the renderer only emits the first `reveal_chars`
+    /// chars of it. Advanced toward the full length by `RevealTick`
+    /// (`advance_reveal`), reset to 0 when a new turn starts streaming, and
+    /// made irrelevant on finalize (the committed message renders in full).
+    pub reveal_chars: usize,
     pub timing_note: Option<String>,
     pub selection_visible_pending: bool,
 
@@ -2380,37 +2406,39 @@ impl App {
                 // Surface a user-visible system message scoped to the
                 // current tab so the user can read it from the
                 // agent session view (which is rendered in-tab).
-                let cli_id = known_cli_id(&s.cli_source).unwrap_or("this CLI");
+                let agent_display: String = match known_cli_id(&s.cli_source) {
+                    Some(id) => crate::agent_registry::lookup_profile_by_id(id)
+                        .display_name
+                        .to_string(),
+                    None => t!("system.fallback.this_agent").into_owned(),
+                };
                 let msg = match reason {
-                    NotResumableReason::LiveWithoutPane => format!(
-                        "Cannot focus session {}: it appears live but no \
-                         pane GUID is bound yet. Try again in a moment.",
-                        s.key
-                    ),
-                    NotResumableReason::LoadSessionNotSupported => {
-                        let agent = if self.agent_name.is_empty() {
-                            "the connected agent"
-                        } else {
-                            self.agent_name.as_str()
-                        };
-                        format!(
-                            "Cannot resume in agent pane: {} did not advertise \
-                             the ACP `loadSession` capability. Press Enter \
-                             (without Shift) to resume in a new terminal pane instead.",
-                            agent
-                        )
+                    NotResumableReason::LiveWithoutPane => {
+                        t!("system.cannot_focus_session", session_id = s.key.as_str())
+                            .into_owned()
                     }
-                    NotResumableReason::CliHasNoResumeFlag => format!(
-                        "Cannot resume {} session: this CLI has no \
-                         `--resume`-style flag. Press Shift+Enter to try \
-                         resuming inside the agent pane via ACP instead.",
-                        cli_id
-                    ),
-                    NotResumableReason::UnknownCli => format!(
-                        "Cannot resume session {}: its source CLI is unknown \
-                         to this WTA build.",
-                        s.key
-                    ),
+                    NotResumableReason::LoadSessionNotSupported => {
+                        let agent: String = if self.agent_name.is_empty() {
+                            t!("system.fallback.connected_agent").into_owned()
+                        } else {
+                            self.agent_name.clone()
+                        };
+                        t!(
+                            "system.cannot_resume_no_load_session",
+                            agent = agent.as_str()
+                        )
+                        .into_owned()
+                    }
+                    NotResumableReason::CliHasNoResumeFlag => t!(
+                        "system.cannot_resume_no_resume_flag",
+                        agent = agent_display.as_str()
+                    )
+                    .into_owned(),
+                    NotResumableReason::UnknownCli => t!(
+                        "system.cannot_resume_unknown_agent",
+                        session_id = s.key.as_str()
+                    )
+                    .into_owned(),
                 };
                 tracing::warn!(
                     target: "agents_view",
@@ -2563,11 +2591,12 @@ impl App {
                 "dispatch_resume: refusing to resume phantom session (no on-disk content); pruning row",
             );
             let short_key: String = s.key.chars().take(8).collect();
-            let msg = format!(
-                "Cannot resume {} session {}: it was started but never accumulated any \
-                 conversation, so {} itself would reject the resume. Removing the row.",
-                cli_id, short_key, cli_id
-            );
+            let msg = t!(
+                "system.cannot_resume_phantom_via_flag",
+                agent = profile.display_name,
+                session_id = short_key.as_str()
+            )
+            .into_owned();
             let tab = self.current_tab_mut();
             tab.messages.push(ChatMessage::System(msg));
             tab.scroll_to_bottom();
@@ -2740,17 +2769,16 @@ impl App {
         // keep the session management view focused so the user can
         // press plain Enter to fall back to the split-pane resume path.
         if !self.agent_supports_load_session {
-            let agent = if self.agent_name.is_empty() {
-                "the connected agent"
+            let agent: String = if self.agent_name.is_empty() {
+                t!("system.fallback.connected_agent").into_owned()
             } else {
-                self.agent_name.as_str()
+                self.agent_name.clone()
             };
-            let msg = format!(
-                "Cannot resume in agent pane: {} did not advertise the ACP \
-                 `loadSession` capability. Press Enter (without Shift) to \
-                 resume in a new terminal pane instead.",
-                agent
-            );
+            let msg = t!(
+                "system.cannot_resume_no_load_session",
+                agent = agent.as_str()
+            )
+            .into_owned();
             tracing::warn!(
                 target: "agents_view",
                 key = %s.key,
@@ -2789,12 +2817,18 @@ impl App {
                 "dispatch_resume_in_agent_pane: refusing to load phantom session; pruning row",
             );
             let short_key: String = s.key.chars().take(8).collect();
-            let cli_id = known_cli_id(&s.cli_source).unwrap_or("this CLI");
-            let msg = format!(
-                "Cannot resume {} session {}: it was started but never accumulated any \
-                 conversation, so {} would reject the load. Removing the row.",
-                cli_id, short_key, cli_id
-            );
+            let agent_display: String = match known_cli_id(&s.cli_source) {
+                Some(id) => crate::agent_registry::lookup_profile_by_id(id)
+                    .display_name
+                    .to_string(),
+                None => t!("system.fallback.this_agent").into_owned(),
+            };
+            let msg = t!(
+                "system.cannot_resume_phantom_via_load",
+                agent = agent_display.as_str(),
+                session_id = short_key.as_str()
+            )
+            .into_owned();
             let tab = self.current_tab_mut();
             tab.messages.push(ChatMessage::System(msg));
             tab.scroll_to_bottom();
@@ -3822,6 +3856,7 @@ impl App {
             AppEvent::TabSystemMessage { .. } => "tab_system_message",
             AppEvent::PromptTemplateLoaded { .. } => "prompt_template_loaded",
             AppEvent::AgentError { .. } => "agent_error",
+            AppEvent::AgentSoftStop { .. } => "agent_soft_stop",
             AppEvent::AgentBusy { .. } => "agent_busy",
             AppEvent::TabRenamed { .. } => "tab_renamed",
             AppEvent::ExecutionInfo(_) => "execution_info",
@@ -3850,6 +3885,7 @@ impl App {
             AppEvent::SessionsChanged => "sessions_changed",
             AppEvent::AgentsSnapshotLoaded { .. } => "agents_snapshot_loaded",
             AppEvent::MasterMutationCompleted { .. } => "master_mutation_completed",
+            AppEvent::RevealTick => "reveal_tick",
         }
     }
 
@@ -3913,6 +3949,9 @@ impl App {
             AppEvent::Resize(w, h) => {
                 self.terminal_cols = w;
                 self.terminal_rows = h;
+            }
+            AppEvent::RevealTick => {
+                self.advance_reveal();
             }
             AppEvent::FocusChanged(focused) => {
                 self.pane_focused = focused;
@@ -4057,10 +4096,8 @@ impl App {
             }
             AppEvent::AgentBusy { tab_id } => {
                 let tab = self.tab_mut(&tab_id);
-                tab.messages.push(ChatMessage::System(
-                    "Agent is busy on this tab — wait for the current prompt to finish."
-                        .to_string(),
-                ));
+                tab.messages
+                    .push(ChatMessage::System(t!("system.agent_busy").into_owned()));
                 tab.scroll_to_bottom();
             }
             AppEvent::TabRenamed {
@@ -4072,25 +4109,29 @@ impl App {
             }
             AppEvent::AgentError {
                 session_id,
+                failure,
                 message,
             } => {
-                // No substring classification of the error text here — keyword
-                // matching is fragile. The message is passed through as-is; the
-                // clean "connection lost" line comes from a real signal (the
-                // `handle_io` watchdog emitting connection.lost on pipe death),
-                // not from pattern-matching jargon. Auth errors flow through with
-                // their marker intact so the fallback below routes them to
-                // sign-in.
-                // Optimistic-connect fallback: if we have stashed auth info
-                // and the error is auth-related, show the auth screen instead
-                // of a dead error state.
-                let lower = message.to_lowercase();
-                let is_auth_error = lower.contains("authentication required")
-                    || lower.contains("not logged in")
-                    || lower.contains("unauthorized")
-                    || lower.contains("401")
-                    || lower.contains("apikey is missing")
-                    || lower.contains("api key");
+                // Classification is typed (`AgentFailure`), done once at the
+                // helper boundary where the `acp::Error` code / transport
+                // signal is still available. No substring matching here — the
+                // discriminant decides the recovery path. `message` is only the
+                // human-readable line to display.
+                tracing::info!(
+                    target: "failure",
+                    class = failure.class(),
+                    session_id = ?session_id,
+                    "agent failure"
+                );
+
+                // A user-initiated cancel surfaced as an error is not a
+                // failure — the turn already ended via the cancel path, so
+                // show nothing and leave the state untouched.
+                if failure.is_cancelled() {
+                    return;
+                }
+
+                let is_auth_error = failure.is_auth();
                 if is_auth_error && !self.preflight_setup_active {
                     tracing::info!("AgentError auth fallback: showing setup screen");
                     // Use current_agent_id — set at preflight or agent selection time.
@@ -4168,6 +4209,28 @@ impl App {
                         tab.messages.push(ChatMessage::Error(message));
                     }
                 }
+            }
+            AppEvent::AgentSoftStop { session_id, reason } => {
+                use crate::protocol::acp::soft_stop::SoftStopReason;
+                // A soft stop is an *outcome*, not a connection failure — the
+                // session stays Connected and the turn already closed via
+                // AgentMessageEnd. We only append an informational line so the
+                // user knows why the reply ended (truncation / budget / refusal)
+                // instead of silently trailing off.
+                tracing::info!(
+                    target: "soft_stop",
+                    class = reason.class(),
+                    session_id = %session_id,
+                    "agent turn ended on a soft stop"
+                );
+                let msg = match reason {
+                    SoftStopReason::MaxTokens => t!("system.stopped_max_tokens"),
+                    SoftStopReason::MaxTurnRequests => t!("system.stopped_max_turn_requests"),
+                    SoftStopReason::Refusal => t!("system.stopped_refusal"),
+                };
+                let tab = self.session_tab_mut(&session_id);
+                tab.messages.push(ChatMessage::System(msg.into_owned()));
+                tab.scroll_to_bottom();
             }
             AppEvent::ExecutionInfo(message) => {
                 self.push_execution_info(message);
@@ -4862,10 +4925,13 @@ impl App {
                         // close it).
                         tab.loading_session = true;
                         tab.loading_target_session_id = Some(session_id.to_string());
-                        tab.messages.push(ChatMessage::System(format!(
-                            "Resuming session {}...",
-                            session_id
-                        )));
+                        tab.messages.push(ChatMessage::System(
+                            t!(
+                                "system.resuming_session",
+                                session_id = session_id
+                            )
+                            .into_owned(),
+                        ));
                         tab.scroll_to_bottom();
                     }
                     // If the load_session target IS the active tab, push the
@@ -5521,6 +5587,11 @@ impl App {
     fn event_requires_redraw(&self, event: &AppEvent) -> bool {
         match event {
             AppEvent::Tick => self.has_activity_indicator() || self.show_notification_banner,
+            // The reveal animation only needs a frame while there is still
+            // unrevealed pending text on the *visible* tab. When the reveal
+            // has caught up (or nothing is streaming) this is a cheap no-op
+            // tick that doesn't redraw — so idle/no-backlog costs nothing.
+            AppEvent::RevealTick => self.has_reveal_backlog(),
             AppEvent::AgentMessageChunk { .. } => true,
             AppEvent::DebugPipeMessage(_) => self.show_debug_panel,
             // History only affects the agent session view; chat doesn't read it.
@@ -5528,6 +5599,51 @@ impl App {
             // view is showing — pay the one frame.
             AppEvent::HistoricalSessionsLoaded(_) => true,
             _ => true,
+        }
+    }
+
+    /// Number of *user-visible* characters in a tab's streaming buffer, i.e.
+    /// the length of what the renderer would show in full. `None` when the
+    /// tab is not streaming visible prose.
+    fn tab_visible_stream_len(tab: &TabSession) -> Option<usize> {
+        let buf = tab.turn.buffer()?;
+        crate::ui::chat::user_visible_stream_text(buf).map(|t| t.chars().count())
+    }
+
+    /// True iff the current (visible) tab has streaming text that the reveal
+    /// cursor hasn't caught up to yet. Used to gate `RevealTick` redraws.
+    fn has_reveal_backlog(&self) -> bool {
+        let tab = self.current_tab();
+        matches!(Self::tab_visible_stream_len(tab), Some(len) if tab.reveal_chars < len)
+    }
+
+    /// Advance the typewriter reveal cursor on every streaming tab. The step
+    /// is *adaptive*: it grows with the backlog so the reveal can never fall
+    /// permanently behind a fast model — any backlog is drained within
+    /// `REVEAL_CATCHUP_FRAMES` ticks. Combined with the fact that finalize
+    /// commits the message in full (un-gated), this guarantees the smoothing
+    /// never increases the total time for the response to appear: it only
+    /// redistributes *when* characters show up within the streaming window.
+    fn advance_reveal(&mut self) {
+        // ~30fps tick. `REVEAL_MIN_STEP` is the floor so a slow trickle still
+        // animates; the `backlog / REVEAL_CATCHUP_FRAMES` term speeds up to
+        // match (and overtake) arrival, capping the visible lag at roughly
+        // `REVEAL_CATCHUP_FRAMES` ticks (~130ms).
+        const REVEAL_MIN_STEP: usize = 3;
+        const REVEAL_CATCHUP_FRAMES: usize = 4;
+        for tab in self.tab_sessions.values_mut() {
+            let Some(len) = Self::tab_visible_stream_len(tab) else {
+                continue;
+            };
+            if tab.reveal_chars >= len {
+                // Clamp down if the visible text shrank (e.g. a fenced JSON
+                // block replaced the streamed prose).
+                tab.reveal_chars = len;
+                continue;
+            }
+            let backlog = len - tab.reveal_chars;
+            let step = REVEAL_MIN_STEP.max(backlog / REVEAL_CATCHUP_FRAMES);
+            tab.reveal_chars = (tab.reveal_chars + step).min(len);
         }
     }
 
@@ -6120,10 +6236,13 @@ impl App {
                             .unwrap_or("/")
                             .to_string();
                         let tab = self.current_tab_mut();
-                        tab.messages.push(ChatMessage::System(format!(
-                            "Unknown command \"{}\" — sent as prompt. Type /help for the list.",
-                            unknown
-                        )));
+                        tab.messages.push(ChatMessage::System(
+                            t!(
+                                "system.unknown_command",
+                                command = unknown.as_str()
+                            )
+                            .into_owned(),
+                        ));
                         // Fall through to the prompt path below.
                     }
                 }
@@ -6169,10 +6288,8 @@ impl App {
                     // too, but bouncing here keeps the user's input intact.
                     if !self.current_tab().turn.accepts_new_prompt() {
                         let tab = self.current_tab_mut();
-                        tab.messages.push(ChatMessage::System(
-                            "Agent is busy on this tab — wait for the current prompt to finish."
-                                .to_string(),
-                        ));
+                        tab.messages
+                            .push(ChatMessage::System(t!("system.agent_busy").into_owned()));
                         tab.scroll_to_bottom();
                         return;
                     }
@@ -6374,7 +6491,7 @@ impl App {
                 if in_flight {
                     let tab = self.current_tab_mut();
                     tab.messages.push(ChatMessage::System(
-                        "Wait for the current prompt to finish, or /stop first.".to_string(),
+                        t!("system.busy_use_stop").into_owned(),
                     ));
                     tab.scroll_to_bottom();
                     return;
@@ -7133,6 +7250,8 @@ impl App {
                     prompt,
                     buf: text.to_string(),
                 };
+                // New turn: restart the typewriter reveal from the top.
+                tab.reveal_chars = 0;
                 true
             }
             // Thought chunk while Submitted: enter Streaming with empty buf.
@@ -7146,6 +7265,7 @@ impl App {
                     prompt,
                     buf: String::new(),
                 };
+                tab.reveal_chars = 0;
                 false
             }
             // Streaming → Streaming, append message chunks only.
@@ -11169,10 +11289,15 @@ mod tests {
         // In-flight prompt fails first (raw), then the watchdog's connection.lost.
         app.handle_event(AppEvent::AgentError {
             session_id: None,
+            failure: crate::protocol::acp::failure::AgentFailure::Protocol {
+                code: -32603,
+                message: "pipe closed".to_string(),
+            },
             message: "prompt error: pipe closed".to_string(),
         });
         app.handle_event(AppEvent::AgentError {
             session_id: None,
+            failure: crate::protocol::acp::failure::AgentFailure::TransportLost,
             message: lost.clone(),
         });
         assert!(
@@ -11189,6 +11314,7 @@ mod tests {
         // An identical connection.lost arriving again must not stack a duplicate.
         app.handle_event(AppEvent::AgentError {
             session_id: None,
+            failure: crate::protocol::acp::failure::AgentFailure::TransportLost,
             message: lost.clone(),
         });
         let n = app
@@ -11201,15 +11327,18 @@ mod tests {
     }
 
     /// Auth failures must reach the sign-in screen, not get flattened to a dead
-    /// `connection.lost`. The over-pipe startup path passes errors through
-    /// verbatim (main.rs does no substring classification), so the auth marker
-    /// survives to this handler's auth check.
+    /// `connection.lost`. Classification is typed (`AgentFailure::AuthRequired`),
+    /// done once at the helper boundary, so the handler routes purely on the
+    /// discriminant — no substring matching of the message text.
     #[test]
     fn auth_error_routes_to_signin_not_connection_lost() {
         let mut app = test_app();
         app.state = ConnectionState::Connected;
         app.handle_event(AppEvent::AgentError {
             session_id: None,
+            failure: crate::protocol::acp::failure::AgentFailure::AuthRequired {
+                message: "authentication required".to_string(),
+            },
             message: "new_session over master pipe failed: authentication required"
                 .to_string(),
         });
@@ -11222,6 +11351,77 @@ mod tests {
             !matches!(app.state, ConnectionState::Failed(_)),
             "an auth failure must not become a Failed connection-lost state"
         );
+    }
+
+    /// A soft stop is an *outcome*, not a connection failure: the handler must
+    /// append an informational System line carrying the localized reason text,
+    /// while leaving the connection `Connected` and never routing to the
+    /// sign-in screen. This is what keeps soft stops off the `AgentFailure`
+    /// axis — the gap the client-level emit test cannot cover.
+    #[test]
+    fn soft_stop_appends_system_line_without_changing_state() {
+        use crate::protocol::acp::soft_stop::SoftStopReason;
+        let mut app = test_app();
+        app.state = ConnectionState::Connected;
+
+        app.handle_event(AppEvent::AgentSoftStop {
+            session_id: "0".to_string(),
+            reason: SoftStopReason::Refusal,
+        });
+
+        let expected = t!("system.stopped_refusal").into_owned();
+        assert!(
+            app.current_tab()
+                .messages
+                .iter()
+                .any(|m| matches!(m, ChatMessage::System(s) if *s == expected)),
+            "a soft stop must append its localized System line"
+        );
+        assert!(
+            matches!(app.state, ConnectionState::Connected),
+            "a soft stop must not change the connection state"
+        );
+        assert_ne!(
+            app.mode,
+            AppMode::Setup,
+            "a soft stop is not a failure — it must never route to sign-in"
+        );
+        assert!(
+            !app.current_tab()
+                .messages
+                .iter()
+                .any(|m| matches!(m, ChatMessage::Error(_))),
+            "a soft stop must not surface an Error line"
+        );
+    }
+
+    /// Each `SoftStopReason` must resolve to its own distinct localized line so
+    /// the user can tell truncation from a request-budget stop from a refusal.
+    #[test]
+    fn soft_stop_reasons_map_to_distinct_localized_lines() {
+        use crate::protocol::acp::soft_stop::SoftStopReason;
+        for (reason, key) in [
+            (SoftStopReason::MaxTokens, "system.stopped_max_tokens"),
+            (
+                SoftStopReason::MaxTurnRequests,
+                "system.stopped_max_turn_requests",
+            ),
+            (SoftStopReason::Refusal, "system.stopped_refusal"),
+        ] {
+            let mut app = test_app();
+            app.handle_event(AppEvent::AgentSoftStop {
+                session_id: "0".to_string(),
+                reason,
+            });
+            let expected = t!(key).into_owned();
+            assert!(
+                app.current_tab()
+                    .messages
+                    .iter()
+                    .any(|m| matches!(m, ChatMessage::System(s) if *s == expected)),
+                "reason {reason:?} must render the {key} line"
+            );
+        }
     }
 
     /// F7: while `Connecting`, the activity frame must keep advancing on Tick so

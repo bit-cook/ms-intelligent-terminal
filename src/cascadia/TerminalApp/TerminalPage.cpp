@@ -308,6 +308,56 @@ namespace winrt::TerminalApp::implementation
             _agentSettingsSnapshotInitialized = true;
         }
 
+        // Shell-integration reconcile (silent, background).
+        //
+        // Fires on first-load AND whenever EffectiveAutoErrorDetectionEnabled
+        // changes between settings reloads. This handles two cases that
+        // the explicit FRE/Settings-Save install paths miss:
+        //
+        //   1. Toggle-OFF: previously a no-op, leaving our $PROFILE block
+        //      in place. We now call UninstallForTarget to strip it.
+        //   2. Roaming/sync: a synced settings.json arriving on a fresh
+        //      machine never triggered an install because no user action
+        //      ran. First-load reconcile installs based on an explicit
+        //      setting value (sync delivers one). When no explicit value
+        //      exists (truly fresh user), first-load is a no-op and the
+        //      FRE / Settings Save flow remains the consent path.
+        //
+        // Install/Uninstall are both idempotent — when the on-disk state
+        // already matches the desired state they return alreadyInstalled
+        // and do no I/O beyond a read. Safe to call every reload.
+        {
+            const bool currentDetection = _settings.GlobalSettings().EffectiveAutoErrorDetectionEnabled();
+            const bool hasExplicit = _settings.GlobalSettings().HasAutoErrorDetectionEnabled();
+            const bool isFirstLoad = !_autoErrorDetectionSnapshotInitialized;
+            // First load gating:
+            //   - explicit value present (true or false, e.g. roaming-synced settings.json,
+            //     or local user has already saved) -> reconcile, which installs or removes
+            //     to match the user's expressed intent.
+            //   - no explicit value (fresh user, default true) -> do NOT install just because
+            //     the default is true. The FRE / Settings Save flow is the explicit consent
+            //     path for first-time PowerShell profile mutation.
+            // Subsequent reloads: fire on any change (so explicit toggle in Settings works
+            // even when transitioning back to the default value) AND on the false->true
+            // transition of explicit-ness (covers a user/sync adding the explicit key while
+            // the effective value happens to match the previously-defaulted value).
+            const bool effectiveChanged = (_lastAutoErrorDetectionEnabled != currentDetection);
+            const bool explicitTurnedOn = (!_lastAutoErrorDetectionHasExplicit && hasExplicit);
+            const bool shouldReconcile = isFirstLoad
+                                             ? hasExplicit
+                                             : (effectiveChanged || explicitTurnedOn);
+            _lastAutoErrorDetectionEnabled = currentDetection;
+            _lastAutoErrorDetectionHasExplicit = hasExplicit;
+            _autoErrorDetectionSnapshotInitialized = true;
+            if (shouldReconcile)
+            {
+                // Publish latest desired state BEFORE spawning the
+                // coroutine so the eventual locked re-read picks it up.
+                _shellIntegrationDesiredEnabled.store(currentDetection, std::memory_order_release);
+                _ReconcileShellIntegration();
+            }
+        }
+
         // Auto-suggest toggle hot-reload: when the effective auto-fix
         // value changes between settings reloads, push the new value
         // to WTA over the protocol. Tracks `EffectiveAutoFixEnabled`
@@ -1349,7 +1399,7 @@ namespace winrt::TerminalApp::implementation
     // ordinary conpty children of TermControl — the standard pane teardown
     // path (Pane::Close → ConptyConnection::Close → conpty pipes closed →
     // helper exits) is enough. Each tab has at most one agent pane.
-    void TerminalPage::_TeardownAgentPane(const winrt::com_ptr<Tab>& tab)
+    void TerminalPage::_TeardownAgentPane(const winrt::com_ptr<Tab>& tab, bool suppressMasterRestart)
     {
         if (!tab)
         {
@@ -1357,6 +1407,16 @@ namespace winrt::TerminalApp::implementation
         }
         if (const auto pane = tab->FindAgentPane())
         {
+            if (suppressMasterRestart)
+            {
+                // Closing the pane kills its conpty child → the wta-helper
+                // exits → its master pipe goes EOF → master emits
+                // `restart_agent_pane`. Record a mark so the resulting
+                // event is recognized as a deliberate teardown and skipped
+                // by `OnAgentPaneRestartRequested` rather than respawning a
+                // pane we just intentionally closed.
+                _agentPaneRestartSuppression[tab->StableId()] = std::chrono::steady_clock::now();
+            }
             _agentPaneLog("_TeardownAgentPane: closing agent pane on tab");
             pane->Close();
         }
@@ -4375,6 +4435,85 @@ namespace winrt::TerminalApp::implementation
         // continuity. Tabs that had a pane but aren't active need to be
         // toggled open again by the user — same UX as _RebuildAgentStack.
         _OpenOrReuseAgentPane(false, L"RestartAgent");
+    }
+
+    // Inbound event from WTA: {method:"restart_agent_pane",
+    //                          params:{tab_id, session_id?, reason}}.
+    // Emitted by wta-master when a helper's master pipe disconnects — both
+    // genuine crash and clean exit take this path. We resolve the owning
+    // tab by StableId and re-warm a fresh helper, resuming `session_id` so
+    // the chat history survives. Deliberate teardowns (Ctrl+C×2, settings
+    // rebuild, /restart) also trip the master's emit, so we first consume
+    // any suppression mark and bail when present — that's how we tell a
+    // crash apart from an intentional close.
+    void TerminalPage::OnAgentPaneRestartRequested(hstring eventJson)
+    {
+        Json::Value evt;
+        Json::CharReaderBuilder rb;
+        std::istringstream ss(winrt::to_string(eventJson));
+        std::string errs;
+        if (!Json::parseFromStream(rb, ss, &evt, &errs))
+        {
+            return;
+        }
+        const auto& params = evt["params"];
+        if (!params.isObject())
+        {
+            return;
+        }
+        winrt::hstring tabId;
+        if (params.isMember("tab_id") && params["tab_id"].isString())
+        {
+            tabId = winrt::to_hstring(params["tab_id"].asString());
+        }
+        if (tabId.empty())
+        {
+            return;
+        }
+
+        // Suppression check (consume on read). A mark within the last few
+        // seconds means this tab's helper died because we deliberately tore
+        // the pane down — don't respawn it.
+        if (const auto it = _agentPaneRestartSuppression.find(tabId); it != _agentPaneRestartSuppression.end())
+        {
+            const auto age = std::chrono::steady_clock::now() - it->second;
+            _agentPaneRestartSuppression.erase(it);
+            if (age < std::chrono::seconds(5))
+            {
+                _agentPaneLog("OnAgentPaneRestartRequested: suppressed (deliberate teardown)");
+                return;
+            }
+        }
+
+        const auto ownerTab = _FindTabByStableId(tabId);
+        if (!ownerTab)
+        {
+            // Tab closed, or belongs to another window — the fan-out will
+            // reach the right page (or there's nothing left to recover).
+            return;
+        }
+
+        std::string sessionId;
+        if (params.isMember("session_id") && params["session_id"].isString())
+        {
+            sessionId = params["session_id"].asString();
+        }
+
+        // If a (wedged) pane is still present, restore it visible after the
+        // re-warm; otherwise a clean exit already removed it (closeOnExit),
+        // so keep the fresh helper stashed.
+        const bool wasOpen = ownerTab->FindAgentPane() != nullptr;
+
+        // Tear down any leftover dead/wedged pane first. Suppress so that
+        // killing a wedged helper here doesn't loop back into yet another
+        // restart event.
+        _TeardownAgentPane(ownerTab, /*suppressMasterRestart*/ true);
+
+        _agentPaneLog("OnAgentPaneRestartRequested: re-warming helper after disconnect");
+        _AutoCreateHiddenAgentPaneShared(ownerTab,
+                                         /*intoSessionsView*/ false,
+                                         /*autoStash*/ !wasOpen,
+                                         sessionId);
     }
 
     // Inbound event from WTA: {method:"set_agent_chip_target",

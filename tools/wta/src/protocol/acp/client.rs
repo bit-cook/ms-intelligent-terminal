@@ -1,4 +1,6 @@
+use super::failure::{classify_anyhow, AgentFailure, HandshakeStage};
 use super::prompt;
+use super::soft_stop::SoftStopReason;
 use acp::Agent as _;
 use agent_client_protocol as acp;
 use anyhow::Result;
@@ -794,8 +796,9 @@ fn requested_model_id(program: &str, args: &[&str]) -> Option<String> {
     crate::agent_registry::extract_model_from_args(args, profile).map(str::to_string)
 }
 
-async fn complete_prompt_request<T, E: std::fmt::Display>(
-    result: std::result::Result<T, E>,
+async fn complete_prompt_request<T>(
+    result: std::result::Result<T, acp::Error>,
+    soft_stop: Option<SoftStopReason>,
     prompt_timing: &PromptTimingState,
     event_tx: &mpsc::UnboundedSender<AppEvent>,
     session_id: String,
@@ -824,10 +827,21 @@ async fn complete_prompt_request<T, E: std::fmt::Display>(
             //
             // Once Copilot honors the spec, this delay can be removed.
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let _ = event_tx.send(AppEvent::AgentMessageEnd { session_id });
+            let _ = event_tx.send(AppEvent::AgentMessageEnd {
+                session_id: session_id.clone(),
+            });
+            // A successful turn can still end on a soft stop (truncation /
+            // request-budget / refusal). It is NOT a connection failure — the
+            // session stays Connected — so it rides its own event and only
+            // appends an informational line AFTER `AgentMessageEnd` has flushed
+            // the agent's streamed content.
+            if let Some(reason) = soft_stop {
+                let _ = event_tx.send(AppEvent::AgentSoftStop { session_id, reason });
+            }
         }
         Err(e) => {
             let error_message = e.to_string();
+            let failure = AgentFailure::from_acp_error(&e);
             let timing_note = prompt_timing.complete(&session_id, false, Some(&error_message));
             if let Some(note) = timing_note {
                 let _ = event_tx.send(AppEvent::TimingMetric {
@@ -837,6 +851,7 @@ async fn complete_prompt_request<T, E: std::fmt::Display>(
             }
             let _ = event_tx.send(AppEvent::AgentError {
                 session_id: Some(session_id),
+                failure,
                 message: format!("prompt error: {}", error_message),
             });
         }
@@ -1881,36 +1896,65 @@ impl acp::Client for WtaClient {
 /// See doc/specs/Multi-window-agent-pane.md for the helper+master
 /// architecture, and `tools/wta/src/master/mod.rs` for the peer.
 
+/// Process-wide owner tab StableId for this helper, seeded once at
+/// startup from `--owner-tab-id`. A helper process owns exactly one WT
+/// tab for its lifetime, so a `OnceLock` is the right shape: set once in
+/// `main()`, read by [`inject_wta_pane_meta`] on every `session/new` /
+/// `session/load` so master can record `owner_tab_id` on the routing
+/// entry and address `restart_agent_pane` recovery events by StableId.
+static HELPER_OWNER_TAB_ID: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+
+/// Seed the process-wide owner tab StableId. Idempotent — only the first
+/// call wins (subsequent calls are ignored), matching the "one tab per
+/// helper for its whole life" invariant. Empty/blank ids are stored as
+/// `None`.
+pub fn set_helper_owner_tab_id(owner_tab_id: Option<&str>) {
+    let normalized = owner_tab_id
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(String::from);
+    let _ = HELPER_OWNER_TAB_ID.set(normalized);
+}
+
+fn helper_owner_tab_id() -> Option<String> {
+    HELPER_OWNER_TAB_ID.get().cloned().flatten()
+}
+
 /// Inject `_meta.wta.pane_session_id = $WT_SESSION` (lowercased, no
-/// braces) into an outbound ACP `session/new` or `session/load`
-/// request, when this helper is running inside a Windows Terminal pane.
+/// braces) and `_meta.wta.owner_tab_id = <this helper's StableId>` into
+/// an outbound ACP `session/new` or `session/load` request, when this
+/// helper is running inside a Windows Terminal pane.
 ///
 /// Used by the helper-over-master path to tell `wta-master` which WT
-/// pane owns the session it's about to create or rehydrate. Master
-/// records this in `SessionRegistry`, surfaces it via `session/list`
-/// `_meta.wta.pane_session_id`, and broadcasts it via
-/// `intellterm.wta/session_added` notifications. Other helpers
-/// listening on those broadcasts use it to populate `alive_mirror`
-/// pane bindings so cross-helper Focus actions (session management Enter on a row
-/// owned by a sibling helper) have a real WT pane GUID to target.
+/// pane owns the session it's about to create or rehydrate (so focus /
+/// session-list resolution works) and which WT tab owns it (so master
+/// can drive `restart_agent_pane` recovery). Master records both in
+/// `SessionRegistry` / its per-helper recovery map.
 ///
-/// No-op when `WT_SESSION` is unset/empty (e.g. when running outside
-/// a WT pane in tests).
+/// No-op for whichever fields are unavailable: `pane_session_id` when
+/// `WT_SESSION` is unset/empty (e.g. running outside a WT pane in
+/// tests), `owner_tab_id` when `--owner-tab-id` wasn't supplied.
 fn inject_wta_pane_meta(meta: &mut Option<acp::Meta>) {
     let wt_session = std::env::var("WT_SESSION").unwrap_or_default();
-    if wt_session.is_empty() {
-        return;
-    }
-    let normalized = wt_session
-        .trim_matches(|c| c == '{' || c == '}')
-        .to_ascii_lowercase();
-    if normalized.is_empty() {
+    let pane_session_id = {
+        let normalized = wt_session
+            .trim_matches(|c| c == '{' || c == '}')
+            .to_ascii_lowercase();
+        if normalized.is_empty() {
+            None
+        } else {
+            Some(normalized)
+        }
+    };
+    let owner_tab_id = helper_owner_tab_id();
+    if pane_session_id.is_none() && owner_tab_id.is_none() {
         return;
     }
     crate::session_registry::inject_wta_meta(
         meta,
         &crate::session_registry::WtaMeta {
-            pane_session_id: Some(normalized),
+            pane_session_id,
+            owner_tab_id,
         },
     );
 }
@@ -2188,6 +2232,7 @@ pub async fn run_acp_client_over_pipe(
         // shutdown the helper process is being torn down, so this event is moot.
         let _ = io_event_tx.send(AppEvent::AgentError {
             session_id: None,
+            failure: AgentFailure::TransportLost,
             message: t!("connection.lost").into_owned(),
         });
     });
@@ -2335,7 +2380,12 @@ pub async fn run_acp_client_over_pipe(
                         anyhow::anyhow!("new_session over master pipe timed out after 30s")
                     })?
                     .map_err(|e| {
-                        anyhow::anyhow!("new_session over master pipe failed: {}", e)
+                        // Attach the typed classification so an auth error
+                        // (or any ACP code) survives the `?`-collapse into
+                        // `anyhow` and can be recovered by `classify_anyhow`
+                        // downcast at the receiver (main.rs).
+                        anyhow::Error::new(AgentFailure::from_acp_error(&e))
+                            .context(format!("new_session over master pipe failed: {e}"))
                     })?;
 
             let session_id = session.session_id.clone();
@@ -2601,6 +2651,7 @@ pub async fn run_acp_client_over_pipe(
                         Err(e) => {
                             let _ = event_tx_for_new.send(AppEvent::AgentError {
                                 session_id: None,
+                                failure: AgentFailure::from_acp_error(&e),
                                 message: format!("/new failed for tab {}: {}", req.tab_id, e),
                             });
                             return;
@@ -2930,6 +2981,7 @@ pub async fn run_acp_client(
                 ));
                 let _ = event_tx.send(AppEvent::AgentError {
                     session_id: None,
+                    failure: classify_anyhow(&e, HandshakeStage::Initialize),
                     message: format!("{:#}", e),
                 });
                 // Don't break — a transient failure (e.g. agent crashed
@@ -3435,6 +3487,7 @@ async fn run_inner(
                         Err(e) => {
                             let _ = event_tx_for_new.send(AppEvent::AgentError {
                                 session_id: None,
+                                failure: AgentFailure::from_acp_error(&e),
                                 message: format!("/new failed for tab {}: {}", req.tab_id, e),
                             });
                             return;
@@ -3862,6 +3915,7 @@ async fn dispatch_prompt_body(
                 Err(e) => {
                     let _ = event_tx_task.send(AppEvent::AgentError {
                         session_id: None,
+                        failure: AgentFailure::from_acp_error(&e),
                         message: format!("new_session failed for tab {}: {}", tab_key_task, e),
                     });
                     in_flight_tabs_task.lock().unwrap().remove(&tab_key_task);
@@ -3984,8 +4038,16 @@ async fn dispatch_prompt_body(
 
     let cancelled = tokio::select! {
         result = &mut prompt_fut => {
+            // Peek the successful turn's stop_reason (the response is consumed
+            // by `complete_prompt_request`). A soft stop is not an error; the
+            // Err arm is classified separately by `from_acp_error`.
+            let soft_stop = result
+                .as_ref()
+                .ok()
+                .and_then(|resp| SoftStopReason::from_stop_reason(resp.stop_reason));
             complete_prompt_request(
                 result,
+                soft_stop,
                 &prompt_timing_task,
                 &event_tx_task,
                 prompt_session_id_str.clone(),
@@ -4025,8 +4087,9 @@ async fn dispatch_prompt_body(
 mod tests {
     use super::{
         complete_prompt_request, inject_wta_pane_meta, requested_model_id,
-        summarize_agent_identity, user_locale_tag, PromptTimingState,
+        summarize_agent_identity, user_locale_tag, PromptTimingState, SoftStopReason,
     };
+    use super::acp;
     use crate::app::AppEvent;
     use tokio::sync::mpsc;
 
@@ -4182,7 +4245,8 @@ mod tests {
         let prompt_timing = PromptTimingState::default();
 
         complete_prompt_request(
-            Ok::<(), &str>(()),
+            Ok::<(), acp::Error>(()),
+            None,
             &prompt_timing,
             &event_tx,
             "test-session".to_string(),
@@ -4200,12 +4264,47 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn soft_stop_emits_message_end_then_soft_stop() {
+        let (event_tx, mut event_rx) = mpsc::unbounded_channel();
+        let prompt_timing = PromptTimingState::default();
+
+        complete_prompt_request(
+            Ok::<(), acp::Error>(()),
+            Some(SoftStopReason::Refusal),
+            &prompt_timing,
+            &event_tx,
+            "test-session".to_string(),
+        )
+        .await;
+
+        // Order matters: the turn-closing AgentMessageEnd must land first so the
+        // soft-stop notice appends after the agent's streamed content.
+        match event_rx.try_recv() {
+            Ok(AppEvent::AgentMessageEnd { session_id }) => {
+                assert_eq!(session_id, "test-session");
+            }
+            Ok(_) => panic!("expected AgentMessageEnd first"),
+            Err(err) => panic!("expected AgentMessageEnd first, got channel error: {err}"),
+        }
+        match event_rx.try_recv() {
+            Ok(AppEvent::AgentSoftStop { session_id, reason }) => {
+                assert_eq!(session_id, "test-session");
+                assert_eq!(reason, SoftStopReason::Refusal);
+            }
+            Ok(_) => panic!("expected AgentSoftStop second"),
+            Err(err) => panic!("expected AgentSoftStop second, got channel error: {err}"),
+        }
+        assert!(event_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
     async fn failed_prompt_completion_emits_error_only() {
         let (event_tx, mut event_rx) = mpsc::unbounded_channel();
         let prompt_timing = PromptTimingState::default();
 
         complete_prompt_request(
-            Err::<(), _>("boom"),
+            Err::<(), acp::Error>(acp::Error::new(-32603, "boom")),
+            None,
             &prompt_timing,
             &event_tx,
             "test-session".to_string(),
@@ -4215,10 +4314,18 @@ mod tests {
         match event_rx.try_recv() {
             Ok(AppEvent::AgentError {
                 session_id,
+                failure,
                 message,
             }) => {
                 assert_eq!(session_id.as_deref(), Some("test-session"));
                 assert_eq!(message, "prompt error: boom");
+                assert_eq!(
+                    failure,
+                    crate::protocol::acp::failure::AgentFailure::Protocol {
+                        code: -32603,
+                        message: "boom".to_string(),
+                    }
+                );
             }
             Ok(_) => panic!("expected AgentError"),
             Err(err) => panic!("expected AgentError, got channel error: {err}"),
