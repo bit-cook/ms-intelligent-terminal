@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
   <resheader name="version"><value>2.0</value></resheader>
@@ -52,6 +52,10 @@
   <data name="FreOverlay_AgentDescription.Text" xml:space="preserve">
     <value>Kies die agent wat in die agentpaneel gebruik word. Enige versoenbare ACP-agent sal outomaties opgespoor word.</value>
     <comment>{Locked="ACP"} In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
+  </data>
+  <data name="FreOverlay_AcpReferenceLink.Content" xml:space="preserve">
+    <value>Kom meer te wete oor ACP</value>
+    <comment>{Locked="ACP"} HyperlinkButton displayed below FreOverlay_AgentDescription that links to the Agent Client Protocol reference page.</comment>
   </data>
   <data name="FreOverlay_AgentInstallHint.Text" xml:space="preserve">
     <value>ℹ Hierdie agent benodig Node.js en NPX, wat outomaties geïnstalleer sal word as dit nog nie teenwoordig is nie.</value>

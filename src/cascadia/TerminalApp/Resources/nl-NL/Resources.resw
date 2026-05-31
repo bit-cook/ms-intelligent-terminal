@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!--
     Microsoft ResX Schema
@@ -161,6 +161,10 @@
   <data name="FreOverlay_AgentDescription.Text" xml:space="preserve">
     <value>Kies de agent die in het agentvenster wordt gebruikt. Elke compatibele ACP-agent wordt gedetecteerd.</value>
     <comment>{Locked="ACP"}</comment>
+  </data>
+  <data name="FreOverlay_AcpReferenceLink.Content" xml:space="preserve">
+    <value>Meer informatie over ACP</value>
+    <comment>{Locked="ACP"} HyperlinkButton displayed below FreOverlay_AgentDescription that links to the Agent Client Protocol reference page.</comment>
   </data>
   <data name="FreOverlay_AgentInstallHint.Text" xml:space="preserve">
     <value>ℹ Deze agent vereist Node.js en NPX, die automatisch worden geïnstalleerd als ze nog niet aanwezig zijn.</value>

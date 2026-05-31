@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
   <resheader name="version"><value>2.0</value></resheader>
@@ -52,6 +52,10 @@
   <data name="FreOverlay_AgentDescription.Text" xml:space="preserve">
     <value>Kōwhiria te kaitiaki e whakamahia ana i te papa kaitiaki. Ka kitea aunoa ngā kaitiaki ACP hototahi.</value>
     <comment>{Locked="ACP"} In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
+  </data>
+  <data name="FreOverlay_AcpReferenceLink.Content" xml:space="preserve">
+    <value>Akona atu mō ACP</value>
+    <comment>{Locked="ACP"} HyperlinkButton displayed below FreOverlay_AgentDescription that links to the Agent Client Protocol reference page.</comment>
   </data>
   <data name="FreOverlay_AgentInstallHint.Text" xml:space="preserve">
     <value>ℹ Ka hiahiatia e tēnei kaitiaki a Node.js me NPX, ka tāutahia aunoa mēnā kāore anō.</value>

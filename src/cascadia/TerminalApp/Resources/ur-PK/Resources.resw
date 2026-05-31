@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!--
     Microsoft ResX Schema
@@ -166,6 +166,10 @@
   <data name="FreOverlay_AgentDescription.Text" xml:space="preserve">
     <value>ایجنٹ پین میں استعمال ہونے والا ایجنٹ منتخب کریں۔ کوئی بھی ہم آہنگ ACP ایجنٹ خود بخود شناخت ہو جائے گا۔</value>
     <comment>{Locked="ACP"} In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
+  </data>
+  <data name="FreOverlay_AcpReferenceLink.Content" xml:space="preserve">
+    <value>ACP کے بارے میں مزید معلومات</value>
+    <comment>{Locked="ACP"} HyperlinkButton displayed below FreOverlay_AgentDescription that links to the Agent Client Protocol reference page.</comment>
   </data>
   <data name="FreOverlay_AgentInstallHint.Text" xml:space="preserve">
     <value>ℹ اس ایجنٹ کو Node.js اور NPX درکار ہیں، جو پہلے سے موجود نہ ہونے پر خود بخود انسٹال ہو جائیں گے۔</value>
