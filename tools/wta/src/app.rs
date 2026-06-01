@@ -75,7 +75,7 @@ pub fn resolve_sessions_origin_filter() -> crate::agent_sessions::OriginFilter {
     }
 }
 
-use crate::commands::{self, CommandKind, CommandSpec, ParsedCommand};
+use crate::commands::{self, CommandKind, CommandSpec, ParseOutcome, ParsedCommand};
 use crate::coordinator::{
     parse_autofix_response, parse_recommendation_set, recommended_choice_index,
     validate_recommendation_set_for_coordinator_target, AutofixDecision, RecommendationChoice,
@@ -6240,21 +6240,6 @@ impl App {
             KeyCode::Enter if key.modifiers.contains(KeyModifiers::SHIFT) => {
                 self.current_tab_mut().insert_input_char('\n');
             }
-            KeyCode::Enter if self.command_popup_visible() => {
-                // Popup is showing — Enter runs the highlighted command
-                // (/, /h, /he etc. → /help) instead of committing the
-                // raw text as a prompt. Esc dismisses if the user
-                // doesn't want any command.
-                if let Some(spec) = self.current_tab().selected_command_spec() {
-                    let parsed = ParsedCommand {
-                        kind: spec.kind,
-                        spec,
-                        rest: String::new(),
-                    };
-                    self.current_tab_mut().clear_input();
-                    self.handle_slash_command(parsed);
-                }
-            }
             KeyCode::Enter
                 if self.current_tab().input.is_empty()
                     && self.current_tab().selected_completed_turn_idx.is_some()
@@ -6265,45 +6250,17 @@ impl App {
                 self.current_tab_mut().toggle_selected_completed_turn();
             }
             KeyCode::Enter => {
+                // Slash-command intercept (popup selection, known command, or
+                // unknown-command warning). Runs before the prompt path so
+                // commands like /stop work even mid-flight, and /help / /clear
+                // work even when the agent isn't Connected. Returns true when
+                // the keystroke was consumed; an unknown command only warns and
+                // falls through so the raw line still goes to the agent.
+                if self.try_handle_slash_on_enter() {
+                    return;
+                }
                 let _tab = self.current_tab();
                 tracing::debug!(target: "autofix", input_empty = _tab.input.is_empty(), state = ?self.state, has_recs = _tab.turn.recommendations().is_some(), autofix_pane = ?_tab.autofix.pane_id, selected_idx = _tab.selected_recommendation, "Enter");
-                // Slash-command intercept. Runs before the prompt path so
-                // commands like /stop work even mid-flight, and /help / /clear
-                // / /exit work even when the agent isn't Connected.
-                //
-                // `//literal` falls through to the prompt path (parse() returns
-                // None), and the leading `/` is left intact — the agent sees
-                // exactly what the user typed.
-                if !self.current_tab().input.is_empty() {
-                    if let Some(cmd) = commands::parse(&self.current_tab().input) {
-                        self.current_tab_mut().clear_input();
-                        self.handle_slash_command(cmd);
-                        return;
-                    } else if self.current_tab().input.trim_start().starts_with('/')
-                        && !self.current_tab().input.trim_start().starts_with("//")
-                    {
-                        // Looks like an attempted command but the name isn't
-                        // registered: warn the user but still send the line as
-                        // a prompt so they don't lose what they typed.
-                        let unknown = self
-                            .current_tab()
-                            .input
-                            .trim_start()
-                            .split_whitespace()
-                            .next()
-                            .unwrap_or("/")
-                            .to_string();
-                        let tab = self.current_tab_mut();
-                        tab.messages.push(ChatMessage::System(
-                            t!(
-                                "system.unknown_command",
-                                command = unknown.as_str()
-                            )
-                            .into_owned(),
-                        ));
-                        // Fall through to the prompt path below.
-                    }
-                }
                 if self.current_tab().input.is_empty()
                     && self.state == ConnectionState::Connected
                     && self.current_tab().turn.recommendations().is_some()
@@ -6500,6 +6457,59 @@ impl App {
 
     fn command_popup_visible(&self) -> bool {
         self.current_tab().command_popup_visible()
+    }
+
+    /// Handle Enter for the slash-command system. Centralizes all three
+    /// intents in one place so the giant `handle_key` match has a single
+    /// guard instead of an inline block plus a separate popup arm:
+    ///
+    /// 1. Autocomplete popup open → run the highlighted command.
+    /// 2. No popup → [`commands::classify`] the committed line:
+    ///    - known command → dispatch it,
+    ///    - unknown `/foo` → warn but leave the input for the prompt path,
+    ///    - plain prompt → do nothing.
+    ///
+    /// Returns `true` when the keystroke is fully consumed (a command ran or
+    /// the popup swallowed Enter); `false` means the caller should continue to
+    /// the normal prompt-submission path with the input intact.
+    fn try_handle_slash_on_enter(&mut self) -> bool {
+        // 1. Popup open: Enter commits the highlighted command (`/`, `/h`,
+        //    `/he` → /help) and never submits the raw text as a prompt, so
+        //    this arm is always consumed even if there is no selection.
+        if self.command_popup_visible() {
+            if let Some(spec) = self.current_tab().selected_command_spec() {
+                let parsed = ParsedCommand {
+                    kind: spec.kind,
+                    spec,
+                    rest: String::new(),
+                };
+                self.current_tab_mut().clear_input();
+                self.handle_slash_command(parsed);
+            }
+            return true;
+        }
+
+        // 2. No popup: classify the committed line.
+        if self.current_tab().input.is_empty() {
+            return false;
+        }
+        match commands::classify(&self.current_tab().input) {
+            ParseOutcome::Command(cmd) => {
+                self.current_tab_mut().clear_input();
+                self.handle_slash_command(cmd);
+                true
+            }
+            ParseOutcome::Unknown(name) => {
+                // Warn but fall through: the raw line (leading `/` intact) is
+                // still sent so the user doesn't lose what they typed.
+                let tab = self.current_tab_mut();
+                tab.messages.push(ChatMessage::System(
+                    t!("system.unknown_command", command = name.as_str()).into_owned(),
+                ));
+                false
+            }
+            ParseOutcome::NotACommand => false,
+        }
     }
 
     /// Dispatch a parsed slash-command. The Enter handler is responsible

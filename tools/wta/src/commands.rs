@@ -106,6 +106,30 @@ pub struct ParsedCommand {
     pub rest: String,
 }
 
+/// Outcome of classifying a committed input line. Lets the caller branch on
+/// *intent* without re-deriving the "is this a slash attempt?" predicate —
+/// that escaping rule (`/` yes, `//` no) lives only here and in [`parse`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParseOutcome {
+    /// A registered command. Run it; consume the keystroke.
+    Command(ParsedCommand),
+    /// Looks like a slash-command attempt (`/foo`) but `foo` isn't
+    /// registered. Carries the attempted token *with* its leading `/`
+    /// (e.g. `"/claer"`) for the "Unknown command" advisory. The caller
+    /// still sends the raw line as a prompt so the user doesn't lose input.
+    Unknown(String),
+    /// Not a command at all (no `/`, or `//literal` escape). Send as prompt.
+    NotACommand,
+}
+
+impl PartialEq for ParsedCommand {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind && self.spec.name == other.spec.name && self.rest == other.rest
+    }
+}
+
+impl Eq for ParsedCommand {}
+
 /// Parse an input line as a slash-command, or return `None` if the line
 /// should be sent as a normal prompt.
 ///
@@ -141,6 +165,35 @@ pub fn parse(input: &str) -> Option<ParsedCommand> {
         spec,
         rest: args.to_string(),
     })
+}
+
+/// Classify a committed input line into [`ParseOutcome`]. This is the entry
+/// point the Enter handler should use: it folds the "known command",
+/// "unknown-but-looks-like-a-command", and "plain prompt" cases into one
+/// match so the caller never re-implements the slash/escape rules.
+///
+/// - `/help` → [`ParseOutcome::Command`]
+/// - `/claer foo` → [`ParseOutcome::Unknown`]`("/claer")`
+/// - `hello`, `//etc/hosts`, `/` (bare) → [`ParseOutcome::NotACommand`]
+pub fn classify(input: &str) -> ParseOutcome {
+    if let Some(cmd) = parse(input) {
+        return ParseOutcome::Command(cmd);
+    }
+
+    // Not a known command. Was it at least an *attempt* at one? Reuse the
+    // same trimming + `//` escape rules as `parse`/`is_command_prefix`.
+    let trimmed = input.trim_start();
+    if let Some(rest) = trimmed.strip_prefix('/') {
+        if !rest.starts_with('/') {
+            // First whitespace-delimited token after the `/`.
+            let name = rest.split_whitespace().next().unwrap_or("");
+            if !name.is_empty() {
+                return ParseOutcome::Unknown(format!("/{name}"));
+            }
+        }
+    }
+
+    ParseOutcome::NotACommand
 }
 
 /// Return the [`CommandSpec`] for the given name (case-insensitive), or
@@ -219,6 +272,54 @@ mod tests {
     fn unknown_command_falls_through() {
         assert!(parse("/no-such-command").is_none());
         assert!(parse("/no-such-command foo").is_none());
+    }
+
+    #[test]
+    fn classify_known_command() {
+        match classify("/stop") {
+            ParseOutcome::Command(c) => assert_eq!(c.kind, CommandKind::Stop),
+            other => panic!("expected Command, got {other:?}"),
+        }
+        match classify("/help me please") {
+            ParseOutcome::Command(c) => {
+                assert_eq!(c.kind, CommandKind::Help);
+                assert_eq!(c.rest, "me please");
+            }
+            other => panic!("expected Command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn classify_unknown_keeps_attempted_token() {
+        // Token carries its leading `/`, and trailing args are dropped from it.
+        assert_eq!(
+            classify("/claer"),
+            ParseOutcome::Unknown("/claer".to_string())
+        );
+        assert_eq!(
+            classify("/claer foo bar"),
+            ParseOutcome::Unknown("/claer".to_string())
+        );
+        // Leading whitespace is trimmed before the token is taken.
+        assert_eq!(
+            classify("   /nope"),
+            ParseOutcome::Unknown("/nope".to_string())
+        );
+    }
+
+    #[test]
+    fn classify_not_a_command() {
+        assert_eq!(classify("hello"), ParseOutcome::NotACommand);
+        // `//literal` escape is a prompt, not an unknown-command warning.
+        assert_eq!(classify("//etc/hosts"), ParseOutcome::NotACommand);
+        // Bare slash / whitespace-only slash have no token to name.
+        assert_eq!(classify("/"), ParseOutcome::NotACommand);
+        assert_eq!(classify("/  "), ParseOutcome::NotACommand);
+        // A `/` in the middle of a prompt is not an attempt.
+        assert_eq!(
+            classify("run cmd /flag"),
+            ParseOutcome::NotACommand
+        );
     }
 
     #[test]
