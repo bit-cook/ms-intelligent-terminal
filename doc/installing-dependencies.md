@@ -343,14 +343,6 @@ You only need to follow this section if:
   CLI's plugin store).
 - You installed the agent CLI **after** completing the FRE and now want
   to enable session management.
-- Group Policy blocks the FRE from running the installer on your behalf.
-
-> [!NOTE]
-> Session management is **not yet supported for custom agents** (see the
-> note under [Agent CLIs](#agent-clis)). This section only applies to
-> the three built-in non-default agents — **Claude Code**, **OpenAI
-> Codex**, and **Gemini** — and to **GitHub Copilot** when the FRE was
-> not able to install the hooks for you.
 
 #### Step 3.6.1 — Make sure the agent CLI is installed and on PATH
 
@@ -377,6 +369,7 @@ the FRE:
 ```powershell
 wta hooks install --cli copilot
 wta hooks install --cli claude
+wta hooks install --cli codex
 wta hooks install --cli gemini
 ```
 
@@ -386,19 +379,28 @@ Or install for every agent CLI that is currently on `PATH` in one go:
 wta hooks install
 ```
 
-Under the hood this runs the agent CLI's native plugin command against
-the `wt-agent-hooks` bundle shipped inside the Intelligent Terminal
-package:
+Under the hood this runs each agent CLI's native plugin / extension
+command against the `wt-agent-hooks` bundle shipped inside the
+Intelligent Terminal package:
 
-| Agent          | Native commands invoked by `wta hooks install`                                                       |
-|----------------|------------------------------------------------------------------------------------------------------|
-| GitHub Copilot | `copilot plugin marketplace add <bundle>\copilot` then `copilot plugin install wt-agent-hooks@wt-local` |
-| Claude Code    | `claude plugin marketplace add <bundle>\claude` then `claude plugin install wt-agent-hooks@wt-local`    |
-| Gemini CLI     | `gemini extensions install <bundle>\gemini-extension`                                                |
+| Agent          | Native commands invoked by `wta hooks install`                                                                              |
+|----------------|-----------------------------------------------------------------------------------------------------------------------------|
+| GitHub Copilot | `copilot plugin marketplace add <bundle>\copilot` then `copilot plugin install wt-agent-hooks@wt-local`                     |
+| Claude Code    | `claude plugin marketplace add <bundle>\claude` then `claude plugin install wt-agent-hooks@wt-local`                        |
+| OpenAI Codex   | `codex plugin marketplace add <bundle>\codex` then `codex plugin add wt-agent-hooks@wt-local` *(note: `add`, not `install`)* |
+| Gemini CLI     | `gemini extensions install <bundle>\gemini-extension --consent --skip-settings` *(with `GEMINI_CLI_TRUST_WORKSPACE=true` to bypass Gemini's folder-trust prompt)* |
 
 You do not need to run these directly — `wta hooks install` is the
 supported entry point and handles bundle staging, idempotency, and
 diagnostic logging for you.
+
+> [!IMPORTANT]
+> **Codex needs a one-time `/hooks` trust step.** After
+> `wta hooks install --cli codex` succeeds, hook events will not fire
+> until you launch Codex once and run the `/hooks` slash command to
+> trust the `wt-agent-hooks` plugin. This is a Codex security
+> requirement that no external installer can satisfy on your behalf;
+> the other three CLIs do not need this step.
 
 #### Step 3.6.3 — Verify the install and re-enable session management
 
@@ -423,19 +425,18 @@ without it) and restart Intelligent Terminal once.
 > ```
 >
 > The most common causes of failure are: the agent CLI was not on
-> `PATH` when `wta` ran (open a fresh window and retry), the agent CLI
-> has not been signed in yet (see
-> [Section 3.5](#35-signing-in-to-your-agent)), or Group Policy is
-> blocking the agent CLI's plugin commands. The log identifies which
-> step failed and prints the exit code from the underlying
-> `plugin install` / `extensions install` invocation.
+> `PATH` when `wta` ran (open a fresh window and retry), or the agent
+> CLI has not been signed in yet (see
+> [Section 3.5](#35-signing-in-to-your-agent)). The log identifies
+> which step failed and prints the exit code from the underlying
+> `plugin install` / `plugin add` / `extensions install` invocation.
 
 > [!WARNING]
 > If your organization disables agent session hooks through Group
 > Policy, the **Session management** toggle in the FRE and in
-> **Settings → AI Agents** is locked off and `wta hooks install` will
-> refuse to run. Contact your IT administrator if you believe this is
-> in error.
+> **Settings → AI Agents** is locked off and the FRE will not run the
+> hooks installer for you. Contact your IT administrator if you
+> believe this is in error.
 
 ---
 
