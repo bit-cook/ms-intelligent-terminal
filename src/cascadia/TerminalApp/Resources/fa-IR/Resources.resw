@@ -164,7 +164,7 @@
     <comment>In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
   </data>
   <data name="FreOverlay_AgentDescription.Text" xml:space="preserve">
-    <value>عامل استفاده‌شده در پنل عامل را انتخاب کنید. هر عامل سازگار با ACP به‌طور خودکار شناسایی خواهد شد.</value>
+    <value>عامل استفاده‌شده در پنل عامل را که از ACP پشتیبانی می‌کند انتخاب کنید.</value>
     <comment>{Locked="ACP"} In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
   </data>
   <data name="FreOverlay_AgentInstallHint.Text" xml:space="preserve">

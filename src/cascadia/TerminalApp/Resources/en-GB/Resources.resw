@@ -159,7 +159,7 @@
     <value>Agent</value>
   </data>
   <data name="FreOverlay_AgentDescription.Text" xml:space="preserve">
-    <value>Choose the agent used in the agent pane. Any compatible ACP agent will be detected.</value>
+    <value>Choose the agent used in the agent pane that supports ACP.</value>
     <comment>{Locked="ACP"}</comment>
   </data>
   <data name="FreOverlay_AgentInstallHint.Text" xml:space="preserve">

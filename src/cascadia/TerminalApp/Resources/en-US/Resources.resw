@@ -1069,7 +1069,7 @@ In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), n
     <comment>In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
   </data>
   <data name="FreOverlay_AgentDescription.Text" xml:space="preserve">
-    <value>Choose the agent used in the agent pane. Any compatible ACP agent will be detected.</value>
+    <value>Choose the agent used in the agent pane that supports ACP.</value>
     <comment>{Locked="ACP"}
 In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
   </data>

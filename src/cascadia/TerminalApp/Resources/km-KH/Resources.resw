@@ -50,7 +50,7 @@
     <comment>In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
   </data>
   <data name="FreOverlay_AgentDescription.Text" xml:space="preserve">
-    <value>ជ្រើសរើសភ្នាក់ងារដែលប្រើក្នុងផ្ទាំងភ្នាក់ងារ។ ភ្នាក់ងារ ACP ដែលត្រូវគ្នានឹងត្រូវបានកត់សម្គាល់ដោយស្វ័យប្រវត្តិ។</value>
+    <value>ជ្រើសរើសភ្នាក់ងារដែលប្រើក្នុងផ្ទាំងភ្នាក់ងារ និងគាំទ្រ ACP។</value>
     <comment>{Locked="ACP"} In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
   </data>
   <data name="FreOverlay_AgentInstallHint.Text" xml:space="preserve">

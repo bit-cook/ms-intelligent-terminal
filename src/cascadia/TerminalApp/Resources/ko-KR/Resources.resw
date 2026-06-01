@@ -1067,7 +1067,7 @@ In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), n
     <comment>In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
   </data>
   <data name="FreOverlay_AgentDescription.Text" xml:space="preserve">
-    <value>에이전트 창에서 사용할 에이전트를 선택합니다. 호환되는 ACP 에이전트가 자동으로 감지됩니다.</value>
+    <value>에이전트 창에서 사용할 ACP 지원 에이전트를 선택합니다.</value>
     <comment>{Locked="ACP"}
 In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
   </data>

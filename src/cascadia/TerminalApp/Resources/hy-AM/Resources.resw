@@ -50,7 +50,7 @@
     <comment>In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
   </data>
   <data name="FreOverlay_AgentDescription.Text" xml:space="preserve">
-    <value>Ընտրեք գործակալը, որը օգտագործվում է գործակալի վահանակում։ Ցանկացած համատեղելի ACP գործակալ կհայտնաբերվի ինքնաշխատորեն:</value>
+    <value>Ընտրեք գործակալի վահանակում օգտագործվող և ACP աջակցող գործակալը։</value>
     <comment>{Locked="ACP"} In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
   </data>
   <data name="FreOverlay_AgentInstallHint.Text" xml:space="preserve">

@@ -227,7 +227,7 @@
                                                FontSize="12" Foreground="#99FFFFFF"
                                                TextWrapping="Wrap">
                                         <Run x:Name="AgentDescriptionBefore" />
-                                        <Hyperlink NavigateUri="https://aka.ms/intelligent-terminal-acpref"
+                                        <Hyperlink NavigateUri="https://aka.ms/intelligent-terminal-dependency#agent-clis"
                                                    Foreground="#FF99EBFF">
                                             <Run x:Name="AgentDescriptionAcpToken" />
                                         </Hyperlink>

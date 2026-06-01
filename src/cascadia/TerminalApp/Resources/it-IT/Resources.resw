@@ -1002,7 +1002,7 @@
     <value>Agente</value>
   </data>
   <data name="FreOverlay_AgentDescription.Text" xml:space="preserve">
-    <value>Scegli l'agente utilizzato nel riquadro agente. Verrà rilevato qualsiasi agente ACP compatibile.</value>
+    <value>Scegli l'agente utilizzato nel riquadro agente che supporta ACP.</value>
     <comment>{Locked="ACP"}</comment>
   </data>
   <data name="FreOverlay_AgentInstallHint.Text" xml:space="preserve">

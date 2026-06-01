@@ -50,7 +50,7 @@
     <comment>In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
   </data>
   <data name="FreOverlay_AgentDescription.Text" xml:space="preserve">
-    <value>Akllay agente nisqata agente k'itipi llamk'achisqa. Ima ACP agente tupaqpas kikinmanta tarikusqa kanqa.</value>
+    <value>Akllay agente nisqata agente k'itipi llamk'achisqa, ACP nisqata yanapaq.</value>
     <comment>{Locked="ACP"} In this context, "agent" refers to an AI agent (e.g. Copilot, Claude, Gemini), not a human agent or representative.</comment>
   </data>
   <data name="FreOverlay_AgentInstallHint.Text" xml:space="preserve">
