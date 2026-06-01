@@ -14,7 +14,6 @@
 
 #include <filesystem>
 #include <string>
-#include <til/env.h>
 
 namespace Microsoft::Terminal::WtaProcess
 {
@@ -236,15 +235,61 @@ namespace Microsoft::Terminal::WtaProcess
     // the current process's PATH environment variable. This makes
     // SearchPathW pick up directories added after Terminal launched
     // (e.g. WinGet\Links after installing Copilot via winget).
+    // Pure Win32 — no til/env or WinRT dependency.
     inline void RefreshProcessPath()
     {
-        til::env freshEnv;
-        freshEnv.regenerate();
-        auto& map = freshEnv.as_map();
-        auto it = map.find(L"Path");
-        if (it != map.end())
+        auto readRegPath = [](HKEY root, const wchar_t* subkey) -> std::wstring {
+            HKEY hk{};
+            if (RegOpenKeyExW(root, subkey, 0, KEY_READ, &hk) != ERROR_SUCCESS)
+                return {};
+            DWORD size = 0, kind = 0;
+            if (RegQueryValueExW(hk, L"Path", nullptr, &kind, nullptr, &size) != ERROR_SUCCESS || size == 0)
+            {
+                RegCloseKey(hk);
+                return {};
+            }
+            std::wstring buf(size / sizeof(wchar_t), L'\0');
+            if (RegQueryValueExW(hk, L"Path", nullptr, &kind,
+                                 reinterpret_cast<BYTE*>(buf.data()), &size) != ERROR_SUCCESS)
+            {
+                RegCloseKey(hk);
+                return {};
+            }
+            RegCloseKey(hk);
+            // Trim trailing null(s)
+            while (!buf.empty() && buf.back() == L'\0')
+                buf.pop_back();
+            // Expand %VAR% references if REG_EXPAND_SZ
+            if (kind == REG_EXPAND_SZ)
+            {
+                DWORD needed = ExpandEnvironmentStringsW(buf.c_str(), nullptr, 0);
+                if (needed > 0)
+                {
+                    std::wstring expanded(needed, L'\0');
+                    ExpandEnvironmentStringsW(buf.c_str(), expanded.data(), needed);
+                    while (!expanded.empty() && expanded.back() == L'\0')
+                        expanded.pop_back();
+                    return expanded;
+                }
+            }
+            return buf;
+        };
+
+        auto sysPath = readRegPath(HKEY_LOCAL_MACHINE,
+                                   LR"(SYSTEM\CurrentControlSet\Control\Session Manager\Environment)");
+        auto usrPath = readRegPath(HKEY_CURRENT_USER, L"Environment");
+
+        std::wstring combined;
+        if (!sysPath.empty() && !usrPath.empty())
+            combined = sysPath + L";" + usrPath;
+        else if (!sysPath.empty())
+            combined = sysPath;
+        else if (!usrPath.empty())
+            combined = usrPath;
+
+        if (!combined.empty())
         {
-            SetEnvironmentVariableW(L"PATH", it->second.c_str());
+            SetEnvironmentVariableW(L"PATH", combined.c_str());
         }
     }
 
