@@ -5093,7 +5093,7 @@ Registered marketplaces:
     #[test]
     fn install_for_codex_skips_when_home_absent() {
         let tmp = unique_dir("codex-home-absent");
-        // Smoke test: passing a non-existent HOME-like dir shouldn't panic.
+        // Smoke test: passing a nonexistent HOME-like dir shouldn't panic.
         // After the binary-only detection change, the function skips when
         // `codex` is not on PATH (the common case on CI). On a dev machine
         // with `codex` installed and a bundle resolvable next to `wta.exe`
