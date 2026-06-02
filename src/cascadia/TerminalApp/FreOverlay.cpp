@@ -718,15 +718,21 @@ namespace winrt::TerminalApp::implementation
         bool shellIntegFailed = false;
 
         // Ensure the agent config directory exists before hooks install.
-        // Copilot CLI creates ~/.copilot on first run, but winget install
-        // doesn't — and install_for_copilot skips when the dir is absent.
-        if (needsCopilot)
+        // Copilot CLI creates ~/.copilot on first run, but if the user
+        // has never launched copilot (fresh winget install or pre-existing
+        // but unused), the dir is absent and install_for_copilot skips.
+        if (agentId == L"copilot")
         {
             wchar_t home[MAX_PATH]{};
             GetEnvironmentVariableW(L"USERPROFILE", home, MAX_PATH);
             if (home[0])
             {
-                CreateDirectoryW((std::wstring(home) + L"\\.copilot").c_str(), nullptr);
+                auto dir = std::wstring(home) + L"\\.copilot";
+                if (!CreateDirectoryW(dir.c_str(), nullptr) &&
+                    GetLastError() != ERROR_ALREADY_EXISTS)
+                {
+                    _agentPaneLog("[FRE] Failed to create .copilot dir: GetLastError=" + std::to_string(GetLastError()));
+                }
             }
         }
 
