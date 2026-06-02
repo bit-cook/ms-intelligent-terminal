@@ -104,7 +104,7 @@ All shortcuts are customizable through Intelligent Terminal settings.
 | <kbd>Ctrl+Alt+.</kbd> | Open agent pane with error context |
 | <kbd>Ctrl+Shift+/</kbd> | Open agent management |
 | <kbd>Alt+Shift+/</kbd> | Open Command Palette in prompt mode |
-| <kbd>Alt+Shift+B</kbd> | Open the delegate agent in a new tab (background agent, no prompt) |
+| <kbd>Alt+Shift+B</kbd> | Open an interactive delegate-agent tab with no startup prompt (the **background agent** hotkey — `Terminal.OpenBackgroundAgent`) |
 
 ---
 
