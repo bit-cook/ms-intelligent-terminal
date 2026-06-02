@@ -42,6 +42,29 @@ This only affects the first tab of the first launch — subsequent tabs and subs
 
 2. **Re-install the session-tracking hooks.** Open Intelligent Terminal **Settings → Agent**, scroll to the **Agent session tracking (hooks)** row ("Track sessions across agents. Required for agent session management."), expand it, and click the **Install hooks** button next to *Install agent hook script*. This wires the newly installed CLI into Agent Management so its sessions show up in the panel.
 
+## 5. The delegate agent has no model picker in Settings
+
+**Symptom:** The Settings → Agent page exposes a **Model** dropdown for the **agent pane** agent, but there is no equivalent control for the **delegate agent** (the agent invoked by <kbd>Alt+Shift+/</kbd>, <kbd>Alt+Shift+B</kbd>, and the `?<prompt>` command-palette syntax). The delegate always runs against its agent CLI's default model.
+
+**Workaround:** The underlying `delegateModel` setting exists and is honored at runtime — you can set it directly in `settings.json`:
+
+```jsonc
+{
+    "delegateAgent": "copilot",
+    "delegateModel": "gpt-5"   // or any model string your delegate CLI accepts
+}
+```
+
+Save the file and Intelligent Terminal will pick the new value up on the next delegate launch. A Settings UI control is planned for a later release.
+
+## 6. Agent Management shows agent-pane sessions, not delegate sessions
+
+**Symptom:** Open the **Agent Management** panel (<kbd>Ctrl+Shift+/</kbd>) after using the delegate agent (via <kbd>Alt+Shift+/</kbd> / <kbd>Alt+Shift+B</kbd> / `?<prompt>`). The panel lists sessions belonging to your **agent pane** agent — the delegate agent's running session is not represented.
+
+**Why:** Session tracking in this release is wired to the agent-pane lifecycle. Delegate agents run in their own tab (or in the background for `?<prompt>`) but are not yet surfaced in the management UI.
+
+**Workaround:** Switch to the delegate's tab directly (or, for background `?<prompt>` work, watch the bottom-bar agent status indicator) to monitor its progress. Unified tracking of both agent-pane and delegate sessions is planned for a later release.
+
 ---
 
 *Last updated: 2026-06-02. See the [release notes](https://github.com/microsoft/intelligent-terminal/releases) for issues fixed in newer versions.*
