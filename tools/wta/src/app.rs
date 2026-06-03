@@ -1085,6 +1085,16 @@ pub enum AppEvent {
     PromptTemplateLoaded {
         name: String,
     },
+    /// The working pane a manual `/fix` resolved to, plumbed back from the ACP
+    /// client task so the App can fill `AutofixContext.target_pane_id` on the
+    /// in-flight turn. The host fills `Send.parent` from it at execute time —
+    /// the agent never echoes a pane id for autofix turns. Routed by
+    /// `prompt_id` so a superseded turn (a newer `/fix`) is left untouched.
+    AutofixTargetResolved {
+        tab_id: Option<String>,
+        prompt_id: u64,
+        pane_id: String,
+    },
     /// Errors raised before a session exists carry None for `session_id`
     /// and route to the active tab; in-flight failures route to the
     /// session's tab. `failure` is the typed classification that drives
@@ -3919,6 +3929,7 @@ impl App {
             AppEvent::TabError { .. } => "tab_error",
             AppEvent::TabSystemMessage { .. } => "tab_system_message",
             AppEvent::PromptTemplateLoaded { .. } => "prompt_template_loaded",
+            AppEvent::AutofixTargetResolved { .. } => "autofix_target_resolved",
             AppEvent::AgentError { .. } => "agent_error",
             AppEvent::AgentSoftStop { .. } => "agent_soft_stop",
             AppEvent::AgentBusy { .. } => "agent_busy",
@@ -4158,6 +4169,13 @@ impl App {
             }
             AppEvent::PromptTemplateLoaded { name } => {
                 self.prompt_name = Some(name);
+            }
+            AppEvent::AutofixTargetResolved {
+                tab_id,
+                prompt_id,
+                pane_id,
+            } => {
+                self.apply_autofix_target_resolved(tab_id, prompt_id, pane_id);
             }
             AppEvent::AgentBusy { tab_id } => {
                 let tab = self.tab_mut(&tab_id);
@@ -6702,6 +6720,49 @@ impl App {
         );
         self.turn_submit_prompt_for_tab(&target_tab_id, submitted);
         let _ = self.prompt_tx.send(prompt);
+    }
+
+    /// Late-bind a manual `/fix`'s target pane. The working pane is resolved
+    /// in the ACP client task (it isn't known when `cmd_fix` submits) and
+    /// plumbed back via [`AppEvent::AutofixTargetResolved`]. We patch the
+    /// matching in-flight turn's `AutofixContext.target_pane_id` so that
+    /// `turn_execute_card` fills `Send.parent` with a real pane — without it,
+    /// the host's send has no destination ("sendinput failed: no parent").
+    ///
+    /// Routed by `prompt_id`: a superseded turn (the user fired a newer `/fix`)
+    /// won't match, so a stale resolution is dropped. The event is emitted
+    /// before the agent responds, so the patch lands while the turn is still
+    /// `Submitted` — well before the fix card surfaces or the user executes it.
+    fn apply_autofix_target_resolved(
+        &mut self,
+        tab_id: Option<String>,
+        prompt_id: u64,
+        pane_id: String,
+    ) {
+        if pane_id.is_empty() {
+            return;
+        }
+        let key = tab_id.unwrap_or_else(|| self.active_tab_key().to_string());
+        let Some(tab) = self.tab_sessions.get_mut(&key) else {
+            return;
+        };
+        let Some(prompt) = tab.turn.prompt_mut() else {
+            return;
+        };
+        if prompt.id != prompt_id {
+            return;
+        }
+        let Some(autofix) = prompt.autofix.as_mut() else {
+            return;
+        };
+        autofix.target_pane_id = pane_id.clone();
+        tracing::info!(
+            target: "slash_cmd",
+            tab = %key,
+            prompt_id,
+            pane = %pane_id,
+            "bound /fix target pane",
+        );
     }
 
     /// `/sessions` — open the Agents picker for the active tab.
@@ -12412,6 +12473,58 @@ mod tests {
             }),
         };
         app.turn_submit_prompt(DEFAULT_TAB_ID, prompt);
+    }
+
+    /// Submit a manual-`/fix`-style autofix turn: an autofix context whose
+    /// `target_pane_id` is empty (the App doesn't know the working pane until
+    /// the client task resolves it and plumbs it back).
+    fn submit_fix_prompt(app: &mut App, id: u64) {
+        let gen = {
+            let tab = app.tab_mut(DEFAULT_TAB_ID);
+            tab.autofix.generation = tab.autofix.generation.wrapping_add(1);
+            tab.autofix.generation
+        };
+        let prompt = SubmittedPrompt {
+            id,
+            text: String::new(),
+            submitted_at_unix_s: 0.0,
+            autofix: Some(AutofixContext {
+                target_pane_id: String::new(),
+                generation: gen,
+            }),
+        };
+        app.turn_submit_prompt(DEFAULT_TAB_ID, prompt);
+    }
+
+    fn fix_target_pane(app: &App) -> String {
+        app.current_tab()
+            .turn
+            .prompt()
+            .unwrap()
+            .autofix
+            .as_ref()
+            .unwrap()
+            .target_pane_id
+            .clone()
+    }
+
+    #[test]
+    fn fix_target_pane_is_late_bound_by_prompt_id() {
+        let mut app = test_app();
+        submit_fix_prompt(&mut app, 42);
+        assert_eq!(fix_target_pane(&app), "", "starts unbound");
+
+        // A resolution for a different prompt id (a superseded /fix) is ignored.
+        app.apply_autofix_target_resolved(Some(DEFAULT_TAB_ID.into()), 7, "pane-X".into());
+        assert_eq!(fix_target_pane(&app), "", "stale prompt_id must not patch");
+
+        // An empty pane id is a no-op.
+        app.apply_autofix_target_resolved(Some(DEFAULT_TAB_ID.into()), 42, String::new());
+        assert_eq!(fix_target_pane(&app), "", "empty pane id is ignored");
+
+        // The matching prompt id binds the resolved working pane.
+        app.apply_autofix_target_resolved(Some(DEFAULT_TAB_ID.into()), 42, "pane-7".into());
+        assert_eq!(fix_target_pane(&app), "pane-7", "matching id binds the pane");
     }
 
     #[test]

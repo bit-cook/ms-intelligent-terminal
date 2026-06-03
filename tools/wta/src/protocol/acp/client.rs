@@ -1165,9 +1165,14 @@ async fn build_prompt_text(
     shell_mgr: &ShellManager,
     wt_connected: bool,
     pane_context: Option<&PaneContext>,
-) -> (String, String, String) {
+) -> (String, String, String, Option<String>) {
     let total_started = std::time::Instant::now();
     let mut runtime_sections = Vec::new();
+    // Working pane resolved from the active pane for a manual `/fix` (one with
+    // no explicit `source_pane_id`). Plumbed back to the App so it can fill
+    // `AutofixContext.target_pane_id` — empty otherwise (auto-fix carries its
+    // failing pane explicitly; planner turns let the agent fill `Send.parent`).
+    let mut resolved_fix_pane: Option<String> = None;
 
     let template_started = std::time::Instant::now();
     let planner_template = if is_autofix {
@@ -1270,21 +1275,26 @@ async fn build_prompt_text(
             // fall back to the resolved active working pane (`/fix`). An
             // active pane that is itself an agent pane is skipped — there's
             // no terminal output to read there.
-            let source_pane_id = pane_context
-                .and_then(|ctx| ctx.source_pane_id.clone())
-                .or_else(|| {
-                    active.as_ref().and_then(|a| {
-                        let is_agent = a
-                            .get("is_agent_pane")
-                            .and_then(|v| v.as_bool())
-                            .unwrap_or(false);
-                        if is_agent {
-                            None
-                        } else {
-                            json_str_or_num(a.get("session_id"))
-                        }
-                    })
-                });
+            let explicit_source = pane_context.and_then(|ctx| ctx.source_pane_id.clone());
+            let source_pane_id = explicit_source.clone().or_else(|| {
+                active.as_ref().and_then(|a| {
+                    let is_agent = a
+                        .get("is_agent_pane")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    if is_agent {
+                        None
+                    } else {
+                        json_str_or_num(a.get("session_id"))
+                    }
+                })
+            });
+            // When we resolved the pane ourselves (manual `/fix`, no explicit
+            // source), remember it so the App can fill `target_pane_id` — that
+            // is the pane the eventual fix command is sent to.
+            if explicit_source.is_none() {
+                resolved_fix_pane = source_pane_id.clone();
+            }
 
             if let Some(source_pane_id) = source_pane_id {
                 tracing::debug!(
@@ -1354,6 +1364,7 @@ async fn build_prompt_text(
         prompt,
         planner_template.source_label,
         planner_template.display_name,
+        resolved_fix_pane,
     )
 }
 
@@ -4066,7 +4077,7 @@ async fn dispatch_prompt_body(
         .await;
 
     prompt_timing_task.activate(&prompt_session_id_str, &prompt);
-    let (text, prompt_source, prompt_name) = build_prompt_text(
+    let (text, prompt_source, prompt_name, resolved_fix_pane) = build_prompt_text(
         prompt.id,
         prompt.submitted_at_unix_s,
         &prompt.text,
@@ -4077,6 +4088,19 @@ async fn dispatch_prompt_body(
         prompt.pane_context.as_ref(),
     )
     .await;
+    // A manual `/fix` resolved its working pane in build_prompt_text (it had no
+    // explicit source pane). Plumb it back so the App fills the turn's
+    // `target_pane_id`; the host fills `Send.parent` from it at execute time.
+    if let Some(pane_id) = resolved_fix_pane {
+        let _ = event_tx_task.send(AppEvent::AutofixTargetResolved {
+            tab_id: prompt
+                .pane_context
+                .as_ref()
+                .and_then(|c| c.tab_id.clone()),
+            prompt_id: prompt.id,
+            pane_id,
+        });
+    }
     let _ = event_tx_task.send(AppEvent::PromptTemplateLoaded { name: prompt_name });
     prompt_timing_task.mark_context_ready(&prompt_session_id_str, text.len());
     acp_log_built_prompt(
