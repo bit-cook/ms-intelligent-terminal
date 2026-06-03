@@ -7583,7 +7583,13 @@ impl App {
         let target_tab = self.tab_for_session(session_id);
         let tab = self.session_tab_mut(session_id);
         let prompt = tab.turn.prompt().cloned().expect("prompt set");
-        let autofix_pane = prompt.autofix.as_ref().map(|a| a.target_pane_id.clone());
+        // Empty `target_pane_id` (manual `/fix`) is not a real pane — filter
+        // it out so an empty-response turn doesn't emit a bottom-bar event.
+        let autofix_pane = prompt
+            .autofix
+            .as_ref()
+            .map(|a| a.target_pane_id.clone())
+            .filter(|s| !s.is_empty());
         tab.turn = TurnState::Surfaced {
             prompt,
             outcome: TurnOutcome::Empty,
@@ -7968,20 +7974,26 @@ impl App {
         recommendations: RecommendationSet,
         phase_name: &str,
     ) {
-        let pane_id = self
+        let target_pane_id = self
             .session_tab(session_id)
             .turn
             .prompt()
             .and_then(|p| p.autofix.as_ref())
             .map(|a| a.target_pane_id.clone());
-        let Some(pane_id) = pane_id else {
+        // Defensive: only autofix turns surface a fix card here.
+        let Some(target_pane_id) = target_pane_id else {
             return;
         };
+        // An empty `target_pane_id` is a manually-invoked `/fix` with no
+        // concrete failing pane. Still surface the card below, but skip the
+        // bottom-bar / suggested-pane side effects — they key off a real
+        // failing pane (the Review pill, the Ctrl+Alt+. hotkey target).
+        let bar_pane = (!target_pane_id.is_empty()).then_some(target_pane_id);
         self.log_selection_phase_for(
             session_id,
             phase_name,
             &format!(
-                "pane={pane_id} title={:?}",
+                "pane={bar_pane:?} title={:?}",
                 recommendations.choices.first().map(|c| &c.title)
             ),
         );
@@ -7991,13 +8003,15 @@ impl App {
         // pane is closed, Idle when it's already open). The recommendation
         // card still lives in the turn below so the user can act on it
         // inside the pane — autofix no longer auto-executes.
-        {
-            let autofix = &mut self.tab_mut(&target_tab).autofix;
-            autofix.suggested_pane_id = Some(pane_id.clone());
-            autofix.pane_id = None;
-            autofix.armed_at = None;
+        if let Some(pane_id) = bar_pane.as_ref() {
+            {
+                let autofix = &mut self.tab_mut(&target_tab).autofix;
+                autofix.suggested_pane_id = Some(pane_id.clone());
+                autofix.pane_id = None;
+                autofix.armed_at = None;
+            }
+            self.emit_autofix_state_result(&target_tab, pane_id);
         }
-        self.emit_autofix_state_result(&target_tab, &pane_id);
         let rec_idx = recommended_choice_index(&recommendations);
         let summary = format_recommendations_for_chat(&recommendations);
         let turn_prompt_label = t!("chat.autofix_prompt_label").into_owned();
@@ -8039,20 +8053,25 @@ impl App {
         explanation: String,
         phase_name: &str,
     ) {
-        let pane_id = self
+        let target_pane_id = self
             .session_tab(session_id)
             .turn
             .prompt()
             .and_then(|p| p.autofix.as_ref())
             .map(|a| a.target_pane_id.clone());
-        let Some(pane_id) = pane_id else {
+        // Defensive: only autofix turns surface an explain answer here.
+        let Some(target_pane_id) = target_pane_id else {
             return;
         };
+        // Empty `target_pane_id` = a manually-invoked `/fix` with no concrete
+        // failing pane: surface the explanation, but skip the bottom-bar /
+        // suggested-pane side effects below.
+        let bar_pane = (!target_pane_id.is_empty()).then_some(target_pane_id);
         self.log_selection_phase_for(
             session_id,
             phase_name,
             &format!(
-                "pane={pane_id} title={title:?} chars={}",
+                "pane={bar_pane:?} title={title:?} chars={}",
                 explanation.chars().count()
             ),
         );
@@ -8081,13 +8100,15 @@ impl App {
         // Explanation lives in the chat above; mark the tab as having a
         // result pending review and surface the bar (Review when the pane
         // is closed, Idle when already open).
-        {
-            let tab = self.session_tab_mut(session_id);
-            tab.autofix.suggested_pane_id = Some(pane_id.clone());
-            tab.autofix.pane_id = None;
-            tab.autofix.armed_at = None;
+        if let Some(pane_id) = bar_pane.as_ref() {
+            {
+                let tab = self.session_tab_mut(session_id);
+                tab.autofix.suggested_pane_id = Some(pane_id.clone());
+                tab.autofix.pane_id = None;
+                tab.autofix.armed_at = None;
+            }
+            self.emit_autofix_state_result(&target_tab, pane_id);
         }
-        self.emit_autofix_state_result(&target_tab, &pane_id);
 
         let tab = self.session_tab_mut(session_id);
         let prompt = tab.turn.prompt().cloned().expect("prompt set");

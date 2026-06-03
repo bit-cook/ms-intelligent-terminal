@@ -1324,9 +1324,10 @@ async fn build_prompt_text(
             .join("\n\n")
     };
     let prompt = if is_autofix {
-        // Auto-triggered autofix carries no user text — the template + terminal
-        // output is the whole prompt. A manual `/fix <hint>` passes the hint as
-        // `user_text`; append it so the agent can use it to steer the diagnosis.
+        // Autofix prompts historically ignored `user_text` — the template +
+        // terminal output was the whole prompt. Now a non-empty `user_text` is
+        // appended as a `## User Request`: a manual `/fix <hint>` passes the
+        // hint here, and the error-triggered path passes its failure summary.
         if user_text.trim().is_empty() {
             prompt_body
         } else {
