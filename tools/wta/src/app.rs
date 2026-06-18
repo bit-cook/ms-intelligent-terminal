@@ -1924,6 +1924,17 @@ pub struct App {
     // state (the command-completion candidates as the user types `/he…`)
     // lives on `TabSession`.
     pub help_overlay_visible: bool,
+    /// True once the helper's ACP transport to wta-master is lost
+    /// (`AgentFailure::TransportLost` — master died/crashed/was killed). The
+    /// helper has no in-process reconnect, so every slash command except
+    /// `/restart` would only fail against the dead pipe. While this is set the
+    /// command popup is filtered down to just `/restart` (other commands are
+    /// hidden, not greyed), and typing/Entering any other command is refused
+    /// with the reconnect hint. `/restart` is the one recovery that routes via
+    /// `wtcli publish` → C++ `SharedWta::Restart` (a path that doesn't touch
+    /// the dead pipe). Cleared when a fresh connection reaches `Connected`
+    /// (e.g. the post-sign-in reconnect).
+    pub transport_lost: bool,
     // Debug panel
     pub debug_messages: Vec<DebugMessage>,
     pub show_debug_panel: bool,
@@ -2186,6 +2197,7 @@ impl App {
             master_request_tx,
             debug_capture_enabled,
             help_overlay_visible: false,
+            transport_lost: false,
             debug_messages: Vec::new(),
             show_debug_panel: false,
             debug_scroll: 0,
@@ -4381,6 +4393,9 @@ impl App {
                 self.current_model_id = current_model_id.clone();
                 self.agent_supports_load_session = load_session_supported;
                 self.state = ConnectionState::Connected;
+                // A live connection cancels the degraded latch (e.g. the
+                // post-sign-in reconnect that goes back through master).
+                self.transport_lost = false;
                 self.preflight_setup_active = false;
                 // If we were in Setup (e.g. after Retry), transition to Chat
                 if self.mode == AppMode::Setup {
@@ -4544,6 +4559,17 @@ impl App {
                 // show nothing and leave the state untouched.
                 if failure.is_cancelled() {
                     return;
+                }
+
+                // The transport to master is gone — latch the degraded state
+                // so the slash-command popup greys out everything but
+                // /restart (the only command that can recover without the
+                // dead pipe). Cleared on the next Connected.
+                if matches!(
+                    failure,
+                    crate::protocol::acp::failure::AgentFailure::TransportLost
+                ) {
+                    self.transport_lost = true;
                 }
 
                 let is_auth_error = failure.is_auth();
@@ -6841,14 +6867,35 @@ impl App {
     pub fn command_popup_state(&self) -> Option<crate::ui::PopupState<'_>> {
         let tab = self.current_tab();
         if tab.command_popup_candidates.is_empty() {
-            None
-        } else {
-            Some(crate::ui::PopupState {
-                candidates: &tab.command_popup_candidates,
-                selected: tab.command_popup_selected,
-                current_model: self.current_model_display(),
-            })
+            return None;
         }
+        // When the transport to master is lost, only /restart can run — so the
+        // popup simply doesn't show the other commands (rather than greying
+        // them). Collapse the candidate list to /restart if it's among the
+        // prefix matches; otherwise show nothing (the typed prefix excludes
+        // it, e.g. "/new"), and the Enter handler surfaces the reconnect hint.
+        // Normal path borrows the tab's list (no per-frame allocation on the
+        // render hot path); only the degraded filter allocates.
+        let candidates: std::borrow::Cow<'_, [&'static crate::commands::CommandSpec]> =
+            if self.transport_lost {
+                let filtered: Vec<&'static crate::commands::CommandSpec> = tab
+                    .command_popup_candidates
+                    .iter()
+                    .copied()
+                    .filter(|s| s.kind == crate::commands::CommandKind::Restart)
+                    .collect();
+                if filtered.is_empty() {
+                    return None;
+                }
+                std::borrow::Cow::Owned(filtered)
+            } else {
+                std::borrow::Cow::Borrowed(tab.command_popup_candidates.as_slice())
+            };
+        Some(crate::ui::PopupState {
+            candidates,
+            selected: tab.command_popup_selected,
+            current_model: self.current_model_display(),
+        })
     }
 
     /// Display label for the active pane's effective model — its per-pane
@@ -6877,8 +6924,28 @@ impl App {
         Some(name)
     }
 
+    /// Whether the command popup is *effectively* visible — i.e. actually
+    /// rendered. This is the same condition `command_popup_state()` uses to
+    /// decide whether to draw, so key handlers gate on the real on-screen
+    /// state: in degraded mode the candidate list is filtered to `/restart`,
+    /// so when the typed prefix excludes it (e.g. `/new`) nothing is drawn and
+    /// this returns false — the Up/Down/Tab/Enter arms then fall through to
+    /// their normal behavior instead of swallowing the key against an
+    /// invisible popup.
     fn command_popup_visible(&self) -> bool {
-        self.current_tab().command_popup_visible()
+        if !self.current_tab().command_popup_visible() {
+            return false;
+        }
+        if self.transport_lost {
+            // Only /restart is offered; if the prefix excludes it the popup
+            // isn't drawn.
+            return self
+                .current_tab()
+                .command_popup_candidates
+                .iter()
+                .any(|s| s.kind == crate::commands::CommandKind::Restart);
+        }
+        true
     }
 
     /// Per-frame state for the `/model` picker modal, or `None` when it's not
@@ -6922,14 +6989,35 @@ impl App {
         //    `/he` → /help) and never submits the raw text as a prompt, so
         //    this arm is always consumed even if there is no selection.
         if self.command_popup_visible() {
-            if let Some(spec) = self.current_tab().selected_command_spec() {
-                let parsed = ParsedCommand {
-                    kind: spec.kind,
-                    spec,
-                    rest: String::new(),
-                };
-                self.current_tab_mut().clear_input();
-                self.handle_slash_command(parsed);
+            // When the transport to master is lost, only /restart is runnable
+            // (everything else would hit the dead pipe). Pick the /restart
+            // spec if it's in the filtered candidate list; otherwise there's
+            // nothing to run, so consume Enter and show the reconnect hint.
+            let spec = if self.transport_lost {
+                self.current_tab()
+                    .command_popup_candidates
+                    .iter()
+                    .copied()
+                    .find(|s| s.kind == CommandKind::Restart)
+            } else {
+                self.current_tab().selected_command_spec()
+            };
+            match spec {
+                Some(spec) => {
+                    let parsed = ParsedCommand {
+                        kind: spec.kind,
+                        spec,
+                        rest: String::new(),
+                    };
+                    self.current_tab_mut().clear_input();
+                    self.handle_slash_command(parsed);
+                }
+                None => {
+                    self.current_tab_mut().clear_input();
+                    if self.transport_lost {
+                        self.push_degraded_command_hint();
+                    }
+                }
             }
             return true;
         }
@@ -6940,6 +7028,13 @@ impl App {
         }
         match commands::classify(&self.current_tab().input) {
             ParseOutcome::Command(cmd) => {
+                // Degraded: a typed command other than /restart can't run
+                // against the dead pipe — swallow it with the reconnect hint.
+                if self.transport_lost && cmd.kind != CommandKind::Restart {
+                    self.current_tab_mut().clear_input();
+                    self.push_degraded_command_hint();
+                    return true;
+                }
                 self.current_tab_mut().clear_input();
                 self.handle_slash_command(cmd);
                 true
@@ -6957,6 +7052,15 @@ impl App {
         }
     }
 
+    /// Append the localized "connection to the agent was lost — /restart to
+    /// reconnect" line to the active tab. Shown when the user invokes any
+    /// slash command other than /restart while the transport to master is
+    /// down (reuses the existing `connection.lost` string).
+    fn push_degraded_command_hint(&mut self) {
+        let msg = t!("connection.lost").into_owned();
+        self.current_tab_mut().messages.push(ChatMessage::System(msg));
+    }
+
     /// Dispatch a parsed slash-command. The Enter handler is responsible
     /// for clearing the input and cursor before calling this.
     fn handle_slash_command(&mut self, cmd: ParsedCommand) {
@@ -6967,6 +7071,16 @@ impl App {
             in_flight,
             "dispatch"
         );
+
+        // Transport to master is lost — only /restart can recover (it routes
+        // via wtcli→COM, not the dead pipe). Refuse everything else with the
+        // reconnect hint so a command can never silently fail against a dead
+        // connection. This is the defensive backstop; the Enter handler and
+        // greyed popup already steer the user here.
+        if self.transport_lost && cmd.kind != CommandKind::Restart {
+            self.push_degraded_command_hint();
+            return;
+        }
 
         // Thin dispatch: each arm's logic lives in a `cmd_*` method so a
         // single command can be read and unit-tested in isolation. `in_flight`
@@ -12406,6 +12520,95 @@ mod tests {
             .filter(|m| matches!(m, ChatMessage::Error(s) if *s == lost))
             .count();
         assert_eq!(n, 1, "identical connection.lost must not duplicate");
+    }
+
+    /// The degraded latch (`App::transport_lost`) drives the slash-command
+    /// greying. It must arm on a transport loss and stay armed (the helper has
+    /// no in-process reconnect), so the popup keeps refusing everything but
+    /// /restart until recovery.
+    #[test]
+    fn transport_lost_latch_arms_on_transport_loss() {
+        let mut app = test_app();
+        app.state = ConnectionState::Connected;
+        assert!(!app.transport_lost, "fresh app is not degraded");
+
+        app.handle_event(AppEvent::AgentError {
+            session_id: None,
+            failure: crate::protocol::acp::failure::AgentFailure::TransportLost,
+            message: t!("connection.lost").into_owned(),
+        });
+
+        assert!(
+            app.transport_lost,
+            "a transport loss must arm the degraded latch"
+        );
+    }
+
+    /// A non-transport failure (a one-off protocol error) must NOT arm the
+    /// latch — the session is still alive, so commands stay enabled.
+    #[test]
+    fn protocol_error_does_not_arm_degraded_latch() {
+        let mut app = test_app();
+        app.state = ConnectionState::Connected;
+
+        app.handle_event(AppEvent::AgentError {
+            session_id: None,
+            failure: crate::protocol::acp::failure::AgentFailure::Protocol {
+                code: -32603,
+                message: "bad params".to_string(),
+            },
+            message: "protocol error".to_string(),
+        });
+
+        assert!(
+            !app.transport_lost,
+            "a non-transport protocol error must not degrade the pane"
+        );
+    }
+
+    /// An auth failure routes to sign-in, not the dead-transport path, so it
+    /// must not arm the degraded latch (otherwise the post-sign-in pane would
+    /// wrongly grey out its commands).
+    #[test]
+    fn auth_failure_does_not_arm_degraded_latch() {
+        let mut app = test_app();
+        app.state = ConnectionState::Connected;
+
+        app.handle_event(AppEvent::AgentError {
+            session_id: None,
+            failure: crate::protocol::acp::failure::AgentFailure::AuthRequired {
+                message: "authentication required".to_string(),
+            },
+            message: "authentication required".to_string(),
+        });
+
+        assert!(
+            !app.transport_lost,
+            "an auth failure must not arm the degraded latch"
+        );
+    }
+
+    /// A fresh connection (e.g. the post-sign-in reconnect that goes back
+    /// through master) must clear the latch so commands re-enable.
+    #[test]
+    fn agent_connected_clears_degraded_latch() {
+        let mut app = test_app();
+        app.transport_lost = true;
+
+        app.handle_event(AppEvent::AgentConnected {
+            name: "Copilot".to_string(),
+            model: None,
+            version: None,
+            session_id: "sid-fresh".to_string(),
+            available_models: Vec::new(),
+            current_model_id: None,
+            load_session_supported: true,
+        });
+
+        assert!(
+            !app.transport_lost,
+            "reaching Connected must clear the degraded latch"
+        );
     }
 
     /// Auth failures must reach the sign-in screen, not get flattened to a dead
