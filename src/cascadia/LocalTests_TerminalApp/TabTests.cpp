@@ -28,6 +28,7 @@
 #include <winrt/Windows.UI.Xaml.Automation.h>
 #include <winrt/Windows.UI.Xaml.Automation.Peers.h>
 #include <winrt/Windows.UI.Xaml.Automation.Provider.h>
+#include <winrt/Windows.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.UI.Xaml.Shapes.h>
 
 using namespace Microsoft::Console;
@@ -271,6 +272,9 @@ namespace TerminalAppLocalTests
         TEST_METHOD(TryCreateXamlObjects);
 
         TEST_METHOD(TryInitializePage);
+        TEST_METHOD(FreTabModeSelectionDoesNotMutateSettings);
+        TEST_METHOD(FreIllustrationsFollowThemeWithoutChangingChrome);
+        TEST_METHOD(EmptyTabLayoutChangeCompletesBeforeStartup);
         TEST_METHOD(VerticalRailVisibilityRestoresWidth);
         TEST_METHOD(VerticalRailCollapseRestoresWidth);
         TEST_METHOD(LiveTabLayoutRoundTripPreservesState);
@@ -2991,6 +2995,80 @@ namespace TerminalAppLocalTests
             VERIFY_IS_FALSE(page->_isVerticalRailCollapsed);
             VERIFY_IS_FALSE(tabStrip->ItemsList().CanDragItems());
             VERIFY_IS_FALSE(tabStrip->ItemsList().CanReorderItems());
+        });
+    }
+
+    void TabTests::FreTabModeSelectionDoesNotMutateSettings()
+    {
+        TestOnUIThread([]() {
+            winrt::TerminalApp::FreOverlay fre;
+            for (const auto configured : { std::optional<TabLayout>{}, std::optional{ TabLayout::Horizontal }, std::optional{ TabLayout::Vertical } })
+            {
+                CascadiaSettings settings{ LR"({"profiles":[{"name":"cmd","commandline":"cmd.exe"}]})", {} };
+                const auto globals = settings.GlobalSettings();
+                if (configured)
+                {
+                    globals.TabLayout(*configured);
+                }
+
+                fre.Initialize(settings);
+                const auto picker = fre.FindName(L"TabModeComboBox").try_as<ComboBox>();
+                VERIFY_IS_NOT_NULL(picker);
+                VERIFY_ARE_EQUAL(2u, picker.Items().Size());
+                VERIFY_ARE_EQUAL(configured == TabLayout::Horizontal ? 1 : 0, picker.SelectedIndex());
+                VERIFY_IS_FALSE(Automation::AutomationProperties::GetName(picker).empty());
+                VERIFY_IS_FALSE(Automation::AutomationProperties::GetHelpText(picker).empty());
+
+                picker.SelectedIndex(1 - picker.SelectedIndex());
+                VERIFY_ARE_EQUAL(configured.has_value(), globals.HasTabLayout());
+                VERIFY_ARE_EQUAL(configured.value_or(TabLayout::Horizontal), globals.TabLayout());
+            }
+        });
+    }
+
+    void TabTests::FreIllustrationsFollowThemeWithoutChangingChrome()
+    {
+        TestOnUIThread([]() {
+            winrt::TerminalApp::FreOverlay fre;
+            for (const auto theme : { ElementTheme::Light, ElementTheme::Dark, ElementTheme::Default, ElementTheme::Light })
+            {
+                fre.RequestedTheme(theme);
+                const auto actualTheme = fre.ActualTheme();
+                VERIFY_ARE_NOT_EQUAL(ElementTheme::Default, actualTheme);
+                if (theme != ElementTheme::Default)
+                {
+                    VERIFY_ARE_EQUAL(theme, actualTheme);
+                }
+                VERIFY_ARE_EQUAL(ElementTheme::Dark, fre.FindName(L"RootGrid").as<Grid>().RequestedTheme());
+                for (const auto name : { L"SidebarImage", L"AutofixImage" })
+                {
+                    const auto image = fre.FindName(name).as<Image>();
+                    VERIFY_ARE_EQUAL(actualTheme, image.RequestedTheme());
+                    const auto source = image.Source().as<Media::Imaging::BitmapImage>().UriSource().AbsoluteUri();
+                    VERIFY_IS_TRUE(std::wstring_view{ source }.ends_with(actualTheme == ElementTheme::Light ? L"-light.png" : L"-dark.png"));
+                }
+            }
+        });
+    }
+
+    void TabTests::EmptyTabLayoutChangeCompletesBeforeStartup()
+    {
+        _createContentManager();
+        TestOnUIThread([&]() {
+            const auto props = winrt::make_self<winrt::TerminalApp::implementation::WindowProperties>();
+            winrt::TerminalApp::TerminalPage projectedPage{ *props, *_contentManager };
+            const auto page = winrt::get_self<winrt::TerminalApp::implementation::TerminalPage>(projectedPage);
+            page->_settings = CascadiaSettings{ LR"({"profiles":[{"name":"cmd","commandline":"cmd.exe"}]})", {} };
+            page->_terminalSettingsCache = std::make_shared<winrt::TerminalApp::implementation::TerminalSettingsCache>(page->_settings);
+            page->Create();
+
+            VERIFY_ARE_EQUAL(0u, page->_tabs.Size());
+            VERIFY_IS_TRUE(page->_ApplyTabLayout(TabLayout::Vertical));
+            VERIFY_IS_TRUE(page->_isVerticalLayout);
+            VERIFY_IS_FALSE(page->_changingTabLayout);
+            VERIFY_IS_TRUE(page->_ApplyTabLayout(TabLayout::Horizontal));
+            VERIFY_IS_FALSE(page->_isVerticalLayout);
+            VERIFY_IS_FALSE(page->_changingTabLayout);
         });
     }
 
