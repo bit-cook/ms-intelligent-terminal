@@ -4005,8 +4005,8 @@ namespace winrt::TerminalApp::implementation
                 if (owner)
                 {
                     self->_UpdateTabIcon(*owner);
+                    self->_ApplyTabListProjection(*owner);
                 }
-                self->_ApplyTabListProjection();
 
                 const auto activeTab = self->_GetFocusedTabImpl();
                 if (activeTab && activeTab->FindAgentPaneContent() == sender)
@@ -8644,7 +8644,7 @@ namespace winrt::TerminalApp::implementation
                 _UpdateBottomBarState();
             }
         }
-        _ApplyTabListProjection();
+        _ApplyTabListProjection(*targetTab);
     }
 
     // Inbound event from WTA: {method:"close_agent_pane", params:{tab_id}}.
@@ -9518,7 +9518,7 @@ namespace winrt::TerminalApp::implementation
                          agentSessionId.starts_with("sidekick-") ||
                          (agent.empty() && resumeCommandline.empty())))
                     {
-                        _ApplyTabListProjection();
+                         _ApplyTabListProjection(tab);
                         return;
                     }
 
@@ -9570,7 +9570,7 @@ namespace winrt::TerminalApp::implementation
                             _agentPaneLog("OnPaneAgentSessionChanged: ignored prompt session " + agentSessionId + " for already-bound pane " + paneId);
                         }
                     }
-                    _ApplyTabListProjection();
+                    _ApplyTabListProjection(tab);
                     return;
                 }
             }
@@ -10256,7 +10256,11 @@ namespace winrt::TerminalApp::implementation
                 if (propertyName == L"Title")
                 {
                     page->_UpdateTitle(*tab);
-                    page->_ApplyTabListProjection();
+                    page->_ApplyTabListProjection(*tab);
+                }
+                else if (propertyName == L"Icon" && page->_isVerticalLayout)
+                {
+                    page->_tabStrip.SetTabPresentation(tab->TabViewItem(), tab->Title(), tab->Icon());
                 }
                 else if (propertyName == L"Content")
                 {
@@ -11081,7 +11085,7 @@ namespace winrt::TerminalApp::implementation
 
     void TerminalPage::_RefreshTabStripPaneItems(const winrt::com_ptr<Tab>& tab)
     {
-        if (!_tabStrip || !tab)
+        if (!_tabStrip || !_isVerticalLayout || !tab)
         {
             return;
         }
@@ -13206,6 +13210,10 @@ namespace winrt::TerminalApp::implementation
         for (const auto& tab : _tabs)
         {
             tab.CloseButtonVisibility(visibility);
+            if (_isVerticalLayout)
+            {
+                winrt::get_self<implementation::TabStrip>(_tabStrip)->PrepareTabItem(tab.TabViewItem());
+            }
         }
 
         switch (visibility)
@@ -14248,11 +14256,19 @@ namespace winrt::TerminalApp::implementation
                 bgColor = ThemeColor::ColorFromBrush(tabRowBg.Evaluate(res, terminalBrush, true));
             }
 
-            const auto acrylicBrush = Media::AcrylicBrush();
-            acrylicBrush.BackgroundSource(Media::AcrylicBackgroundSource::HostBackdrop);
-            acrylicBrush.FallbackColor(bgColor);
-            acrylicBrush.TintColor(bgColor);
-            acrylicBrush.TintOpacity(0.5);
+            auto acrylicBrush = TitlebarBrush().try_as<Media::AcrylicBrush>();
+            if (!acrylicBrush ||
+                acrylicBrush.BackgroundSource() != Media::AcrylicBackgroundSource::HostBackdrop ||
+                acrylicBrush.FallbackColor() != bgColor ||
+                acrylicBrush.TintColor() != bgColor ||
+                acrylicBrush.TintOpacity() != 0.5)
+            {
+                acrylicBrush = Media::AcrylicBrush();
+                acrylicBrush.BackgroundSource(Media::AcrylicBackgroundSource::HostBackdrop);
+                acrylicBrush.FallbackColor(bgColor);
+                acrylicBrush.TintColor(bgColor);
+                acrylicBrush.TintOpacity(0.5);
+            }
 
             TitlebarBrush(acrylicBrush);
         }
