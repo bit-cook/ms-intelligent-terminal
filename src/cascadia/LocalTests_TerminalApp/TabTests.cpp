@@ -325,6 +325,7 @@ namespace TerminalAppLocalTests
         TEST_METHOD(CliAgentClassifiesTab);
         TEST_METHOD(VisibleFieldsControlRichTabComposition);
         TEST_METHOD(RichTabMetadataSelectionIsLimitedToTwo);
+        TEST_METHOD(RichTabMetadataIsVisibleOnlyInVerticalLayout);
         TEST_METHOD(RichTabMetadataExpandsVerticalRow);
         TEST_METHOD(RichTabManifestAcceptsCamelCaseFieldIds);
         TEST_METHOD(RichTabRequestIncludesFirstPartyFields);
@@ -5590,6 +5591,59 @@ namespace TerminalAppLocalTests
             const auto container = tabStrip->ItemsList().ContainerFromIndex(0).try_as<ListViewItem>();
             VERIFY_IS_NOT_NULL(container);
             VERIFY_IS_TRUE(container.ActualHeight() > 48.0);
+        });
+    }
+
+    void TabTests::RichTabMetadataIsVisibleOnlyInVerticalLayout()
+    {
+        auto page = _commonSetup();
+
+        TestOnUIThread([&]() {
+            const auto tab = page->_GetFocusedTabImpl();
+            VERIFY_IS_NOT_NULL(tab);
+
+            ::Microsoft::Terminal::RichTab::Provider::Presentation presentation;
+            presentation.text = L"main\n2 changes";
+            presentation.tooltip = L"main, 2 changes";
+            presentation.accessibilityText = L"Branch: main, Changes: 2";
+            tab->SetRichTabPresentation(presentation);
+
+            const auto tooltipText = [&]() {
+                const auto toolTip = ToolTipService::GetToolTip(tab->TabViewItem()).as<ToolTip>();
+                const auto textBlock = toolTip.Content().as<TextBlock>();
+                std::wstring text;
+                for (const auto& inlineElement : textBlock.Inlines())
+                {
+                    if (const auto run = inlineElement.try_as<Documents::Run>())
+                    {
+                        text.append(run.Text());
+                    }
+                    else if (inlineElement.try_as<Documents::LineBreak>())
+                    {
+                        text.push_back(L'\n');
+                    }
+                }
+                return text;
+            };
+
+            const auto title = tab->Title();
+            VERIFY_ARE_EQUAL(winrt::hstring{ presentation.text }, tab->_headerControl.MetadataText());
+            VERIFY_IS_FALSE(tab->_headerControl.IsMetadataVisible());
+            VERIFY_ARE_EQUAL(title, Automation::AutomationProperties::GetName(tab->TabViewItem()));
+            VERIFY_ARE_EQUAL(std::wstring::npos, tooltipText().find(presentation.tooltip));
+
+            tab->SetVerticalTabLayout(true);
+            VERIFY_IS_TRUE(tab->_headerControl.IsMetadataVisible());
+            VERIFY_ARE_EQUAL(
+                winrt::hstring{ std::wstring{ title } + L", " + presentation.accessibilityText },
+                Automation::AutomationProperties::GetName(tab->TabViewItem()));
+            VERIFY_ARE_NOT_EQUAL(std::wstring::npos, tooltipText().find(presentation.tooltip));
+
+            tab->SetVerticalTabLayout(false);
+            VERIFY_IS_FALSE(tab->_headerControl.IsMetadataVisible());
+            VERIFY_ARE_EQUAL(title, Automation::AutomationProperties::GetName(tab->TabViewItem()));
+            VERIFY_ARE_EQUAL(winrt::hstring{ presentation.text }, tab->_headerControl.MetadataText());
+            VERIFY_ARE_EQUAL(std::wstring::npos, tooltipText().find(presentation.tooltip));
         });
     }
 
