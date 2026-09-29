@@ -685,6 +685,7 @@ namespace winrt::TerminalApp::implementation
         _tabStrip.HistoryRequested([weakThis{ get_weak() }](auto&&, auto&&) {
             if (const auto page = weakThis.get())
             {
+                page->_UpdateSidebarHistoryCurrentSession();
                 page->_StartSidebarHistoryRefreshTimer();
                 page->_RequestSidebarHistoryRefresh(true);
             }
@@ -699,6 +700,12 @@ namespace winrt::TerminalApp::implementation
             if (const auto page = weakThis.get(); page && args)
             {
                 page->_ActivateSidebarHistoryItem(args.Item());
+            }
+        });
+        winrt::get_self<implementation::TabStrip>(_tabStrip)->HistoryProjectionChanged([weakThis{ get_weak() }]() {
+            if (const auto page = weakThis.get())
+            {
+                page->_UpdateSidebarHistoryCurrentSession();
             }
         });
         if constexpr (Feature_RichTabProviders::IsEnabled())
@@ -6032,6 +6039,43 @@ namespace winrt::TerminalApp::implementation
         _SetVerticalRailVisibility(true);
     }
 
+    void TerminalPage::_UpdateSidebarHistoryCurrentSession()
+    {
+        if (!_tabStrip || !_tabStrip.HistoryActive())
+        {
+            return;
+        }
+
+        TerminalApp::TabStripHistoryItem current{ nullptr };
+        MUX::Controls::TabViewItem tabItem{ nullptr };
+        if (const auto tab = _GetFocusedTabImpl())
+        {
+            tabItem = tab->TabViewItem();
+            if (const auto pane = tab->GetActivePane(); pane && pane->GetTerminalControl())
+            {
+                const auto paneId = pane->GetSessionId();
+                const auto binding = _paneAgentSessions.find(paneId);
+                for (const auto& item : _tabStrip.HistoryItems())
+                {
+                    if (paneId == winrt::guid{} || !item.IsLive() ||
+                        _TryParsePaneSessionId(winrt::to_string(item.PaneSessionId())) != paneId)
+                    {
+                        continue;
+                    }
+                    if (binding != _paneAgentSessions.end() &&
+                        (item.SessionId() != binding->second.sessionId ||
+                         (!binding->second.agent.empty() && item.AgentId() != binding->second.agent)))
+                    {
+                        continue;
+                    }
+                    current = item;
+                    break;
+                }
+            }
+        }
+        winrt::get_self<implementation::TabStrip>(_tabStrip)->SetCurrentHistoryItem(current, tabItem);
+    }
+
     void TerminalPage::_StartSidebarHistoryRefreshTimer()
     {
         if (!_historyRefreshTimer)
@@ -6379,6 +6423,10 @@ namespace winrt::TerminalApp::implementation
             }();
 
             auto title = row.get("title", "").asString();
+            if (const auto lineBreak = title.find_first_of("\r\n"); lineBreak != std::string::npos)
+            {
+                title.resize(lineBreak);
+            }
             const auto cwd = row.get("cwd", "").asString();
             if (title.empty() && isLive && isAgentPane)
             {
@@ -6399,7 +6447,12 @@ namespace winrt::TerminalApp::implementation
             item.Title(winrt::to_hstring(title));
             const auto& lastActivity = row["last_activity_at_ms"];
             const auto lastActivityAtMs = lastActivity.isUInt64() ? std::optional<uint64_t>{ lastActivity.asUInt64() } : std::nullopt;
-            item.Subtitle(winrt::to_hstring(providerDisplayName) + L" \u00b7 " +
+            auto providerLabel = winrt::to_hstring(providerDisplayName);
+            if (agentSource == "wsl")
+            {
+                providerLabel = providerLabel + L" \u00b7 " + winrt::to_hstring(wslDistro);
+            }
+            item.Subtitle(providerLabel + L" \u00b7 " +
                           _SidebarHistoryAgeText(lastActivityAtMs, nowMs) + L" \u00b7 ");
             item.StatusText(_SidebarHistoryStatusText(status));
             item.Cwd(winrt::to_hstring(cwd));
@@ -11943,6 +11996,7 @@ namespace winrt::TerminalApp::implementation
             _RefreshRichTabForTab(*tab, true);
         }
 
+        _UpdateSidebarHistoryCurrentSession();
         _adjustProcessPriorityThrottled->Run();
     }
 

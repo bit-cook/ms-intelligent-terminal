@@ -41,6 +41,12 @@ namespace winrt::TerminalApp::implementation
         WINRT_PROPERTY(winrt::hstring, StatusText);
         WINRT_PROPERTY(winrt::Windows::UI::Xaml::Style, StatusTextStyle, nullptr);
         WINRT_PROPERTY(winrt::Windows::UI::Xaml::DataTemplate, IconTemplate, nullptr);
+        WINRT_OBSERVABLE_PROPERTY(bool, IsCurrent, PropertyChanged.raise, false);
+        WINRT_OBSERVABLE_PROPERTY(winrt::Windows::UI::Xaml::Media::Brush, CurrentBackground, PropertyChanged.raise, nullptr);
+        WINRT_OBSERVABLE_PROPERTY(winrt::Windows::UI::Xaml::Media::Brush, CurrentForeground, PropertyChanged.raise, nullptr);
+
+    public:
+        til::property_changed_event PropertyChanged;
     };
 
     struct TabStripHistoryActivationEventArgs : TabStripHistoryActivationEventArgsT<TabStripHistoryActivationEventArgs>
@@ -218,6 +224,8 @@ namespace winrt::TerminalApp::implementation
         void SearchQuery(winrt::hstring const& value);
         winrt::Windows::Foundation::Collections::IObservableVector<TerminalApp::TabStripHistoryItem> HistoryItems() const { return _historyItems; }
         void CommitHistorySnapshot(std::vector<TerminalApp::TabStripHistoryItem> items);
+        void SetCurrentHistoryItem(TerminalApp::TabStripHistoryItem const& item,
+                                   winrt::Microsoft::UI::Xaml::Controls::TabViewItem const& tab);
         bool ApplyHistoryStatusDelta(winrt::hstring const& sessionId,
                                      winrt::hstring const& paneSessionId,
                                      winrt::hstring const& status,
@@ -272,10 +280,10 @@ namespace winrt::TerminalApp::implementation
                                   winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
         void OnCompactNewTabMenuClick(winrt::Windows::Foundation::IInspectable const& sender,
                                       winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
-        void OnAllTabsFilterClick(winrt::Windows::Foundation::IInspectable const& sender,
-                                  winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
-        void OnAgentsOnlyFilterClick(winrt::Windows::Foundation::IInspectable const& sender,
-                                     winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
+        void OnHistoryClick(winrt::Windows::Foundation::IInspectable const& sender,
+                            winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
+        void OnHistoryCloseClick(winrt::Windows::Foundation::IInspectable const& sender,
+                                 winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
         void OnRichTabRepositoryVisibleClick(winrt::Windows::Foundation::IInspectable const& sender,
                                              winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
         void OnRichTabBranchVisibleClick(winrt::Windows::Foundation::IInspectable const& sender,
@@ -302,6 +310,10 @@ namespace winrt::TerminalApp::implementation
                                        winrt::Windows::UI::Xaml::Input::KeyRoutedEventArgs const& e);
         void OnHistoryItemClick(winrt::Windows::Foundation::IInspectable const& sender,
                                 winrt::Windows::UI::Xaml::Controls::ItemClickEventArgs const& e);
+        void OnHistoryRowLoaded(winrt::Windows::Foundation::IInspectable const& sender,
+                                winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
+        void OnHistoryContainerContentChanging(winrt::Windows::UI::Xaml::Controls::ListViewBase const& sender,
+                                               winrt::Windows::UI::Xaml::Controls::ContainerContentChangingEventArgs const& e);
         void OnContainerContentChanging(winrt::Windows::UI::Xaml::Controls::ListViewBase const& sender,
                                         winrt::Windows::UI::Xaml::Controls::ContainerContentChangingEventArgs const& e);
         void OnTabHeaderLoaded(winrt::Windows::Foundation::IInspectable const& sender,
@@ -360,6 +372,7 @@ namespace winrt::TerminalApp::implementation
         til::typed_event<TerminalApp::TabStrip, TerminalApp::TabStripCloseRequestedEventArgs> TabRenameRequested;
         til::typed_event<TerminalApp::TabStrip, TerminalApp::TabStripCloseRequestedEventArgs> TabFocusRequested;
         til::typed_event<TerminalApp::TabStrip, winrt::Windows::Foundation::IInspectable> VisibleFieldsChanged;
+        til::event<winrt::delegate<>> HistoryProjectionChanged;
 
     private:
         TerminalApp::TabStripOrientation _orientation{ TerminalApp::TabStripOrientation::Vertical };
@@ -386,6 +399,7 @@ namespace winrt::TerminalApp::implementation
         bool _richTabAgentStatusVisible{ true };
         bool _richTabWorkingDirectoryVisible{ true };
         bool _richTabChangesVisible{ false };
+        bool _richTabMetadataControlsVisible{ true };
         winrt::Windows::Foundation::Collections::IObservableVector<winrt::Windows::Foundation::IInspectable> _tabItems{ nullptr };
         winrt::Windows::Foundation::Collections::IObservableVector<TerminalApp::TabStripDisplayItem> _displayItems{ nullptr };
         winrt::Windows::Foundation::Collections::IObservableVector<TerminalApp::TabStripHistoryItem> _historyItems{ nullptr };
