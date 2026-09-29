@@ -97,6 +97,8 @@ namespace winrt::TerminalApp::implementation
         const auto isGroup = IsGroup();
         GroupVisibility(isGroup && !railCollapsed ? Visibility::Visible : Visibility::Collapsed);
         ChildrenVisibility(isGroup && !railCollapsed && IsExpanded() ? Visibility::Visible : Visibility::Collapsed);
+        IconVisibility(isGroup && !railCollapsed ? Visibility::Collapsed : Visibility::Visible);
+        HeaderMinHeight(railCollapsed ? 32.0 : 40.0);
         ChevronGlyph(IsExpanded() ? L"\xE70D" : L"\xE76C");
     }
 
@@ -472,17 +474,23 @@ namespace winrt::TerminalApp::implementation
                                      tabBrush.Color().A != 0 &&
                                      tabBrush.Opacity() > 0;
             const auto selected = display.SelectionVisibility() == Visibility::Visible;
-            const auto color = hasTabColor && selected ? tabBrush.Color() : Windows::UI::Colors::Transparent();
-            const auto previous = grid.Background().try_as<WUX::Media::SolidColorBrush>();
-            if (previous && previous.Color() == color)
+            if (const auto selectionBackground = grid.FindName(L"TabColorSelectionBackground").try_as<WUX::Controls::Border>())
             {
-                return;
+                if (hasTabColor && selected)
+                {
+                    selectionBackground.Background(WUX::Media::SolidColorBrush{ tabBrush.Color() });
+                }
+                else
+                {
+                    selectionBackground.Background(WUX::Media::SolidColorBrush{ Windows::UI::Colors::Transparent() });
+                }
             }
-            grid.Background(WUX::Media::SolidColorBrush{ color });
+            grid.Background(WUX::Media::SolidColorBrush{ Windows::UI::Colors::Transparent() });
             const auto header = display.Header().try_as<WUX::Controls::Control>();
             const auto close = grid.FindName(L"TabCloseButton").try_as<WUX::Controls::Control>();
             if (hasTabColor && selected)
             {
+                const auto color = tabBrush.Color();
                 const auto luminance = (0.2126 * color.R + 0.7152 * color.G + 0.0722 * color.B) / 255.0;
                 const auto foreground = WUX::Media::SolidColorBrush{
                     luminance >= 0.6 ? Windows::UI::Colors::Black() : Windows::UI::Colors::White()
@@ -2004,6 +2012,30 @@ namespace winrt::TerminalApp::implementation
         {
             e.Handled(true);
             PaneCloseRequested.raise(*this, winrt::make<TabStripPaneEventArgs>(pane.Tab(), pane.ContentId()));
+        }
+    }
+
+    void TabStrip::OnPanePointerEntered(IInspectable const& sender,
+                                        WUX::Input::PointerRoutedEventArgs const&)
+    {
+        if (const auto root = sender.try_as<FrameworkElement>())
+        {
+            if (const auto background = root.FindName(L"PaneHoverBackground").try_as<UIElement>())
+            {
+                background.Opacity(1.0);
+            }
+        }
+    }
+
+    void TabStrip::OnPanePointerExited(IInspectable const& sender,
+                                       WUX::Input::PointerRoutedEventArgs const&)
+    {
+        if (const auto root = sender.try_as<FrameworkElement>())
+        {
+            if (const auto background = root.FindName(L"PaneHoverBackground").try_as<UIElement>())
+            {
+                background.Opacity(0.0);
+            }
         }
     }
 

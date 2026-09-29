@@ -97,6 +97,8 @@ namespace winrt::TerminalApp::implementation
         WINRT_OBSERVABLE_PROPERTY(winrt::Windows::UI::Xaml::Visibility, SelectionVisibility, PropertyChanged.raise, winrt::Windows::UI::Xaml::Visibility::Collapsed);
         WINRT_OBSERVABLE_PROPERTY(winrt::Windows::UI::Xaml::Visibility, GroupVisibility, PropertyChanged.raise, winrt::Windows::UI::Xaml::Visibility::Collapsed);
         WINRT_OBSERVABLE_PROPERTY(winrt::Windows::UI::Xaml::Visibility, ChildrenVisibility, PropertyChanged.raise, winrt::Windows::UI::Xaml::Visibility::Collapsed);
+        WINRT_OBSERVABLE_PROPERTY(winrt::Windows::UI::Xaml::Visibility, IconVisibility, PropertyChanged.raise, winrt::Windows::UI::Xaml::Visibility::Visible);
+        WINRT_OBSERVABLE_PROPERTY(double, HeaderMinHeight, PropertyChanged.raise, 40.0);
         WINRT_OBSERVABLE_PROPERTY(winrt::hstring, ChevronGlyph, PropertyChanged.raise, L"\xE70D");
 
     public:
@@ -308,6 +310,10 @@ namespace winrt::TerminalApp::implementation
                              winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
         void OnGroupToggleClick(winrt::Windows::Foundation::IInspectable const& sender,
                                 winrt::Windows::UI::Xaml::RoutedEventArgs const& e);
+        void OnPanePointerEntered(winrt::Windows::Foundation::IInspectable const& sender,
+                                  winrt::Windows::UI::Xaml::Input::PointerRoutedEventArgs const& e);
+        void OnPanePointerExited(winrt::Windows::Foundation::IInspectable const& sender,
+                                 winrt::Windows::UI::Xaml::Input::PointerRoutedEventArgs const& e);
         void OnPanePointerPressed(winrt::Windows::Foundation::IInspectable const& sender,
                                   winrt::Windows::UI::Xaml::Input::PointerRoutedEventArgs const& e);
         void OnPaneActivateClick(winrt::Windows::Foundation::IInspectable const& sender,
