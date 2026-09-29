@@ -682,10 +682,20 @@ namespace winrt::TerminalApp::implementation
         _tabStrip.SearchChanged([weakThis{ get_weak() }](const auto& sender, auto&&) {
             if (const auto page = weakThis.get())
             {
+                const auto wasSearchActive = page->_tabSearchActive;
                 page->_tabSearchActive = sender.SearchActive();
                 page->_tabSearchQuery = sender.SearchQuery();
                 page->_ApplyTabListProjection();
                 page->_suppressTabFocusRequests = false;
+                if (!wasSearchActive && page->_IsTabSearchEffective())
+                {
+                    TraceLoggingWrite(
+                        g_hTerminalAppProvider,
+                        "SidebarSearchOpened",
+                        TraceLoggingDescription("User opened sidebar tab search"),
+                        TraceLoggingKeyword(MICROSOFT_KEYWORD_MEASURES),
+                        TelemetryPrivacyDataTag(PDT_ProductAndServiceUsage));
+                }
             }
         });
         _tabStrip.HistoryRequested([weakThis{ get_weak() }](auto&&, auto&&) {
@@ -755,9 +765,10 @@ namespace winrt::TerminalApp::implementation
                 ::Microsoft::Terminal::RichTab::Provider::ProviderBroker::Instance().SetVisibleFields(
                     "com.microsoft.intelligent-terminal.git-status",
                     std::move(fields));
-                if (sender.RichTabAgentStatusVisible())
+                if (const auto page = weakThis.get())
                 {
-                    if (const auto page = weakThis.get())
+                    page->_LogSidebarRowFieldsTelemetry();
+                    if (sender.RichTabAgentStatusVisible())
                     {
                         page->_RequestRichTabAgentStatusRefresh();
                     }
@@ -2036,6 +2047,40 @@ namespace winrt::TerminalApp::implementation
             TraceLoggingWideString(triggerSource, "TriggerSource"),
             TraceLoggingKeyword(MICROSOFT_KEYWORD_MEASURES),
             TelemetryPrivacyDataTag(PDT_ProductAndServiceUsage));
+    }
+
+    void TerminalPage::_LogSidebarRowFieldsTelemetry() const
+    {
+        if constexpr (Feature_RichTabProviders::IsEnabled())
+        {
+            const auto fields = ::Microsoft::Terminal::RichTab::Provider::ProviderBroker::Instance().VisibleFields(
+                "com.microsoft.intelligent-terminal.git-status");
+            if (!fields)
+            {
+                _agentPaneLog("SidebarRowFieldsChanged: Rich Tab provider selection unavailable");
+                return;
+            }
+
+            std::string fieldNames;
+            for (const auto field : { "agentStatus", "workingDirectory", "repository", "branch", "changes" })
+            {
+                if (std::find(fields->begin(), fields->end(), field) != fields->end())
+                {
+                    if (!fieldNames.empty())
+                    {
+                        fieldNames += ',';
+                    }
+                    fieldNames += field;
+                }
+            }
+            TraceLoggingWrite(
+                g_hTerminalAppProvider,
+                "SidebarRowFieldsChanged",
+                TraceLoggingDescription("Current sidebar tab metadata field selection"),
+                TraceLoggingString(fieldNames.c_str(), "fields"),
+                TraceLoggingKeyword(MICROSOFT_KEYWORD_MEASURES),
+                TelemetryPrivacyDataTag(PDT_ProductAndServiceUsage));
+        }
     }
 
     // --- Hot-reload of agent/model settings -------------------------------
@@ -6577,7 +6622,7 @@ namespace winrt::TerminalApp::implementation
         if (snapshot.state == State::Ready ||
             (snapshot.state != State::InvalidResponse && !snapshot.items.empty()))
         {
-            strip->CommitHistorySnapshot(std::move(snapshot.items));
+            strip->CommitHistorySnapshot(std::move(snapshot.items), snapshot.state == State::Ready);
         }
         if (snapshot.state == State::Error)
         {
@@ -8792,7 +8837,6 @@ namespace winrt::TerminalApp::implementation
                     "AgentSessionStarted",
                     TraceLoggingDescription("Effective settings snapshot after successful ACP session creation or load"),
                     TraceLoggingString(start->startId.c_str(), "StartId"),
-                    TraceLoggingString(start->sessionId.c_str(), "SessionId"),
                     TraceLoggingString(start->kind, "StartKind"),
                     TraceLoggingString(start->agentId, "AgentId"),
                     TraceLoggingString(start->source, "AgentSource"),
@@ -8817,6 +8861,7 @@ namespace winrt::TerminalApp::implementation
                     TraceLoggingValue(distribution, "Distribution"),
                     TraceLoggingKeyword(MICROSOFT_KEYWORD_MEASURES),
                     TelemetryPrivacyDataTag(PDT_ProductAndServiceUsage));
+                _LogSidebarRowFieldsTelemetry();
             }
         }
 

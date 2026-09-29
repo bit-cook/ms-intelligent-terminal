@@ -4,7 +4,7 @@ This document defines the telemetry emitted by Intelligent Terminal's AI
 integration: what each event measures, when it is emitted, its complete
 business payload, and the limits on interpreting that payload.
 
-The scope is **27 event definitions**: 7 App, 16 WTA, 1 Settings Model,
+The scope is **31 event definitions**: 11 App, 16 WTA, 1 Settings Model,
 and 3 Settings Editor. This includes the existing `AppCreated` event,
 extended with the startup configuration snapshot.
 An event is identified by **provider name plus event name**, not by event
@@ -38,6 +38,8 @@ established separately. See [privacy information](../PRIVACY.md).
 | How often is the assistant opened through an instrumented UI entry point? | App `AgentPaneOpened`, grouped by `TriggerSource` | Not every pane creation or restoration path |
 | How often is foreground agent prompt mode entered or submitted? | App `CommandPaletteAgentPromptEntered` and `CommandPaletteDispatchedAgentPrompt` | Entry and submission are separate boundaries; neither proves task completion |
 | Is the sidebar enabled at window creation? | App `AppCreated.SidebarEnabled` | Vertical tab layout at window creation, not a session-weighted snapshot |
+| Are sidebar search, agent filtering, and keep-running used? | App `SidebarSearchOpened`, `SidebarAgentFilterApplied`, `SidebarTabPinned` | Explicit UI transitions, not automatic projection refresh, retention, or restore |
+| Which rich-tab fields do people select? | App `SidebarRowFieldsChanged.fields` | Current selection at successful agent-session start and after each user toggle; not displayed metadata values |
 | Which providers are configured at startup or changed later? | App `AppCreated` snapshot and Model `AgentProviderChanged` | Configuration, not CLI installation, authentication, or successful session use |
 | How many custom agents are configured under policy? | App `AppCreated` custom-agent inventory fields | Both roles in the same window-created snapshot, including unused entries and zero counts; no commands or custom names |
 | How often are prompts dispatched? | WTA `AgentPromptSent`, grouped by `AgentId`, `IsAutofix`, `IsByok`, `TemplateKind` | ACP prompt dispatches; Command Palette delegation is a separate path |
@@ -82,7 +84,7 @@ or resolve that hot-refresh limitation.
 
 | Alias | Provider name | GUID | Dedicated events |
 |---|---|---|---|
-| App | `Microsoft.Windows.Terminal.App` | `{24a1622f-7da7-5c77-3303-d850bd1ab2ed}` | 7 |
+| App | `Microsoft.Windows.Terminal.App` | `{24a1622f-7da7-5c77-3303-d850bd1ab2ed}` | 11 |
 | WTA | `Microsoft.Windows.Terminal.WTA` | `{4cfcff80-4e6b-5bfd-8ea1-d38e1226f70b}` | 16 |
 | Model | `Microsoft.Windows.Terminal.Setting.Model` | `{be579944-4d33-5202-e5d6-a7a57f1935cb}` | 1 |
 | Editor | `Microsoft.Windows.Terminal.Settings.Editor` | `{1b16317d-b594-51f8-c552-5d50572b5efc}` | 3 |
@@ -120,8 +122,7 @@ keyword are event metadata, not extra business fields. No implicit
 
 Field names and category values are case-sensitive. All fields listed in an
 event's table are emitted; an empty string or `unknown` is a value, not an
-omitted field. In particular, failed `AcpNewSessionComplete` events carry an
-empty `SessionId`.
+omitted field. Agent/provider session identifiers are not emitted.
 
 The agent category set is `copilot`, `claude`, `codex`, `gemini`,
 `opencode`, and `custom`. WTA and the App snapshot bucket unrecognized agent
@@ -145,16 +146,20 @@ Business-field counts exclude the common `PartA_PrivTags` field.
 | App | [CommandPaletteAgentPromptEntered](#appcommandpaletteagentpromptentered) | 0 | Usage |
 | App | [CommandPaletteDispatchedAgentPrompt](#appcommandpalettedispatchedagentprompt) | 1 | Usage |
 | App | [AppCreated](#appappcreated) | 13 | Usage |
+| App | [SidebarSearchOpened](#appsidebarsearchopened) | 0 | Usage |
+| App | [SidebarAgentFilterApplied](#appsidebaragentfilterapplied) | 1 | Usage |
+| App | [SidebarTabPinned](#appsidebartabpinned) | 1 | Usage |
+| App | [SidebarRowFieldsChanged](#appsidebarrowfieldschanged) | 1 | Usage |
 | App | [DelegateInvoked](#appdelegateinvoked) | 1 | Usage |
 | App | [ErrorDetected](#apperrordetected) | 1 | Usage |
-| App | [AgentSessionStarted](#appagentsessionstarted) | 24 | Usage |
+| App | [AgentSessionStarted](#appagentsessionstarted) | 23 | Usage |
 | WTA | [AcpInitializeComplete](#wtaacpinitializecomplete) | 5 | Performance |
-| WTA | [AcpNewSessionComplete](#wtaacpnewsessioncomplete) | 6 | Performance |
+| WTA | [AcpNewSessionComplete](#wtaacpnewsessioncomplete) | 5 | Performance |
 | WTA | [AcpLoadSessionComplete](#wtaacploadsessioncomplete) | 2 | Performance |
 | WTA | [AgentColdStartComplete](#wtaagentcoldstartcomplete) | 5 | Performance |
-| WTA | [AgentPromptSent](#wtaagentpromptsent) | 7 | Usage |
-| WTA | [AgentResponseFirstToken](#wtaagentresponsefirsttoken) | 4 | Performance |
-| WTA | [AgentResponseComplete](#wtaagentresponsecomplete) | 5 | Performance |
+| WTA | [AgentPromptSent](#wtaagentpromptsent) | 6 | Usage |
+| WTA | [AgentResponseFirstToken](#wtaagentresponsefirsttoken) | 3 | Performance |
+| WTA | [AgentResponseComplete](#wtaagentresponsecomplete) | 4 | Performance |
 | WTA | [ErrorDetected](#wtaerrordetected) | 5 | Usage |
 | WTA | [ErrorFixOffered](#wtaerrorfixoffered) | 1 | Usage |
 | WTA | [ErrorFixAccepted](#wtaerrorfixaccepted) | 1 | Usage |
@@ -213,6 +218,105 @@ existing submission event below.
 No prompt text is included. This is a submission event, not evidence that
 the selected mode launched or completed an agent task. In particular,
 the reserved background entry point is not a completed background workflow.
+
+### Sidebar measurement plan
+
+| Plan item | Shipped-source contract |
+|---|---|
+| 5.1 `SidebarStateOnLaunch(enabled)` | Consolidated into `AppCreated.SidebarEnabled`; no standalone event |
+| 5.2 `SidebarSearchOpened` | Opening the current-window tab search box |
+| 5.3 `SidebarAgentFilterApplied(row_count)` | Entering the Agent view; count visible session rows on its first successful snapshot |
+| 5.4 `SidebarTabPinned(pinned_count)` | Enabling **Keep tab running** from a sidebar tab's context menu |
+| 5.5 `SidebarRowFieldsChanged(fields)` | Successful agent-session start and Tab metadata toggles both emit the current zero-to-two field IDs |
+
+Search and filtering are independent, adjacent entry points, not a mandatory
+ordered funnel. All four sidebar events use the existing App provider,
+Verbose level, measures keyword, and Usage privacy tag. No search text, tab
+titles, paths, session content, or configurable row values are collected.
+These definitions do not by themselves establish deployment or backend ingestion.
+
+### App.SidebarSearchOpened
+
+**Trigger:** the user opens the sidebar tab search box, transitioning from
+inactive to active search in the expanded, visible vertical layout.
+
+**Business fields:** none. `PartA_PrivTags` is still present.
+
+Typing, clearing a query, closing search, layout redraw, collapsing/restoring
+the rail, and opening Agent History search do not emit this event. Closing
+and explicitly reopening tab search emits again.
+
+### App.SidebarAgentFilterApplied
+
+**Trigger:** the user opens the dedicated Agent sessions sidebar view and its first
+explicitly `Ready` session snapshot is committed. `Loading` or `Error` snapshots
+may display cached rows but do not emit or consume the pending measurement.
+The pending measurement is canceled
+if the user leaves the view before a snapshot succeeds.
+
+| Field | Type | Meaning / values |
+|---|---|---|
+| `row_count` | UInt32 | Visible Agent-view session rows after applying its current session-search query to the first successful snapshot; may be zero |
+
+The unified Agent view reads the global shell-origin session registry,
+including historical sessions. It does not count current-window tabs,
+split-pane children, or Agent-pane sessions excluded by that view's scope.
+Its search is independent of the live-tab search; entering the view clears
+the session query, but a query entered while loading is honored.
+Repeated open requests while the view is already active, closing the view,
+editing search, and automatic refreshes do not emit again. Closing and
+reopening Agent sessions arms another measurement. Load failure
+does not fabricate a zero-count event; a later successful refresh while
+the same entry remains active can complete the pending measurement.
+
+### App.SidebarTabPinned
+
+**Trigger:** the user enables **Keep tab running** through the sidebar tab
+context menu. The telemetry name retains the plan's "pinned" terminology;
+it does not mean tab-order pinning or a Windows taskbar pin.
+
+| Field | Type | Meaning / values |
+|---|---|---|
+| `pinned_count` | UInt32 | Attached terminal tabs in the owning window with Keep tab running enabled, after the action |
+
+Count includes tabs hidden by search/filter, but excludes detached retained
+tabs, other windows, and individual panes. Turning keep-running off does not
+emit. Re-enabling emits again. State copying, programmatic setters, layout
+changes, closing into background retention, and restoring a retained tab do
+not emit. This measures opt-in actions, not successful background work or
+retention across an application restart.
+
+### App.SidebarRowFieldsChanged
+
+**Triggers:** emitted immediately after each valid `App.AgentSessionStarted`
+settings snapshot, and when the user toggles a **Tab metadata** option in
+the sidebar filter menu. Both paths read the current selection from the
+shared Rich Tab provider broker and use the same emitter. This follows the
+existing `Feature_RichTabProviders` gate; no event is emitted when that feature
+is disabled or the provider selection is unavailable (the latter is logged).
+
+| Field | Type | Meaning / values |
+|---|---|---|
+| `fields` | String | Comma-separated field IDs in canonical order: `agentStatus`, `workingDirectory`, `repository`, `branch`, `changes`. Contains zero, one, or two IDs; the empty string means no fields selected. |
+
+The payload is the complete current selection, not just the field
+that changed. For example, choosing Branch then Repository produces
+`repository,branch`, independent of click order. Each deselection also emits,
+including the intermediate one-field or empty selection while replacing a
+pair. Successful session creation/load, including pre-warm, also emits even
+when the user has never changed the defaults, or the sidebar is not visible.
+It uses the broker's current selection, not potentially stale controls in a
+different window. Failed session starts and ordinary status updates without
+a valid `session_started` payload do not emit a startup selection snapshot.
+
+Restoring controls in another window, opening or dismissing the menu, disabled
+third-field clicks, layout refresh, and live metadata/status updates do not
+themselves emit. A new agent session created by those operations still emits
+its startup snapshot. The event has no trigger discriminator: its total count
+mixes session-start snapshots and user changes, so it must not be interpreted
+as a pure edit count or a retention metric. Only the five fixed IDs are collected:
+never an agent's status value, directory, repository name, branch name, or
+Git-change contents.
 
 ### App.AppCreated
 
@@ -295,7 +399,6 @@ adds its effective settings when processing that notification.
 | Field | Type | Meaning / values |
 |---|---|---|
 | `StartId` | String | New random UUID for this start/load notification; event deduplication key |
-| `SessionId` | String | ACP session ID, not `WT_SESSION`; a saved session can be loaded repeatedly |
 | `StartKind` | String | `New` or `Load` |
 | `AgentId` | String | Connected agent category |
 | `AgentSource` | String | `host`, `wsl`, or `unknown`; no distribution name |
@@ -337,8 +440,8 @@ adds its effective settings when processing that notification.
   based on a model name. A reconnect resets this telemetry binding.
 - Loaded sessions retain their restored model. A BYOK-bound process is
   categorized as `byok` even if the restored agent reports a native model ID.
-- Re-loading the same saved session produces a new `StartId`, with the
-  existing `SessionId` and `StartKind=Load`. `Load` alone does not identify
+- Re-loading the same saved session produces a new `StartId` and
+  `StartKind=Load`. `Load` alone does not identify
   session-view resume versus saved-layout restoration.
 - Stashing/showing the same pane, moving/renaming its tab, or changing a
   setting does not by itself produce another successful-session snapshot.
@@ -375,7 +478,6 @@ failure or an enforced timeout.
 
 | Field | Type | Meaning / values |
 |---|---|---|
-| `SessionId` | String | Returned ACP session ID on success; empty on failure |
 | `DurationMs` | Double | Monotonic RPC-attempt duration in milliseconds |
 | `Success` | Bool | Whether the RPC returned successfully |
 | `Route` | String | `MasterForward`, `HelperPipeStartup`, `HelperPipeNewSessionForTab`, `HelperPipeFallback`, `LazyCreateOnFirstPrompt`, or `Probe` |
@@ -423,7 +525,6 @@ the App snapshot's `AgentSource`.
 
 | Field | Type | Meaning / values |
 |---|---|---|
-| `SessionId` | String | ACP session receiving the prompt |
 | `PromptLengthBytes` | UInt32 | Byte length of the constructed dispatch prompt, including context/templates |
 | `IsAutofix` | Bool | Whether this dispatch is an autofix prompt |
 | `IsByok` | Bool | BYOK state captured for this prompt |
@@ -441,7 +542,6 @@ turn with a known monotonic dispatch time.
 
 | Field | Type | Meaning / values |
 |---|---|---|
-| `SessionId` | String | ACP session |
 | `FirstTokenLatencyMs` | Double | Dispatch-to-first-counted-text duration in milliseconds |
 | `ChunkLengthBytes` | UInt32 | Byte length of that first counted chunk |
 | `AgentId` | String | Agent category associated with the turn |
@@ -458,7 +558,6 @@ known monotonic dispatch time.
 
 | Field | Type | Meaning / values |
 |---|---|---|
-| `SessionId` | String | ACP session |
 | `TotalDurationMs` | Double | Monotonic prompt-dispatch-to-completion duration in milliseconds |
 | `Success` | Bool | Whether the ACP prompt request completed successfully |
 | `IsByok` | Bool | BYOK state associated with the prompt |
@@ -698,15 +797,12 @@ does not assume a particular backend table or query language.
 
 **Correlation rules:**
 
-- `StartId` is the snapshot event deduplication key. `SessionId` is not:
-  loading the same session again is a separate start/load observation.
-- App snapshots and WTA events that explicitly carry `SessionId` can be
-  related at session scope. Use agent identity and capture/process/time
-  context where available; do not assume opaque IDs are globally unique
-  across all providers or deployments.
-- A session can have many prompts and repeated loads. There is no exported
-  `TurnId` or `StartId` on turn events, so joining only on `SessionId`
-  does not create an exact prompt-to-response or load-to-turn mapping.
+- `StartId` is a random per-notification deduplication key, independent of the
+  agent's session ID. Loading the same session again is a separate observation.
+- Agent session IDs are not emitted, hashed, or replaced with stable aliases.
+  App snapshots and WTA turn events cannot be joined at session or turn scope.
+  Aggregate by event, agent category, route, and capture/process/time scope
+  where available; these populations do not establish per-session funnels.
 - `AcpNewSessionComplete` can report both master and helper layers for one
   creation. Choose the intended route rather than summing them as sessions.
 - `AcpLoadSessionComplete` has no payload correlation ID or origin route.
@@ -764,8 +860,9 @@ settings telemetry and the independent `AgentProviderChanged` event.
 ## Privacy and collection boundaries
 
 The dedicated payloads contain categories, booleans, counts, durations,
-opaque correlation IDs, and numeric ACP error codes. They do not contain
-prompt/response text, terminal contents, command text, custom agent names,
+independent telemetry correlation IDs (`StartId` and `OfferId`), terminal pane
+identity where documented, and numeric ACP error codes. They do not contain
+agent/provider session identifiers, prompt/response text, terminal contents, command text, custom agent names,
 custom commands, model IDs, API keys, credential identifiers, or custom
 endpoint URLs.
 

@@ -2079,6 +2079,10 @@ namespace winrt::TerminalApp::implementation
             if (const auto tab = weakThis.get())
             {
                 tab->KeepRunning(!tab->KeepRunning());
+                if (tab->KeepRunning())
+                {
+                    tab->KeepRunningEnabledByUser.raise();
+                }
             }
         });
 

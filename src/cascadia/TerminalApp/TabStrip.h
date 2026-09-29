@@ -18,6 +18,11 @@
 #include "TabStripDisplayItem.g.h"
 #include "TabStripPaneEventArgs.g.h"
 
+namespace TerminalAppLocalTests
+{
+    class TabTests;
+}
+
 namespace winrt::TerminalApp::implementation
 {
     struct TabStripHistoryItem : TabStripHistoryItemT<TabStripHistoryItem>
@@ -223,7 +228,7 @@ namespace winrt::TerminalApp::implementation
         winrt::hstring SearchQuery() const { return _searchQuery; }
         void SearchQuery(winrt::hstring const& value);
         winrt::Windows::Foundation::Collections::IObservableVector<TerminalApp::TabStripHistoryItem> HistoryItems() const { return _historyItems; }
-        void CommitHistorySnapshot(std::vector<TerminalApp::TabStripHistoryItem> items);
+        void CommitHistorySnapshot(std::vector<TerminalApp::TabStripHistoryItem> items, bool ready = false);
         void SetCurrentHistoryItem(TerminalApp::TabStripHistoryItem const& item,
                                    winrt::Microsoft::UI::Xaml::Controls::TabViewItem const& tab);
         bool ApplyHistoryStatusDelta(winrt::hstring const& sessionId,
@@ -387,6 +392,8 @@ namespace winrt::TerminalApp::implementation
         bool _projectionControlsEnabled{ true };
         winrt::hstring _searchQuery;
         bool _historyActive{ false };
+        bool _agentFilterTelemetryPending{ false };
+        friend class ::TerminalAppLocalTests::TabTests;
         bool _historyLoading{ false };
         bool _historyActivating{ false };
         bool _syncingHistorySearchState{ false };

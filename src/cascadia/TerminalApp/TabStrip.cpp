@@ -721,7 +721,7 @@ namespace winrt::TerminalApp::implementation
         return Resources().Lookup(box_value(styleKey)).as<WUX::Style>();
     }
 
-    void TabStrip::CommitHistorySnapshot(std::vector<TerminalApp::TabStripHistoryItem> items)
+    void TabStrip::CommitHistorySnapshot(std::vector<TerminalApp::TabStripHistoryItem> items, const bool ready)
     {
         _historySnapshot = std::move(items);
         // WTA supplies newest-activity-first rows; preserve that order within each group.
@@ -746,6 +746,17 @@ namespace winrt::TerminalApp::implementation
             _historySearchTerms.emplace_back(_buildHistorySearchTerms(item));
         }
         _applyHistoryProjection(true);
+        if (ready && _historyActive && _agentFilterTelemetryPending)
+        {
+            _agentFilterTelemetryPending = false;
+            TraceLoggingWrite(
+                g_hTerminalAppProvider,
+                "SidebarAgentFilterApplied",
+                TraceLoggingDescription("User entered the sidebar agent view and its session rows loaded"),
+                TraceLoggingUInt32(_historyItems.Size(), "row_count"),
+                TraceLoggingKeyword(MICROSOFT_KEYWORD_MEASURES),
+                TelemetryPrivacyDataTag(PDT_ProductAndServiceUsage));
+        }
     }
 
     void TabStrip::SetCurrentHistoryItem(TerminalApp::TabStripHistoryItem const& current,
@@ -833,6 +844,10 @@ namespace winrt::TerminalApp::implementation
 
     void TabStrip::HistoryActive(bool value)
     {
+        if (!value)
+        {
+            _agentFilterTelemetryPending = false;
+        }
         FilterMode(TerminalApp::TabStripFilterMode::AllTabs);
 
         if (_historyActive != value)
@@ -1064,6 +1079,10 @@ namespace winrt::TerminalApp::implementation
         if (_isRailCollapsed || !_projectionControlsEnabled)
         {
             return;
+        }
+        if (!_historyActive)
+        {
+            _agentFilterTelemetryPending = true;
         }
         HistoryActive(true);
         HistoryRequested.raise(*this, nullptr);
