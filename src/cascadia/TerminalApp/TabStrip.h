@@ -229,8 +229,9 @@ namespace winrt::TerminalApp::implementation
         void HistoryLoading(bool value);
         bool HistoryActivating() const noexcept { return _historyActivating; }
         void HistoryActivating(bool value);
-        winrt::hstring HistoryError() const { return _historyError; }
+        winrt::hstring HistoryError() const { return _historyError.empty() ? _historyRefreshError : _historyError; }
         void HistoryError(winrt::hstring const& value);
+        void HistoryRefreshError(winrt::hstring const& value);
         void ProjectionControlsEnabled(bool value);
         void MoveTabItem(uint32_t from, uint32_t to);
         void BeginHeaderTransfer();
@@ -372,6 +373,7 @@ namespace winrt::TerminalApp::implementation
         bool _syncingHistorySearchState{ false };
         winrt::hstring _historySearchQuery;
         winrt::hstring _historyError;
+        winrt::hstring _historyRefreshError;
         TerminalApp::TabStripFilterMode _filterMode{ TerminalApp::TabStripFilterMode::AllTabs };
         bool _richTabRepositoryVisible{ false };
         bool _richTabBranchVisible{ false };

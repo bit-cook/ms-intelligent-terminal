@@ -264,6 +264,10 @@ namespace winrt::TerminalApp::implementation
 
     TerminalPage::~TerminalPage()
     {
+        if (_historyRefreshCancellation)
+        {
+            _historyRefreshCancellation->store(true, std::memory_order_relaxed);
+        }
         if constexpr (Feature_RichTabProviders::IsEnabled())
         {
             std::vector<::Microsoft::Terminal::RichTab::Provider::ProviderBroker::AttachmentId> attachments;
@@ -6051,6 +6055,10 @@ namespace winrt::TerminalApp::implementation
         }
         ++_historyRequestGeneration;
         _historyRefreshPending = false;
+        if (_historyRefreshCancellation)
+        {
+            _historyRefreshCancellation->store(true, std::memory_order_relaxed);
+        }
     }
 
     void TerminalPage::_CloseSidebarHistory(const bool restoreFocus)
@@ -6082,9 +6090,12 @@ namespace winrt::TerminalApp::implementation
 
         ++_historyActivationSerial;
         _StopSidebarHistoryRefreshTimer();
+        _historyRetryDelay = std::chrono::seconds{ 0 };
+        _historyNextRefresh = {};
         _tabStrip.HistoryActive(false);
         _tabStrip.HistoryLoading(false);
         _tabStrip.HistoryError(L"");
+        winrt::get_self<implementation::TabStrip>(_tabStrip)->HistoryRefreshError(L"");
 
         // Collapsing the focused History overlay can make XAML select the
         // previously realized ListView row. Preserve the tab that was active
@@ -6110,14 +6121,26 @@ namespace winrt::TerminalApp::implementation
         {
             return;
         }
+        if (_tabStrip.HistoryActivating())
+        {
+            _historyRefreshPending = true;
+            return;
+        }
         if (initialLoad)
         {
+            _historyRetryDelay = std::chrono::seconds{ 0 };
+            _historyNextRefresh = {};
             _tabStrip.HistoryError(L"");
+            winrt::get_self<implementation::TabStrip>(_tabStrip)->HistoryRefreshError(L"");
             _tabStrip.HistoryLoading(!winrt::get_self<implementation::TabStrip>(_tabStrip)->HasHistoryItems());
         }
         if (_historyRefreshInFlight)
         {
             _historyRefreshPending = true;
+            return;
+        }
+        if (std::chrono::steady_clock::now() < _historyNextRefresh)
+        {
             return;
         }
 
@@ -6257,13 +6280,29 @@ namespace winrt::TerminalApp::implementation
                                                      .count());
         for (const auto& row : response["sessions"])
         {
-            const auto stringFields = { "session_id", "provider_id", "title", "cwd", "pane_session_id", "session_universe" };
+            const auto stringFields = { "session_id", "provider_id", "title", "cwd", "pane_session_id", "session_universe", "status", "origin" };
             if (!row.isObject() ||
                 std::ranges::any_of(stringFields, [&](const auto key) {
                     return !row[key].isNull() && !row[key].isString();
                 }))
             {
                 _agentPaneLog("invalid sidebar history session row");
+                snapshot.state = _SidebarHistorySnapshot::State::InvalidResponse;
+                snapshot.items.clear();
+                return snapshot;
+            }
+
+            const auto& cliSource = row["cli_source"];
+            const auto& location = row["location"];
+            const auto validCliSource = cliSource.isNull() || cliSource.isString() ||
+                                        (cliSource.isObject() && cliSource.size() == 1 && cliSource["Unknown"].isString());
+            const auto validLocation = location.isNull() ||
+                                       (location.isString() && (location.asString() == "Host" || location.asString() == "Unknown")) ||
+                                       (location.isObject() && location.size() == 1 &&
+                                        location["Wsl"].isObject() && location["Wsl"]["distro"].isString());
+            if (!validCliSource || !validLocation)
+            {
+                _agentPaneLog("invalid sidebar history session metadata");
                 snapshot.state = _SidebarHistorySnapshot::State::InvalidResponse;
                 snapshot.items.clear();
                 return snapshot;
@@ -6285,7 +6324,6 @@ namespace winrt::TerminalApp::implementation
 
             std::string agentSource;
             std::string wslDistro;
-            const auto& location = row["location"];
             if (location.isString() && location.asString() == "Host")
             {
                 agentSource = "host";
@@ -6383,6 +6421,8 @@ namespace winrt::TerminalApp::implementation
     {
         const auto weakThis = get_weak();
         const auto dispatcher = Dispatcher();
+        const auto cancellation = std::make_shared<std::atomic<bool>>(false);
+        _historyRefreshCancellation = cancellation;
 
         co_await winrt::resume_background();
 
@@ -6393,9 +6433,14 @@ namespace winrt::TerminalApp::implementation
             L"sessions list --origin shell --all-agents --json --include-status",
             15'000,
             nullptr,
-            false);
+            false,
+            cancellation.get());
         _SidebarHistorySnapshot snapshot;
-        if (result.completed && result.exitCode == 0)
+        if (result.cancelled)
+        {
+            snapshot.state = _SidebarHistorySnapshot::State::Cancelled;
+        }
+        else if (result.completed && result.exitCode == 0)
         {
             snapshot = _ParseSidebarHistorySnapshot(result.output);
         }
@@ -6416,9 +6461,10 @@ namespace winrt::TerminalApp::implementation
     void TerminalPage::_CompleteSidebarHistoryRefresh(const uint64_t generation, _SidebarHistorySnapshot snapshot)
     {
         _historyRefreshInFlight = false;
-        if (_historyRequestGeneration != generation || !_tabStrip.HistoryActive())
+        _historyRefreshCancellation.reset();
+        if (_historyRequestGeneration != generation || !_tabStrip.HistoryActive() || _tabStrip.HistoryActivating())
         {
-            if (_historyRefreshPending && _tabStrip.HistoryActive())
+            if (_historyRefreshPending && _tabStrip.HistoryActive() && !_tabStrip.HistoryActivating())
             {
                 _historyRefreshPending = false;
                 _RequestSidebarHistoryRefresh(_tabStrip.HistoryLoading());
@@ -6427,6 +6473,10 @@ namespace winrt::TerminalApp::implementation
         }
 
         using State = _SidebarHistorySnapshot::State;
+        if (snapshot.state == State::Cancelled)
+        {
+            return;
+        }
         const auto strip = winrt::get_self<implementation::TabStrip>(_tabStrip);
         if (snapshot.state == State::Ready ||
             (snapshot.state != State::InvalidResponse && !snapshot.items.empty()))
@@ -6435,15 +6485,26 @@ namespace winrt::TerminalApp::implementation
         }
         if (snapshot.state == State::Error)
         {
-            _tabStrip.HistoryError(RS_(L"VerticalTabsHistoryLoadError"));
+            strip->HistoryRefreshError(RS_(L"VerticalTabsHistoryLoadError"));
         }
         else if (snapshot.state == State::InvalidResponse)
         {
-            _tabStrip.HistoryError(RS_(L"VerticalTabsHistoryInvalidResponse"));
+            strip->HistoryRefreshError(RS_(L"VerticalTabsHistoryInvalidResponse"));
         }
         else
         {
-            _tabStrip.HistoryError(L"");
+            strip->HistoryRefreshError(L"");
+        }
+        if (snapshot.state == State::Error || snapshot.state == State::InvalidResponse)
+        {
+            _historyRetryDelay = (std::min)((std::max)(_historyRetryDelay * 2, std::chrono::seconds{ 5 }), std::chrono::seconds{ 60 });
+            _historyNextRefresh = std::chrono::steady_clock::now() + _historyRetryDelay;
+            _historyRefreshPending = false;
+        }
+        else if (snapshot.state == State::Ready)
+        {
+            _historyRetryDelay = std::chrono::seconds{ 0 };
+            _historyNextRefresh = {};
         }
         _tabStrip.HistoryLoading(snapshot.state == State::Loading && !strip->HasHistoryItems());
         if (_historyRefreshPending)

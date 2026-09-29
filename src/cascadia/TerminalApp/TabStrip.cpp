@@ -805,6 +805,15 @@ namespace winrt::TerminalApp::implementation
         }
     }
 
+    void TabStrip::HistoryRefreshError(winrt::hstring const& value)
+    {
+        if (_historyRefreshError != value)
+        {
+            _historyRefreshError = value;
+            _updateHistoryVisualState();
+        }
+    }
+
     void TabStrip::ProjectionControlsEnabled(bool value)
     {
         _projectionControlsEnabled = value;
@@ -1526,9 +1535,9 @@ namespace winrt::TerminalApp::implementation
         {
             HistoryMessage().Visibility(Visibility::Collapsed);
         }
-        else if (!_historyError.empty())
+        else if (const auto error = HistoryError(); !error.empty())
         {
-            HistoryMessage().Text(_historyError);
+            HistoryMessage().Text(error);
             HistoryMessage().Visibility(Visibility::Visible);
         }
         else if (_historyItems.Size() == 0)
