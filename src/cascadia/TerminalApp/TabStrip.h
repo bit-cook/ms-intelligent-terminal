@@ -68,6 +68,7 @@ namespace winrt::TerminalApp::implementation
         TabStripPaneItem() = default;
         TabStripPaneItem(winrt::Microsoft::UI::Xaml::Controls::TabViewItem tab,
                          uint32_t contentId,
+                         winrt::hstring iconPath,
                          winrt::hstring title,
                          bool isActive);
 
@@ -79,6 +80,7 @@ namespace winrt::TerminalApp::implementation
         WINRT_OBSERVABLE_PROPERTY(winrt::hstring, MetadataText, PropertyChanged.raise);
         WINRT_OBSERVABLE_PROPERTY(winrt::hstring, AutomationName, PropertyChanged.raise);
         WINRT_OBSERVABLE_PROPERTY(winrt::Windows::UI::Xaml::Visibility, MetadataVisibility, PropertyChanged.raise, winrt::Windows::UI::Xaml::Visibility::Collapsed);
+        WINRT_OBSERVABLE_PROPERTY(winrt::Windows::UI::Xaml::Controls::IconElement, Icon, PropertyChanged.raise, nullptr);
 
     public:
         til::property_changed_event PropertyChanged;

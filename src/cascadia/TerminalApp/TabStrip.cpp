@@ -35,11 +35,26 @@ namespace winrt::TerminalApp::implementation
 {
     TabStripPaneItem::TabStripPaneItem(MUX::Controls::TabViewItem tab,
                                        uint32_t contentId,
+                                       hstring iconPath,
                                        hstring title,
                                        bool isActive) :
         _tab{ std::move(tab) },
         _contentId{ contentId }
     {
+        if (iconPath.empty())
+        {
+            WUX::Controls::FontIcon fallback;
+            fallback.FontFamily(WUX::Media::FontFamily{ L"Segoe Fluent Icons, Segoe MDL2 Assets" });
+            fallback.FontSize(12);
+            fallback.Glyph(L"\xE756");
+            Icon(fallback);
+        }
+        else
+        {
+            Icon(Microsoft::Terminal::UI::IconPathConverter::IconWUX(iconPath));
+        }
+        Icon().Width(16);
+        Icon().Height(16);
         Title(std::move(title));
         AutomationName(Title());
         IsActive(isActive);
@@ -393,6 +408,7 @@ namespace winrt::TerminalApp::implementation
                     {
                         // Keep the row and its bindings alive during focus/title updates.
                         const auto existing = current.GetAt(match);
+                        existing.Icon(pane.Icon());
                         existing.Title(pane.Title());
                         existing.IsActive(pane.IsActive());
                         existing.ActiveIndicatorVisibility(pane.ActiveIndicatorVisibility());
