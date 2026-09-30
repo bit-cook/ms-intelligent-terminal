@@ -305,6 +305,8 @@ namespace TerminalAppLocalTests
         TEST_METHOD(LiteralSearchHighlighting);
         TEST_METHOD(VerticalTabHistoryButtonOpensView);
         TEST_METHOD(VerticalTabHistoryCloseStopsRefresh);
+        TEST_METHOD(SessionHistoryFallbackFollowsLayout);
+        TEST_METHOD(SessionHistoryInitialVerticalLayoutConfig);
         TEST_METHOD(VerticalTabFilterContainsOnlyMetadata);
         TEST_METHOD(RichTabMetadataFlyoutDismissalBehavior);
         TEST_METHOD(VerticalTabHistoryStatusText);
@@ -327,6 +329,8 @@ namespace TerminalAppLocalTests
         TEST_METHOD(VerticalTabHistoryActivationKeepsRows);
         TEST_METHOD(VerticalTabHistoryStartupLoading);
         TEST_METHOD(VerticalTabHistoryLoadingAndErrorsKeepRows);
+        TEST_METHOD(VerticalTabHistoryTimeoutKeepsRowsWithoutError);
+        TEST_METHOD(VerticalTabHistoryInitialTimeoutKeepsLoading);
         TEST_METHOD(VerticalTabHistoryTelemetryWaitsForReady);
         TEST_METHOD(VerticalTabHistorySnapshotRejectsMalformedResponse);
         TEST_METHOD(VerticalTabHistoryTitlesUseFirstLine);
@@ -4565,6 +4569,9 @@ namespace TerminalAppLocalTests
                 page->_tabStrip.HistoryActive(true);
                 page->_StartSidebarHistoryRefreshTimer();
                 VERIFY_IS_TRUE(page->_historyRefreshTimer.IsEnabled());
+                VERIFY_ARE_EQUAL(
+                    std::chrono::duration_cast<winrt::Windows::Foundation::TimeSpan>(std::chrono::seconds{ 60 }).count(),
+                    page->_historyRefreshTimer.Interval().count());
                 if (useAction)
                 {
                     ActionEventArgs args;
@@ -4585,6 +4592,88 @@ namespace TerminalAppLocalTests
                 VERIFY_ARE_EQUAL(winrt::hstring{ L"Preserved conversation" }, item.Title());
                 VERIFY_ARE_EQUAL(winrt::hstring{ L"Working" }, item.Status());
             }
+        });
+    }
+
+    void TabTests::SessionHistoryFallbackFollowsLayout()
+    {
+        const auto page = _commonSetup();
+        TestOnUIThread([&]() {
+            std::vector<Json::Value> configs;
+            const auto token = page->ProtocolVtSequenceReceived([&](auto&&, const winrt::hstring& payload) {
+                Json::Value event;
+                Json::CharReaderBuilder reader;
+                std::string errors;
+                std::istringstream stream{ winrt::to_string(payload) };
+                VERIFY_IS_TRUE(Json::parseFromStream(reader, stream, &event, &errors));
+                if (event["method"].asString() == "agent_config_changed" &&
+                    event["params"].isMember("sessions_in_sidebar"))
+                {
+                    configs.push_back(event["params"]);
+                }
+            });
+            const auto revoke = wil::scope_exit([&]() { page->ProtocolVtSequenceReceived(token); });
+            VERIFY_IS_TRUE(page->_agentRuntimeConfigInitialized);
+            VERIFY_IS_FALSE(page->_lastAgentRuntimeConfig.sessionsInSidebar);
+
+            VERIFY_IS_FALSE(page->_isVerticalLayout);
+            page->_tabStrip.HistoryActive(true);
+            page->_StartSidebarHistoryRefreshTimer();
+            VERIFY_IS_TRUE(!page->_historyRefreshTimer || !page->_historyRefreshTimer.IsEnabled());
+            page->_tabStrip.HistoryActive(false);
+
+            for (const auto vertical : { true, false, true })
+            {
+                configs.clear();
+                VERIFY_IS_TRUE(page->_ApplyTabLayout(vertical ? TabLayout::Vertical : TabLayout::Horizontal));
+                page->_CompleteTabLayoutChange(page->_tabLayoutGeneration);
+                VERIFY_ARE_EQUAL(vertical, page->_isVerticalLayout);
+                VERIFY_ARE_EQUAL(size_t{ 1 }, configs.size());
+                VERIFY_ARE_EQUAL(vertical, configs[0]["sessions_in_sidebar"].asBool());
+                VERIFY_ARE_EQUAL(std::to_string(page->_WindowProperties.WindowId()), configs[0]["window_id"].asString());
+                VERIFY_IS_FALSE(configs[0].isMember("tab_id"));
+
+                if (vertical)
+                {
+                    page->_tabStrip.HistoryActive(true);
+                    page->_StartSidebarHistoryRefreshTimer();
+                    VERIFY_IS_TRUE(page->_historyRefreshTimer.IsEnabled());
+                }
+                else
+                {
+                    VERIFY_IS_FALSE(page->_tabStrip.HistoryActive());
+                    VERIFY_IS_FALSE(page->_historyRefreshTimer.IsEnabled());
+                    page->_StartSidebarHistoryRefreshTimer();
+                    VERIFY_IS_FALSE(page->_historyRefreshTimer.IsEnabled());
+                }
+            }
+            page->_CloseSidebarHistory(false);
+        });
+    }
+
+    void TabTests::SessionHistoryInitialVerticalLayoutConfig()
+    {
+        const auto page = _commonSetup(nullptr, nullptr, std::nullopt, true);
+        TestOnUIThread([&]() {
+            VERIFY_IS_TRUE(page->_agentRuntimeConfigInitialized);
+            VERIFY_IS_TRUE(page->_lastAgentRuntimeConfig.sessionsInSidebar);
+            bool receivedHorizontalLayout = false;
+            const auto token = page->ProtocolVtSequenceReceived([&](auto&&, const winrt::hstring& payload) {
+                Json::Value event;
+                Json::CharReaderBuilder reader;
+                std::string errors;
+                std::istringstream stream{ winrt::to_string(payload) };
+                VERIFY_IS_TRUE(Json::parseFromStream(reader, stream, &event, &errors));
+                if (event["method"].asString() == "agent_config_changed" &&
+                    event["params"]["sessions_in_sidebar"].isBool())
+                {
+                    receivedHorizontalLayout = !event["params"]["sessions_in_sidebar"].asBool();
+                }
+            });
+            const auto revoke = wil::scope_exit([&]() { page->ProtocolVtSequenceReceived(token); });
+            VERIFY_IS_TRUE(page->_ApplyTabLayout(TabLayout::Horizontal));
+            page->_CompleteTabLayoutChange(page->_tabLayoutGeneration);
+            VERIFY_IS_TRUE(receivedHorizontalLayout);
         });
     }
 
@@ -5427,6 +5516,68 @@ namespace TerminalAppLocalTests
             VERIFY_IS_TRUE(page->_tabStrip.HistoryLoading());
             VERIFY_IS_TRUE(page->_tabStrip.HistoryError().empty());
             VERIFY_ARE_EQUAL(Visibility::Collapsed, strip->HistoryMessage().Visibility());
+        });
+    }
+
+    void TabTests::VerticalTabHistoryTimeoutKeepsRowsWithoutError()
+    {
+        auto page = _commonSetup(nullptr, nullptr, std::nullopt, true);
+        TestOnUIThread([&]() {
+            using Page = winrt::TerminalApp::implementation::TerminalPage;
+            const auto strip = winrt::get_self<winrt::TerminalApp::implementation::TabStrip>(page->_tabStrip);
+            page->_tabStrip.HistoryActive(true);
+            const auto generation = page->_historyRequestGeneration;
+            page->_CompleteSidebarHistoryRefresh(generation, page->_ParseSidebarHistorySnapshot(
+                R"({"history_status":"ready","sessions":[{"session_id":"cached","provider_id":"copilot","title":"Cached session","location":"Host","status":"Historical"}]})"));
+            const auto item = page->_tabStrip.HistoryItems().GetAt(0);
+            const auto timeout = page->_ParseSidebarHistorySnapshot(
+                R"({"history_status":"error","history_error_kind":"timeout","sessions":[]})");
+            VERIFY_IS_TRUE(timeout.state == Page::_SidebarHistorySnapshot::State::Timeout);
+            page->_CompleteSidebarHistoryRefresh(generation, timeout);
+            VERIFY_IS_TRUE(page->_tabStrip.HistoryError().empty());
+            VERIFY_IS_FALSE(page->_tabStrip.HistoryLoading());
+            VERIFY_ARE_EQUAL(Visibility::Collapsed, strip->HistoryMessage().Visibility());
+            VERIFY_IS_TRUE(page->_tabStrip.HistoryItems().GetAt(0) == item);
+            VERIFY_IS_TRUE(page->_historyRetryDelay >= std::chrono::seconds{ 5 });
+
+            for (const auto response : {
+                     R"({"history_status":"error","history_error_kind":"other","sessions":[]})",
+                     R"({"history_status":"error","sessions":[]})",
+                     R"({"history_status":"error","history_error_kind":true,"sessions":[]})" })
+            {
+                page->_CompleteSidebarHistoryRefresh(generation, page->_ParseSidebarHistorySnapshot(response));
+                VERIFY_IS_FALSE(page->_tabStrip.HistoryError().empty());
+                VERIFY_ARE_EQUAL(Visibility::Visible, strip->HistoryMessage().Visibility());
+                VERIFY_IS_TRUE(page->_tabStrip.HistoryItems().GetAt(0) == item);
+            }
+
+            page->_CompleteSidebarHistoryRefresh(generation, timeout);
+            VERIFY_IS_TRUE(page->_tabStrip.HistoryError().empty());
+            page->_tabStrip.HistoryError(L"activation failed");
+            page->_CompleteSidebarHistoryRefresh(generation, timeout);
+            VERIFY_ARE_EQUAL(winrt::hstring{ L"activation failed" }, page->_tabStrip.HistoryError());
+            VERIFY_ARE_EQUAL(Visibility::Visible, strip->HistoryMessage().Visibility());
+        });
+    }
+
+    void TabTests::VerticalTabHistoryInitialTimeoutKeepsLoading()
+    {
+        auto page = _commonSetup(nullptr, nullptr, std::nullopt, true);
+        TestOnUIThread([&]() {
+            const auto strip = winrt::get_self<winrt::TerminalApp::implementation::TabStrip>(page->_tabStrip);
+            page->_tabStrip.HistoryActive(true);
+            const auto generation = page->_historyRequestGeneration;
+            page->_CompleteSidebarHistoryRefresh(generation, page->_ParseSidebarHistorySnapshot(
+                R"({"history_status":"error","history_error_kind":"timeout","sessions":[]})"));
+            VERIFY_IS_TRUE(page->_tabStrip.HistoryLoading());
+            VERIFY_IS_TRUE(page->_tabStrip.HistoryError().empty());
+            VERIFY_ARE_EQUAL(Visibility::Collapsed, strip->HistoryMessage().Visibility());
+
+            page->_CompleteSidebarHistoryRefresh(generation, page->_ParseSidebarHistorySnapshot(
+                R"({"history_status":"error","history_error_kind":"other","sessions":[]})"));
+            VERIFY_IS_FALSE(page->_tabStrip.HistoryLoading());
+            VERIFY_IS_FALSE(page->_tabStrip.HistoryError().empty());
+            VERIFY_ARE_EQUAL(Visibility::Visible, strip->HistoryMessage().Visibility());
         });
     }
 
@@ -11235,6 +11386,12 @@ namespace TerminalAppLocalTests
         VERIFY_IS_FALSE(payload["yolo_enabled"].asBool());
         VERIFY_IS_TRUE(payload["yolo_policy_blocked"].isBool());
         VERIFY_IS_TRUE(payload["yolo_policy_blocked"].asBool());
+        VERIFY_IS_TRUE(payload["sessions_in_sidebar"].isBool());
+        VERIFY_IS_FALSE(payload["sessions_in_sidebar"].asBool());
+        config.sessionsInSidebar = true;
+        const auto verticalPayload = winrt::TerminalApp::implementation::TerminalPage::_BuildAgentReadyRuntimeConfigPayload(
+            "tab-a", "42", config);
+        VERIFY_IS_TRUE(verticalPayload["sessions_in_sidebar"].asBool());
     }
 
     void TabTests::NextMRUTab()

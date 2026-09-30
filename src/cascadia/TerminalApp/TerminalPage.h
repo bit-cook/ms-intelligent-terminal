@@ -574,6 +574,7 @@ namespace winrt::TerminalApp::implementation
             bool yoloEnabled{ false };
             bool yoloPolicyBlocked{ false };
             std::string autofixPolicyState{ "unknown" };
+            bool sessionsInSidebar{ false };
         };
         AgentRuntimeConfigSnapshot _lastAgentRuntimeConfig{};
         bool _agentRuntimeConfigInitialized{ false };
@@ -1015,6 +1016,7 @@ namespace winrt::TerminalApp::implementation
                 Loading,
                 Ready,
                 Error,
+                Timeout,
                 InvalidResponse,
                 Cancelled,
             };
