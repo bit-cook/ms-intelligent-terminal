@@ -596,10 +596,12 @@
     <value>Користи хоризонтални јазичиња во сите прозорци на Terminal</value>
   </data>
   <data name="SwitchToVerticalTabsText" xml:space="preserve">
-    <value>Префрли на вертикални јазичиња</value>
+    <value>Префрли на страничната лента</value>
+    <comment>Context-menu command that changes the tab layout from horizontal tabs to the sidebar.</comment>
   </data>
   <data name="SwitchToVerticalTabsToolTip" xml:space="preserve">
-    <value>Користи вертикални јазичиња во сите прозорци на Terminal</value>
+    <value>Користи ја страничната лента во сите прозорци на Terminal</value>
+    <comment>Tooltip for the command that changes the tab layout from horizontal tabs to the sidebar in every Terminal window.</comment>
   </data>
   <data name="TabCloseBelowToolTip" xml:space="preserve">
     <value>Затвори ги сите јазичиња под ова јазиче</value>

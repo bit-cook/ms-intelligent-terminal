@@ -987,10 +987,12 @@
     <value>Horizontale Tabs in allen Terminal-Fenstern verwenden</value>
   </data>
   <data name="SwitchToVerticalTabsText" xml:space="preserve">
-    <value>Zu vertikalen Tabs wechseln</value>
+    <value>Zur Seitenleiste wechseln</value>
+    <comment>Context-menu command that changes the tab layout from horizontal tabs to the sidebar.</comment>
   </data>
   <data name="SwitchToVerticalTabsToolTip" xml:space="preserve">
-    <value>Vertikale Tabs in allen Terminal-Fenstern verwenden</value>
+    <value>Die Seitenleiste in allen Terminal-Fenstern verwenden</value>
+    <comment>Tooltip for the command that changes the tab layout from horizontal tabs to the sidebar in every Terminal window.</comment>
   </data>
   <data name="CloseOnExitInfoBar.Message" xml:space="preserve">
     <value>Das Beendigungsverhalten kann in den erweiterten Profileinstellungen konfiguriert werden.</value>

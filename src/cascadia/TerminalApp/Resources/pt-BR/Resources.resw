@@ -984,10 +984,12 @@
     <value>Usar guias horizontais em todas as janelas do Terminal</value>
   </data>
   <data name="SwitchToVerticalTabsText" xml:space="preserve">
-    <value>Mudar para guias verticais</value>
+    <value>Mudar para a barra lateral</value>
+    <comment>Context-menu command that changes the tab layout from horizontal tabs to the sidebar.</comment>
   </data>
   <data name="SwitchToVerticalTabsToolTip" xml:space="preserve">
-    <value>Usar guias verticais em todas as janelas do Terminal</value>
+    <value>Usar a barra lateral em todas as janelas do Terminal</value>
+    <comment>Tooltip for the command that changes the tab layout from horizontal tabs to the sidebar in every Terminal window.</comment>
   </data>
   <data name="CloseOnExitInfoBar.Message" xml:space="preserve">
     <value>O comportamento de término pode ser configurado nas configurações avançadas do perfil.</value>

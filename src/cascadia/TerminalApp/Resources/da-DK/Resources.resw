@@ -594,10 +594,12 @@
     <value>Brug vandrette faner i alle Terminal-vinduer</value>
   </data>
   <data name="SwitchToVerticalTabsText" xml:space="preserve">
-    <value>Skift til lodrette faner</value>
+    <value>Skift til sidepanelet</value>
+    <comment>Context-menu command that changes the tab layout from horizontal tabs to the sidebar.</comment>
   </data>
   <data name="SwitchToVerticalTabsToolTip" xml:space="preserve">
-    <value>Brug lodrette faner i alle Terminal-vinduer</value>
+    <value>Brug sidepanelet i alle Terminal-vinduer</value>
+    <comment>Tooltip for the command that changes the tab layout from horizontal tabs to the sidebar in every Terminal window.</comment>
   </data>
   <data name="TabCloseBelowToolTip" xml:space="preserve">
     <value>Luk alle faner under denne fane</value>
