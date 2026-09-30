@@ -89,6 +89,8 @@ namespace TerminalApp
         Windows.UI.Xaml.Thickness LeadingContentMargin;
         String ToolTipText;
         String AcceleratorKey;
+        Boolean IsPinned;
+        Windows.UI.Xaml.Visibility PinnedIconVisibility;
     };
 
     [default_interface] runtimeclass TabStripPaneEventArgs
