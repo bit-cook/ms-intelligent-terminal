@@ -277,6 +277,7 @@ namespace TerminalAppLocalTests
         TEST_METHOD(EmptyTabLayoutChangeCompletesBeforeStartup);
         TEST_METHOD(VerticalRailVisibilityRestoresWidth);
         TEST_METHOD(VerticalRailCollapseRestoresWidth);
+        TEST_METHOD(VerticalTitlebarDragAreaExcludesControls);
         TEST_METHOD(SidebarRailHintsTrackBindings);
         TEST_METHOD(VerticalTabChromeBackgroundTracksTheme);
         TEST_METHOD(NewTabButtonSharesChromeBackdrop);
@@ -3380,6 +3381,85 @@ namespace TerminalAppLocalTests
         });
     }
 
+    void TabTests::VerticalTitlebarDragAreaExcludesControls()
+    {
+        TestOnUIThread([]() {
+            const auto row = winrt::make_self<winrt::TerminalApp::implementation::TabRowControl>();
+            row->IsVerticalLayout(true);
+            const auto chrome = row->VerticalTitleBarContent().as<FrameworkElement>();
+            const auto area = winrt::TerminalApp::TitlebarControl::GetContentDragArea(chrome);
+            VERIFY_IS_NOT_NULL(area);
+            VERIFY_IS_NULL(winrt::TerminalApp::TitlebarControl::GetContentDragArea(*row));
+
+            winrt::TerminalApp::TitlebarControl titlebar{ uint64_t{ 0 } };
+            titlebar.Width(800);
+            titlebar.Content(chrome);
+            const auto previousContent = Window::Current().Content();
+            const auto cleanup = wil::scope_exit([&]() {
+                Window::Current().Content(previousContent);
+            });
+            Window::Current().Content(titlebar);
+            Window::Current().Activate();
+
+            const auto bounds = [&](const FrameworkElement& element) {
+                return element.TransformToVisual(chrome).TransformBounds(
+                    { 0, 0, static_cast<float>(element.ActualWidth()), static_cast<float>(element.ActualHeight()) });
+            };
+            for (const auto elevated : { false, true })
+            {
+                row->ShowElevationShield(elevated);
+                for (const auto width : { 180.0, 220.0, 333.0, 480.0 })
+                {
+                    row->SetVerticalRailState(true, false, width);
+                    titlebar.UpdateLayout();
+                    const auto dragBounds = bounds(area);
+                    const auto buttonBounds = bounds(row->VerticalNewTabButton());
+                    VERIFY_IS_TRUE(dragBounds.Width > 0);
+                    VERIFY_ARE_EQUAL(40.0f, dragBounds.Height);
+                    VERIFY_IS_TRUE(dragBounds.X >= 40.0f);
+                    VERIFY_ARE_EQUAL(buttonBounds.X, dragBounds.X + dragBounds.Width);
+                    VERIFY_IS_TRUE(row->VerticalNewTabButton().IsHitTestVisible());
+                    if (elevated)
+                    {
+                        const auto shieldBounds = bounds(row->ElevationShieldIcon());
+                        VERIFY_IS_TRUE(dragBounds.X >= shieldBounds.X + shieldBounds.Width);
+                    }
+                    else
+                    {
+                        VERIFY_ARE_EQUAL(40.0f, dragBounds.X);
+                        VERIFY_ARE_EQUAL(static_cast<float>(width - 108), dragBounds.Width);
+                    }
+                }
+            }
+
+            row->SetVerticalRailState(true, true, 40);
+            titlebar.UpdateLayout();
+            VERIFY_ARE_EQUAL(Visibility::Collapsed, area.Parent().as<UIElement>().Visibility());
+            row->SetVerticalRailState(false, false, 333);
+            titlebar.UpdateLayout();
+            VERIFY_ARE_EQUAL(Visibility::Collapsed, chrome.Visibility());
+            row->SetVerticalRailState(true, false, 333);
+            titlebar.UpdateLayout();
+            VERIFY_ARE_EQUAL(Visibility::Visible, chrome.Visibility());
+            VERIFY_ARE_EQUAL(Visibility::Visible, area.Parent().as<UIElement>().Visibility());
+            VERIFY_IS_TRUE(area.ActualWidth() > 0);
+
+            titlebar.Content(nullptr);
+            row->IsVerticalLayout(false);
+            titlebar.Content(*row);
+            titlebar.UpdateLayout();
+            VERIFY_IS_NULL(winrt::TerminalApp::TitlebarControl::GetContentDragArea(titlebar.Content().as<DependencyObject>()));
+            VERIFY_ARE_EQUAL(Visibility::Visible, row->TabView().Visibility());
+
+            titlebar.Content(nullptr);
+            row->IsVerticalLayout(true);
+            titlebar.Content(chrome);
+            titlebar.UpdateLayout();
+            VERIFY_IS_TRUE(winrt::TerminalApp::TitlebarControl::GetContentDragArea(titlebar.Content().as<DependencyObject>()) == area);
+            VERIFY_IS_TRUE(area.ActualWidth() > 0);
+        });
+    }
+
     void TabTests::FreTabModeSelectionDoesNotMutateSettings()
     {
         TestOnUIThread([]() {
@@ -6080,6 +6160,20 @@ namespace TerminalAppLocalTests
             VERIFY_ARE_EQUAL(Visibility::Collapsed, iconPresenter.Visibility());
             VERIFY_ARE_EQUAL(40.0, headerRoot.ActualHeight());
             const auto groupTitleOffset = headerPresenter.TransformToVisual(headerRoot).TransformPoint({ 0, 0 }).X;
+            VERIFY_ARE_EQUAL(44.0f, groupTitleOffset);
+            const auto groupButton = headerRoot.FindName(L"TabGroupToggleButton").as<Button>();
+            const auto centerX = [&](const FrameworkElement& element) {
+                return element.TransformToVisual(headerRoot).TransformPoint({ static_cast<float>(element.ActualWidth() / 2), 0 }).X;
+            };
+            const auto groupIconCenter = centerX(groupButton);
+            VERIFY_ARE_EQUAL(20.0f, groupIconCenter);
+            stripImpl->OnGroupToggleClick(groupButton, RoutedEventArgs{});
+            host.UpdateLayout();
+            VERIFY_ARE_EQUAL(Visibility::Collapsed, display.ChildrenVisibility());
+            VERIFY_ARE_EQUAL(groupIconCenter, centerX(groupButton));
+            VERIFY_ARE_EQUAL(groupTitleOffset, headerPresenter.TransformToVisual(headerRoot).TransformPoint({ 0, 0 }).X);
+            stripImpl->OnGroupToggleClick(groupButton, RoutedEventArgs{});
+            host.UpdateLayout();
             const auto paneList = templateRoot.Children().GetAt(1).as<ItemsControl>();
             const auto firstPaneContainer = paneList.ContainerFromIndex(0).as<ContentPresenter>();
             const auto firstPaneRoot = Media::VisualTreeHelper::GetChild(firstPaneContainer, 0).as<Grid>();
@@ -6156,6 +6250,8 @@ namespace TerminalAppLocalTests
             host.UpdateLayout();
             VERIFY_IS_TRUE(headerRoot.ActualHeight() > display.HeaderMinHeight());
             VERIFY_ARE_EQUAL(groupTitleOffset, headerPresenter.TransformToVisual(headerRoot).TransformPoint({ 0, 0 }).X);
+            VERIFY_ARE_EQUAL(12.0f, iconPresenter.TransformToVisual(headerRoot).TransformPoint({ 0, 0 }).X);
+            VERIFY_ARE_EQUAL(groupIconCenter, centerX(iconPresenter));
             strip.SetPaneItems(tab, display.PaneItems(), true);
             VERIFY_IS_FALSE(header.IsMetadataVisible());
             VERIFY_ARE_EQUAL(Visibility::Collapsed, display.IconVisibility());
@@ -6183,6 +6279,14 @@ namespace TerminalAppLocalTests
             VERIFY_ARE_EQUAL(Visibility::Visible, display.IconVisibility());
             VERIFY_ARE_EQUAL(32.0, display.HeaderMinHeight());
             VERIFY_IS_TRUE(container.ActualHeight() <= 40.0);
+            VERIFY_ARE_EQUAL(14.0f, centerX(iconPresenter));
+
+            strip.IsRailCollapsed(false);
+            host.UpdateLayout();
+            VERIFY_ARE_EQUAL(groupIconCenter, centerX(groupButton));
+            VERIFY_ARE_EQUAL(groupTitleOffset, headerPresenter.TransformToVisual(headerRoot).TransformPoint({ 0, 0 }).X);
+            strip.IsRailCollapsed(true);
+            host.UpdateLayout();
 
             winrt::MUX::Controls::TabViewItem secondTab;
             winrt::TerminalApp::TabHeaderControl secondHeader;
