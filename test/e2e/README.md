@@ -16,7 +16,7 @@ authenticated ACP agents. Available suites (results depend on the selected packa
 | `Feature.Packaging.Tests.ps1` | §9 packaging/protocol (incl. WT_COM_CLSID injected into pane shells) + §10 logging + log retention/cleanup | 18 |
 | `Feature.HookShutdown.Tests.ps1` | Fixed-CLSID native/cached hook delivery without COM activation, late-hook suppression, and ordinary headless COM compatibility; no windows, agents, or configuration edits | 3 |
 | `Feature.TelemetryFunnels.Tests.ps1` | PR #990: opt-in, provider-only ETW adoption/engagement, per-window startup inventory/sidebar, slash rename, concrete Autofix offer/Run, palette entry, provider changes, and native-ready/startup-policy state; hot-policy checks remain separately visible | 18 (requires `ITE2E_TELEMETRY=1` and explicit policy approval) |
-| `Feature.SidebarTelemetry.Tests.ps1` | Opt-in typed ETW for startup sidebar state, real search/filter/context-menu actions, loaded Agent-view session counts, keep-running counts, rich-tab field changes/session-start snapshots, provider-session-ID exclusion, and suppression during editing/refresh/restore | 7 (requires `ITE2E_TELEMETRY=1`; no policy changes) |
+| `Feature.SidebarTelemetry.Tests.ps1` | Opt-in typed ETW for startup sidebar state, real search/filter/context-menu actions, loaded Agent-view session counts, keep-running opt-in/detach/reattach and surviving-session prompts, rich-tab field changes/session-start snapshots, provider-session-ID exclusion, and suppression during editing/refresh/restore | 9 (requires `ITE2E_TELEMETRY=1`; no policy changes) |
 | `Feature.WtcliPublishStdin.Tests.ps1` | PR #652: WTA/wtcli stdin transport delivers command-line-limit-sized events intact and preserves positional compatibility | 3 |
 | `Feature.Settings.Tests.ps1` | §1 Settings>AI Agents + §0 FRE settings/positions/auto-error/session-mgmt | 18 |
 | `Feature.SettingsUi.Tests.ps1` | Live Settings editor: Agent controls and Appearance's localized Tab Mode label matching FRE | 4 |
@@ -171,7 +171,21 @@ typed decoder without policy writes. Select `ITE2E_PACKAGE=Dev`, opt in with
 `ITE2E_EXPECTED_WTA_SHA256` from the new build. The suite refuses an active Dev
 package, uses a deterministic ACP fixture without model quota, restores
 settings/state byte-for-byte, and retains real UI phase evidence and raw ETW
-artifacts. Its `row_count` oracle counts the unified Agent view's session rows
+artifacts. Before deploying Dev from another branch, compare its generated
+`AppxManifest.xml` version with the installed package: the safe Debug deployment
+script rejects downgrades before `DeployAppRecipe.exe` can unregister the working
+package. Bump `Package-Dev.appxmanifest` and rebuild rather than removing the
+installed package (which would discard LocalState).
+
+If registration fails with `0x80070020` while updating
+`AppRepository\Packages\<Dev-package>\PackagedCom\OpenConsoleProxy.dll`,
+check loaded modules in other Terminal processes as well as processes in the
+Dev layout. An ordinary Windows Terminal can retain that COM proxy after Dev
+closes. Rebuild with a fresh Dev manifest version to avoid overwriting the
+mapped proxy; do not terminate the current CLI host or delete AppRepository
+files to release it.
+
+Its `row_count` oracle counts the unified Agent view's session rows
 on first successful load, independently of live-tab search and split-pane
 children. `SidebarTabPinned` means enabling Keep tab running,
 not tab-order pinning. Row-field selection verifies canonical field IDs for
@@ -180,6 +194,14 @@ during menu-only actions and metadata/layout refresh.
 Every successful agent-session start also emits the selection: the suite pairs
 these snapshots with `AgentSessionStarted` and starts a new fixture session
 after selecting a non-default pair to verify current, not hard-coded, values.
+The same scenario checks that explicit opt-ins emit distinct random `KeepId`
+values and typed post-enable `TotalTabCount` / `KeepRunningTabCount` snapshots,
+including search-hidden attached tabs. A real tab close and restoration emit matching detached/live events,
+and a prompt on the unchanged ACP session after reattachment carries
+`AgentPromptSent.Reattached=true` and `UserPromptOrdinal=Second` while that
+session's earlier prompt carries `false` and `First`. A separate helper's
+first prompt also remains `First`.
+Disabling or restoring a tab alone must not mark it again or dispatch a prompt.
 The decoder explicitly selects startup/sidebar event names; unrelated structured
 diagnostic events remain in the raw ETL rather than blocking these typed
 assertions. Missing or unsupported schemas for selected events still fail.
@@ -187,6 +209,31 @@ The same capture includes a real fixture prompt and verifies that App session
 starts and WTA session creation, prompt, first-text, and completion payloads
 contain no provider session identifiers. Prompt metrics are scoped by process
 and action phase rather than exported session IDs.
+
+To validate only keep-running telemetry without running the unrelated row-field
+and Agent-view scenarios, retain the same Dev selection, telemetry opt-in, and
+build-hash environment variables, then run the existing three contracts:
+
+```powershell
+$cfg = New-PesterConfiguration
+$cfg.Run.Container = New-PesterContainer `
+    -Path test\e2e\tests\Feature.SidebarTelemetry.Tests.ps1 `
+    -Data @{ KeepRunningOnly = $true }
+$cfg.Filter.FullName = @(
+    '*Sidebar pin telemetry counts explicit keep-running opt-ins'
+    '*Keep-running telemetry correlates opt-in, retention, and live reattachment'
+    '*Restored agent prompt telemetry identifies the surviving ACP session'
+)
+$cfg.TestResult.Enabled = $true
+$cfg.TestResult.OutputFormat = 'NUnitXml'
+$cfg.TestResult.OutputPath = 'test\e2e\artifacts\keep-running-results.xml'
+Invoke-Pester -Configuration $cfg
+```
+
+This focused run is not a pass for the complete sidebar suite. Expanded split
+tabs repeat their title in child rows; context-menu targeting selects the
+shallowest matching tab header. The elevated ETW collector runs with its window
+hidden so it does not compete with the unelevated UI runner for foreground.
 
 `Feature.TelemetryFunnels` requires an unused **Dev** package built from the target revision,
 the build receipt's `ITE2E_EXPECTED_WTA_SHA256` and `ITE2E_EXPECTED_APP_SHA256`

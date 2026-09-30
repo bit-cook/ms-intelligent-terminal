@@ -977,6 +977,7 @@ impl App {
                 if tab.session_id.as_deref() != Some(session_id.as_str()) {
                     tab.usage = None;
                     tab.usage_staleness = crate::usage::UsageStaleness::default();
+                    tab.reattached_session_id = None;
                 }
                 tab.session_id = Some(session_id.clone());
                 let has_real_content = !tab.completed_turns.is_empty()
@@ -1067,6 +1068,7 @@ impl App {
                     tab.config_picker = ConfigPickerState::Closed;
                     tab.config_pending_id = None;
                     tab.native_yolo_config_pending = false;
+                    tab.reattached_session_id = None;
                 }
                 tab.session_id = Some(session_id.clone());
                 if let Some(prompt_id) = prompt_id {
@@ -2948,6 +2950,20 @@ impl App {
 
                 if method == "agent_paste_text" {
                     self.handle_agent_paste_text(&params);
+                    return;
+                }
+
+                if method == "keep_running_reattached" {
+                    let target_tab = params.get("tab_id").and_then(|value| value.as_str());
+                    let target_window = params.get("window_id").and_then(|value| value.as_str());
+                    if let (Some(target_tab), Some(target_window)) = (target_tab, target_window) {
+                        if self.owner_tab_id.as_deref() == Some(target_tab)
+                            && self.window_id.as_deref() == Some(target_window)
+                        {
+                            let tab = self.tab_mut(target_tab);
+                            tab.reattached_session_id = tab.session_id.clone();
+                        }
+                    }
                     return;
                 }
 

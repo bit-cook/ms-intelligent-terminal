@@ -12790,7 +12790,7 @@ namespace winrt::TerminalApp::implementation
         }
         if (!firstSplit)
         {
-            destinationTab->KeepRunning(sourceTab->KeepRunning());
+            destinationTab->CopyKeepRunningState(*sourceTab);
             if (sourceTab->AgentPrewarmSuppressed())
             {
                 destinationTab->SuppressAgentPrewarm();
